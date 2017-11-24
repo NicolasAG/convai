@@ -645,7 +645,7 @@ class Topic_Wrapper(Model_Wrapper):
         logging.info('Generating topic for the article')
         logging.info('Topics : {}'.format(self.predicted))
         logging.info('isMatch : {}'.format(self.isMatch(text)))
-        if len(self.predicted) > 0 and self.isMatch(text):
+        if len(self.predicted) > 0 and self.isMatch(text) and user_id in self.predicted:
             topic = self.predicted[user_id][0][0]  # give back the top topic
             topic_phrase_index = random.choice(range(len(self.topic_phrases)))
             response = self.topic_phrases[topic_phrase_index].replace(
