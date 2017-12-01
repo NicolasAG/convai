@@ -256,6 +256,9 @@ def reply_sender():
             'chat_id': chat_id
         }
         data = {}
+        ## If bot.ai does not contain chat_id, then don't do anything
+        if chat_id not in bot.ai:
+            continue
         if 'data' in msg:
             data = msg['data']
         else:

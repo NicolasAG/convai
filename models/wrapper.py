@@ -25,6 +25,7 @@ from gensim.models.keyedvectors import KeyedVectors
 import config
 import os
 import cPickle as pkl
+from threading import Thread
 conf = config.get_config()
 
 
@@ -472,14 +473,14 @@ class DRQA_Wrapper(Model_Wrapper):
         article_present = False
         if user_id in self.articles:
             article_present = True
-        if not isinstance(article,basestring):
+        if not isinstance(article, basestring):
             article = str(article)
         if article_present:
             if len(article) == 0:
                 logging.info("DRQA taking saved article, only if present")
                 article = self.articles[user_id]
             try:
-                res = requests.post(DRQA_ENDURL+'/ask',
+                res = requests.post(DRQA_ENDURL + '/ask',
                                     json={'article': article, 'question': text})
                 res_data = res.json()
                 response = res_data['reply']['text']
@@ -517,18 +518,19 @@ class NQG_Wrapper(Model_Wrapper):
             all_preds = []
             rm_index = []
             for indx, item in enumerate(self.questions[chat_id]):
-                item.update({'used':0})
+                item.update({'used': 0})
                 if item['pred'] not in all_preds:
                     all_preds.append(item['pred'])
                 else:
                     rm_index.append(indx)
             logging.info('Preprocessed article')
             # pruning bad examples
-            for i,preds in enumerate(self.questions[chat_id]):
+            for i, preds in enumerate(self.questions[chat_id]):
                 if 'source: source:' in preds['pred']:
                     rm_index.append(i)
             rm_index = list(set(rm_index))
-            self.questions[chat_id] = [qs for i,qs in enumerate(self.questions[chat_id]) if i not in set(rm_index)]
+            self.questions[chat_id] = [qs for i, qs in enumerate(
+                self.questions[chat_id]) if i not in set(rm_index)]
 
             self.questions[chat_id].sort(key=lambda x:  x["score"])
         except Exception as e:
@@ -544,7 +546,8 @@ class NQG_Wrapper(Model_Wrapper):
         if len(self.questions) > 0 and user_id in self.questions:
             logging.info("Available questions : ")
             logging.info(self.questions[user_id])
-            qs = [(i,q) for i,q in enumerate(self.questions[user_id]) if q['used'] == 0]
+            qs = [(i, q) for i, q in enumerate(
+                self.questions[user_id]) if q['used'] == 0]
             if len(qs) > 0:
                 response = qs[0][1]['pred']
                 if user_id in self.seen_user:
@@ -615,7 +618,13 @@ class Topic_Wrapper(Model_Wrapper):
     def preprocess(self, chat_id='', article_text='', **kwargs):
         """Calculate the article topic in preprocess call
         """
-        logging.info("Started preprocesssing topics")
+        logging.info("Started preprocesssing topics in different thread")
+        pr_th = Thread(target=self.calculate_topics,
+                       args=[chat_id, article_text])
+        pr_th.daemon = True
+        pr_th.start()
+
+    def calculate_topics(self, chat_id, article_text):
         # Write article to tmp file
         with codecs.open('/tmp/{}_article.txt'.format(chat_id), 'w', encoding='utf-8') as fp:
             fp.write(article_text.replace("\n", ""))

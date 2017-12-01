@@ -161,7 +161,8 @@ assert feature_list_short == feature_list_long
 logging.info("creating ranker feature instances...")
 start_creation_time = time.time()
 feature_objects, feature_dim = features.initialize_features(feature_list_short)
-logging.info("created all feature instances in %s sec" % (time.time() - start_creation_time))
+logging.info("created all feature instances in %s sec" %
+             (time.time() - start_creation_time))
 
 
 class ModelClient(multiprocessing.Process):
@@ -173,6 +174,7 @@ class ModelClient(multiprocessing.Process):
     def __init__(self, task_queue, result_queue, model_name, estimate=True):
         multiprocessing.Process.__init__(self)
         self.model_name = model_name
+        self.name = model_name
         self.estimate = estimate
         self.task_queue = task_queue
         self.result_queue = result_queue
@@ -247,7 +249,7 @@ class ModelClient(multiprocessing.Process):
         if self.model_name == ModelID.ALICEBOT:
             logging.info("Initializing Alicebot")
             self.model = AliceBot_Wrapper('', '', '')
-            self.estimate = True  # always sampled according to score 
+            self.estimate = True  # always sampled according to score
 
         self.is_running = True
         import tensorflow as tf
@@ -322,45 +324,51 @@ class ModelClient(multiprocessing.Process):
             # if blank response, do not push it in the channel
             if len(response) > 0:
                 if len(context) > 0 and self.estimate:
-                    # calculate NN estimation
-                    logging.info(
-                        "Start feature calculation for model {}".format(self.model_name))
-                    raw_features = features.get(
-                        feature_objects,
-                        feature_dim,
-                        msg['article_text'],
-                        msg['all_context'] + [context[-1]],
-                        response
-                    )
-                    logging.info(
-                        "Done feature calculation for model {}".format(self.model_name))
-                    # Run approximator and save the score in packet
-                    logging.info(
-                        "Scoring the candidate response for model {}".format(self.model_name))
-                    # reshape raw_features to fit the ranker format
-                    assert len(raw_features) == feature_dim
-                    candidate_vector = raw_features.reshape(
-                        1, feature_dim)  # make an array of shape (1, input)
-                    # Get predictions for this candidate response:
-                    with self.sess_short.as_default():
-                        with self.model_graph_short.as_default():
-                            logging.info("estimator short predicting")
-                            # get predicted class (0: downvote, 1: upvote), and confidence (ie: proba of upvote)
-                            vote, conf = self.estimator_short.predict(
-                                SHORT_TERM_MODE, candidate_vector)
-                            # sanity check with batch size of 1
-                            assert len(vote) == len(conf) == 1
-                    with self.sess_long.as_default():
-                        with self.model_graph_long.as_default():
-                            logging.info("estimator long prediction")
-                            # get the predicted end-of-dialogue score:
-                            pred, _ = self.estimator_long.predict(
-                                LONG_TERM_MODE, candidate_vector)
-                            # sanity check with batch size of 1
-                            assert len(pred) == 1
-                    vote = vote[0]  # 0 = downvote ; 1 = upvote
-                    conf = conf[0]  # 0.0 < Pr(upvote) < 1.0
-                    score = pred[0]  # 1.0 < end-of-chat score < 5.0
+                    try:
+                        # calculate NN estimation
+                        logging.info(
+                            "Start feature calculation for model {}".format(self.model_name))
+                        raw_features = features.get(
+                            feature_objects,
+                            feature_dim,
+                            msg['article_text'],
+                            msg['all_context'] + [context[-1]],
+                            response
+                        )
+                        logging.info(
+                            "Done feature calculation for model {}".format(self.model_name))
+                        # Run approximator and save the score in packet
+                        logging.info(
+                            "Scoring the candidate response for model {}".format(self.model_name))
+                        # reshape raw_features to fit the ranker format
+                        assert len(raw_features) == feature_dim
+                        candidate_vector = raw_features.reshape(
+                            1, feature_dim)  # make an array of shape (1, input)
+                        # Get predictions for this candidate response:
+                        with self.sess_short.as_default():
+                            with self.model_graph_short.as_default():
+                                logging.info("estimator short predicting")
+                                # get predicted class (0: downvote, 1: upvote), and confidence (ie: proba of upvote)
+                                vote, conf = self.estimator_short.predict(
+                                    SHORT_TERM_MODE, candidate_vector)
+                                # sanity check with batch size of 1
+                                assert len(vote) == len(conf) == 1
+                        with self.sess_long.as_default():
+                            with self.model_graph_long.as_default():
+                                logging.info("estimator long prediction")
+                                # get the predicted end-of-dialogue score:
+                                pred, _ = self.estimator_long.predict(
+                                    LONG_TERM_MODE, candidate_vector)
+                                # sanity check with batch size of 1
+                                assert len(pred) == 1
+                        vote = vote[0]  # 0 = downvote ; 1 = upvote
+                        conf = conf[0]  # 0.0 < Pr(upvote) < 1.0
+                        score = pred[0]  # 1.0 < end-of-chat score < 5.0
+                    except:
+                        logging.error("Error in estimation in model {}".format(self.model_name))
+                        vote = -1
+                        conf = 0
+                        score = -1
                 else:
                     vote = -1
                     conf = 0
@@ -378,7 +386,8 @@ class ModelClient(multiprocessing.Process):
                 self.result_queue.put({})
         return
 
-## ResponseQuerier
+# ResponseQuerier
+
 
 class ResponseModelsQuerier(object):
 
@@ -393,20 +402,22 @@ class ResponseModelsQuerier(object):
             model_runner.daemon = True
             model_runner.start()
 
-            self.models += [{"model_runner": model_runner, "tasks": tasks, 
-                "results": results, "model_name":model_name}]
-
+            self.models += [{"model_runner": model_runner, "tasks": tasks,
+                             "results": results, "model_name": model_name}]
 
         # Make sure that all models are started
         for model in self.models:
             model_name = model['model_name']
             try:
-                response = model["results"].get(timeout=90)  # Waiting 10 minutes for each model to initialize.
+                # Waiting 5 minutes for each model to initialize.
+                response = model["results"].get(timeout=300)
             except Exception as e:
-                raise RuntimeError("{} took too long to build.".format(model_name))
+                raise RuntimeError(
+                    "{} took too long to build.".format(model_name))
 
             if isinstance(response, Exception):
-                print("\n{} Failed to initialize with error ({}). See logs in ./logs/models/".format(model_name, response))
+                print(
+                    "\n{} Failed to initialize with error ({}). See logs in ./logs/models/".format(model_name, response))
                 exit(1)
 
     def get_response(self, msg):
@@ -429,7 +440,8 @@ class ResponseModelsQuerier(object):
 
             if isinstance(responses, Exception):
                 model_name = model['model_name']
-                logging.error("\n{0} failed to compute response with error ({1}). \n{0} has been removed from running models.".format(model_name, responses))
+                logging.error("\n{0} failed to compute response with error ({1}). \n{0} has been removed from running models.".format(
+                    model_name, responses))
                 self.models.remove(model)
 
                 if len(self.models) == 0:
@@ -439,7 +451,6 @@ class ResponseModelsQuerier(object):
                 if len(responses) > 0:
                     candidate_responses[model['model_name']] = responses
         return candidate_responses
-
 
 
 class ModelSelectionAgent(object):
@@ -456,7 +467,8 @@ class ModelSelectionAgent(object):
         with open('/root/convai/data/generic_list.txt') as fp:
             for line in fp:
                 self.generic_words_list.append(line.strip())
-        self.generic_words_list = set(self.generic_words_list)  # remove duplicates
+        self.generic_words_list = set(
+            self.generic_words_list)  # remove duplicates
 
         self.modelIds = [
             # ModelID.ECHO,          # return user input
@@ -469,12 +481,22 @@ class ModelSelectionAgent(object):
             ModelID.NQG,           # generate a question for each sentence in the article
             ModelID.TOPIC,         # return article topic
             ModelID.FACT_GEN,      # return a fact based on conversation history
-            ModelID.ALICEBOT,      # give all responsabilities to A.L.I.C.E. ...
+            # give all responsabilities to A.L.I.C.E. ...
+            ModelID.ALICEBOT,
             # ModelID.DUAL_ENCODER,  # return a reddit turn
             # ModelID.HUMAN_IMITATOR  # return a human turn from convai round1
         ]
 
         self.response_models = ResponseModelsQuerier(self.modelIds)
+
+    def preprocess(self, chat_id, chat_unique_id):
+        _ = self.response_models.get_response({
+            'control': 'preprocess',
+            'article_text': self.article_text[chat_id],
+            'chat_id': chat_id,
+            'chat_unique_id': chat_unique_id
+        })
+        logging.info("preprocessed")
 
     def get_response(self, chat_id, text, context, allowed_model=None, control=None):
         # create a chat_id + unique ID candidate responses field
@@ -512,27 +534,22 @@ class ModelSelectionAgent(object):
             self.used_models[chat_id] = []
 
             # preprocessing
+            # Run in separate thread so that it doesn't hold up further processing
             logging.info("Preprocessing call")
-            _ = self.response_models.get_response({
-                'control':'preprocess',
-                'article_text':self.article_text[chat_id],
-                'chat_id':chat_id,
-                'chat_unique_id': chat_unique_id
-            })
-            logging.info("preprocessed")
 
+            self.preprocess(chat_id, chat_unique_id)
             # cand and nqg
             query_models = [ModelID.NQG, ModelID.CAND_QA]
 
             logging.info("fire call")
             candidate_responses = self.response_models.get_response({
                 'query_models': query_models,
-                'article_text':self.article_text[chat_id],
+                'article_text': self.article_text[chat_id],
                 'chat_id': chat_id,
                 'chat_unique_id': chat_unique_id,
-                'text':'',
-                'context':context,
-                'all_context':self.chat_history[chat_id]
+                'text': '',
+                'context': context,
+                'all_context': self.chat_history[chat_id]
             })
             logging.info("received response")
 
@@ -556,13 +573,13 @@ class ModelSelectionAgent(object):
                 all_context = self.chat_history[chat_id]
 
             candidate_responses = self.response_models.get_response({
-                    'article_text':article_text,
-                    'chat_id': chat_id,
-                    'chat_unique_id': chat_unique_id,
-                    'text':text,
-                    'context':context,
-                    'all_context':all_context
-                })
+                'article_text': article_text,
+                'chat_id': chat_id,
+                'chat_unique_id': chat_unique_id,
+                'text': text,
+                'context': context,
+                'all_context': all_context
+            })
 
         # got the responses, now choose which one to send.
         response = None
@@ -574,9 +591,10 @@ class ModelSelectionAgent(object):
                 selection = random.choice(choices)
                 response = candidate_responses[selection]
                 response['policyID'] = Policy.START
-        else: 
+        else:
             logging.info("Removing duplicates")
-            candidate_responses = self.no_duplicate(chat_id, candidate_responses)
+            candidate_responses = self.no_duplicate(
+                chat_id, candidate_responses)
             # if text contains emoji's, strip them
             #text, emojis = strip_emojis(text)
             # check if the text contains wh words
@@ -587,7 +605,7 @@ class ModelSelectionAgent(object):
                 if word in set(conf.wh_words):
                     has_wh_word = True
                     break
-            #if emojis and len(text.strip()) < 1:
+            # if emojis and len(text.strip()) < 1:
             #    # if text had only emoji, give back the emoji itself
             #    response = {'response': emojis, 'context': context,
             #                'model_name': 'emoji', 'policy': Policy.NONE}
@@ -634,7 +652,7 @@ class ModelSelectionAgent(object):
             if ModelID.CAND_QA in candidate_responses:
                 cres = candidate_responses[ModelID.CAND_QA]
                 cres_conf = float(cres['conf'])
-                cres['conf'] = str(cres_conf / 2) # half the confidence
+                cres['conf'] = str(cres_conf / 2)  # half the confidence
                 candidate_responses[ModelID.CAND_QA] = cres
 
             # Bored model selection (TODO: nlp() might be taking time)
@@ -722,14 +740,11 @@ class ModelSelectionAgent(object):
 
         return response
 
-
-
     # given a set of model_responses, rank the best one based on
     # the following policy:
     # return ModelID of the model to select, else None
     # also return a list of models to NOT consider, else None
     # which indicates to take the pre-calculated policy
-
 
     def ranker(self, candidate_responses):
         # array containing tuple of (model_name, rank_score) for 1
