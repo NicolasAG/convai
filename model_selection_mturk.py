@@ -38,6 +38,9 @@ conf = config.get_config()
 # Set a hard time limit to discard the messages which are slow
 # N.B. `import zmq` **has to be** the first import.
 
+# For MTURK version, send back all the candidate responses
+# for history, send the selected response back in the next utterance
+# dont store history by itself
 
 nlp = spacy.load('en')
 
@@ -174,7 +177,6 @@ class ModelClient(multiprocessing.Process):
     def __init__(self, task_queue, result_queue, model_name, estimate=True):
         multiprocessing.Process.__init__(self)
         self.model_name = model_name
-        self.name = model_name
         self.estimate = estimate
         self.task_queue = task_queue
         self.result_queue = result_queue
@@ -324,51 +326,45 @@ class ModelClient(multiprocessing.Process):
             # if blank response, do not push it in the channel
             if len(response) > 0:
                 if len(context) > 0 and self.estimate:
-                    try:
-                        # calculate NN estimation
-                        logging.info(
-                            "Start feature calculation for model {}".format(self.model_name))
-                        raw_features = features.get(
-                            feature_objects,
-                            feature_dim,
-                            msg['article_text'],
-                            msg['all_context'] + [context[-1]],
-                            response
-                        )
-                        logging.info(
-                            "Done feature calculation for model {}".format(self.model_name))
-                        # Run approximator and save the score in packet
-                        logging.info(
-                            "Scoring the candidate response for model {}".format(self.model_name))
-                        # reshape raw_features to fit the ranker format
-                        assert len(raw_features) == feature_dim
-                        candidate_vector = raw_features.reshape(
-                            1, feature_dim)  # make an array of shape (1, input)
-                        # Get predictions for this candidate response:
-                        with self.sess_short.as_default():
-                            with self.model_graph_short.as_default():
-                                logging.info("estimator short predicting")
-                                # get predicted class (0: downvote, 1: upvote), and confidence (ie: proba of upvote)
-                                vote, conf = self.estimator_short.predict(
-                                    SHORT_TERM_MODE, candidate_vector)
-                                # sanity check with batch size of 1
-                                assert len(vote) == len(conf) == 1
-                        with self.sess_long.as_default():
-                            with self.model_graph_long.as_default():
-                                logging.info("estimator long prediction")
-                                # get the predicted end-of-dialogue score:
-                                pred, _ = self.estimator_long.predict(
-                                    LONG_TERM_MODE, candidate_vector)
-                                # sanity check with batch size of 1
-                                assert len(pred) == 1
-                        vote = vote[0]  # 0 = downvote ; 1 = upvote
-                        conf = conf[0]  # 0.0 < Pr(upvote) < 1.0
-                        score = pred[0]  # 1.0 < end-of-chat score < 5.0
-                    except:
-                        logging.error("Error in estimation in model {}".format(self.model_name))
-                        vote = -1
-                        conf = 0
-                        score = -1
+                    # calculate NN estimation
+                    logging.info(
+                        "Start feature calculation for model {}".format(self.model_name))
+                    raw_features = features.get(
+                        feature_objects,
+                        feature_dim,
+                        msg['article_text'],
+                        msg['all_context'] + [context[-1]],
+                        response
+                    )
+                    logging.info(
+                        "Done feature calculation for model {}".format(self.model_name))
+                    # Run approximator and save the score in packet
+                    logging.info(
+                        "Scoring the candidate response for model {}".format(self.model_name))
+                    # reshape raw_features to fit the ranker format
+                    assert len(raw_features) == feature_dim
+                    candidate_vector = raw_features.reshape(
+                        1, feature_dim)  # make an array of shape (1, input)
+                    # Get predictions for this candidate response:
+                    with self.sess_short.as_default():
+                        with self.model_graph_short.as_default():
+                            logging.info("estimator short predicting")
+                            # get predicted class (0: downvote, 1: upvote), and confidence (ie: proba of upvote)
+                            vote, conf = self.estimator_short.predict(
+                                SHORT_TERM_MODE, candidate_vector)
+                            # sanity check with batch size of 1
+                            assert len(vote) == len(conf) == 1
+                    with self.sess_long.as_default():
+                        with self.model_graph_long.as_default():
+                            logging.info("estimator long prediction")
+                            # get the predicted end-of-dialogue score:
+                            pred, _ = self.estimator_long.predict(
+                                LONG_TERM_MODE, candidate_vector)
+                            # sanity check with batch size of 1
+                            assert len(pred) == 1
+                    vote = vote[0]  # 0 = downvote ; 1 = upvote
+                    conf = conf[0]  # 0.0 < Pr(upvote) < 1.0
+                    score = pred[0]  # 1.0 < end-of-chat score < 5.0
                 else:
                     vote = -1
                     conf = 0
@@ -489,16 +485,10 @@ class ModelSelectionAgent(object):
 
         self.response_models = ResponseModelsQuerier(self.modelIds)
 
-    def preprocess(self, chat_id, chat_unique_id):
-        _ = self.response_models.get_response({
-            'control': 'preprocess',
-            'article_text': self.article_text[chat_id],
-            'chat_id': chat_id,
-            'chat_unique_id': chat_unique_id
-        })
-        logging.info("preprocessed")
-
     def get_response(self, chat_id, text, context, allowed_model=None, control=None):
+        """ Fire the model selection algorithms and return back
+            A set of candidate responses
+        """
         # create a chat_id + unique ID candidate responses field
         # chat_unique_id is needed to uniquely determine the return
         # for each call
@@ -534,10 +524,15 @@ class ModelSelectionAgent(object):
             self.used_models[chat_id] = []
 
             # preprocessing
-            # Run in separate thread so that it doesn't hold up further processing
             logging.info("Preprocessing call")
+            _ = self.response_models.get_response({
+                'control': 'preprocess',
+                'article_text': self.article_text[chat_id],
+                'chat_id': chat_id,
+                'chat_unique_id': chat_unique_id
+            })
+            logging.info("preprocessed")
 
-            self.preprocess(chat_id, chat_unique_id)
             # cand and nqg
             query_models = [ModelID.NQG, ModelID.CAND_QA]
 
@@ -549,7 +544,7 @@ class ModelSelectionAgent(object):
                 'chat_unique_id': chat_unique_id,
                 'text': '',
                 'context': context,
-                'all_context': self.chat_history[chat_id]
+                'all_context': context  # self.chat_history[chat_id]
             })
             logging.info("received response")
 
@@ -566,11 +561,8 @@ class ModelSelectionAgent(object):
                 self.used_models[chat_id] = []
 
             article_text = ''
-            all_context = []
             if chat_id in self.article_text:
                 article_text = self.article_text[chat_id]
-            if chat_id in self.chat_history:
-                all_context = self.chat_history[chat_id]
 
             candidate_responses = self.response_models.get_response({
                 'article_text': article_text,
@@ -578,167 +570,13 @@ class ModelSelectionAgent(object):
                 'chat_unique_id': chat_unique_id,
                 'text': text,
                 'context': context,
-                'all_context': all_context
+                'all_context': context  # all_context
             })
 
-        # got the responses, now choose which one to send.
-        response = None
-        if is_start:
-            # TODO: replace this with a proper choice / always NQG?
-            choices = list(set([ModelID.CAND_QA, ModelID.NQG])
-                           .intersection(set(candidate_responses.keys())))
-            if len(choices) > 0:
-                selection = random.choice(choices)
-                response = candidate_responses[selection]
-                response['policyID'] = Policy.START
-        else:
-            logging.info("Removing duplicates")
-            candidate_responses = self.no_duplicate(
-                chat_id, candidate_responses)
-            # if text contains emoji's, strip them
-            #text, emojis = strip_emojis(text)
-            # check if the text contains wh words
-            ntext = nlp(unicode(text))
-            nt_words = [p.lemma_ for p in ntext]
-            has_wh_word = False
-            for word in nt_words:
-                if word in set(conf.wh_words):
-                    has_wh_word = True
-                    break
-            # if emojis and len(text.strip()) < 1:
-            #    # if text had only emoji, give back the emoji itself
-            #    response = {'response': emojis, 'context': context,
-            #                'model_name': 'emoji', 'policy': Policy.NONE}
-            # if query falls under dumb questions, respond appropriately
-            if ModelID.DUMB_QA in candidate_responses:
-                logging.info("Matched dumb preset patterns")
-                response = candidate_responses[ModelID.DUMB_QA]
-                response['policyID'] = Policy.FIXED
-            # if query falls under topic request, respond with the article topic
-            elif ModelID.TOPIC in candidate_responses:
-                logging.info("Matched topic preset patterns")
-                response = candidate_responses[ModelID.TOPIC]
-                response['policyID'] = Policy.FIXED
-            # if query is a question, try to reply with DrQA
-            elif has_wh_word or ("which" in set(nt_words)
-                                 and "?" in set(nt_words)):
-                # get list of common nouns between article and question
-                if chat_id in self.article_nouns:
-                    logging.info(self.article_nouns[chat_id])
-                    common = list(set(self.article_nouns[chat_id]).intersection(
-                        set(nt_words)))
-                else:
-                    logging.info("no article nouns saved")
-                    common = []
-                logging.info(
-                    'Common nouns between question and article: {}'.format(common))
-                # if there is a common noun between question and article
-                # select DrQA
-                if len(common) > 0 and ModelID.DRQA in candidate_responses:
-                    response = candidate_responses[ModelID.DRQA]
-                    response['policyID'] = Policy.FIXED
+        logging.info("Done sending candidate responses")
 
-        if not response:
-            # remove duplicates responses from k nearest chats
-            # no_duplicate(chat_id, chat_unique_id)
-            # Ranker based selection
-            best_model, dont_consider = self.ranker(candidate_responses)
-            if dont_consider and len(dont_consider) > 0:
-                for model, score in dont_consider:
-                    # remove the models from futher consideration
-                    del candidate_responses[model]
-
-            # Reduce confidence of CAND_QA
-            if ModelID.CAND_QA in candidate_responses:
-                cres = candidate_responses[ModelID.CAND_QA]
-                cres_conf = float(cres['conf'])
-                cres['conf'] = str(cres_conf / 2)  # half the confidence
-                candidate_responses[ModelID.CAND_QA] = cres
-
-            # Bored model selection (TODO: nlp() might be taking time)
-            nt_sent = nlp(unicode(text))
-            nt_words = [p.lemma_ for p in nt_sent]
-            # check if user said only generic words:
-            generic_turn = True
-            for word in nt_words:
-                if word not in self.generic_words_list:
-                    generic_turn = False
-                    break
-            # if text contains 2 words or less, add 1 to the bored count
-            # also consider the case when the user says only generic things
-            if len(text.strip().split()) <= 2 or generic_turn:
-                self.boring_count[chat_id] += 1
-            # list of available models to use if bored
-            bored_models = [ModelID.NQG, ModelID.FACT_GEN,
-                            ModelID.CAND_QA, ModelID.HUMAN_IMITATOR]
-            boring_avl = list(
-                set(candidate_responses.keys()).intersection(set(bored_models)))
-            # if user is bored, change the topic by asking a question
-            # (only if that question is not asked before)
-            if self.boring_count[chat_id] >= BORED_COUNT and len(boring_avl) > 0:
-                # assign model selection probability based on estimator confidence
-                confs = [float(candidate_responses[model]['conf'])
-                         for model in boring_avl]
-                norm_confs = confs / np.sum(confs)
-                selection = np.random.choice(boring_avl, 1, p=norm_confs)[0]
-                response = candidate_responses[selection]
-                response['policyID'] = Policy.BORED
-                self.boring_count[chat_id] = 0  # reset bored count to 0
-
-            # If not bored, then select from best model
-            elif best_model:
-                response = candidate_responses[best_model]
-                response['policyID'] = Policy.LEARNED
-            else:
-                # Sample from the other models based on confidence probability
-                # TODO: have choice of probability. Given the past model usage,
-                # if HRED_TWITTER or HRED_REDDIT is used, then decay the
-                # probability by small amount
-                # randomly decide a model to query to get a response:
-                models = [ModelID.HRED_REDDIT, ModelID.HRED_TWITTER,
-                          ModelID.DUAL_ENCODER, ModelID.ALICEBOT]
-                has_wh_word = False
-                for word in nt_words:
-                    if word in set(conf.wh_words):
-                        has_wh_word = True
-                        break
-                if has_wh_word or ("which" in set(nt_words)
-                                   and "?" in set(nt_words)):
-                    # if the user asked a question, also consider DrQA
-                    models.append(ModelID.DRQA)
-                else:
-                    # if the user didn't ask a question, also consider models
-                    # that ask questions: hred-qa, nqg, and cand_qa
-                    models.extend([ModelID.NQG, ModelID.CAND_QA])
-
-                available_models = list(
-                    set(candidate_responses.keys()).intersection(models))
-                if len(available_models) > 0:
-                    # assign model selection probability based on estimator confidence
-                    confs = [float(candidate_responses[model]['conf'])
-                             for model in available_models]
-                    norm_confs = confs / np.sum(confs)
-                    chosen_model = np.random.choice(
-                        available_models, 1, p=norm_confs)
-                    response = candidate_responses[chosen_model[0]]
-                    response['policyID'] = Policy.OPTIMAL
-
-        # if still no response, then just send a random fact
-        if not response or 'text' not in response:
-            logging.warn("Failure to obtain a response, using fact gen")
-            response = candidate_responses[ModelID.FACT_GEN]
-            response['policyID'] = Policy.FIXED
-
-        # Now we have a response, so send it back to bot host
-        # add user and response pair in chat_history
-        self.chat_history[response['chat_id']].append(response['context'][-1])
-        self.chat_history[response['chat_id']].append(response['text'])
-        self.used_models[chat_id].append(response['model_name'])
-        # Again use ZMQ, because lulz
-        response['control'] = control
-        logging.info("Done selecting best model")
-
-        return response
+        candidate_responses = [v for k, v in candidate_responses.iteritems()]
+        return candidate_responses
 
     # given a set of model_responses, rank the best one based on
     # the following policy:
