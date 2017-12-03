@@ -94,7 +94,7 @@ class ConvAIRLLBot:
         state = ChatState.CHATTING  # default state
         # New chat:
         if chat_id not in self.ai:
-            if m['text'].startswith('/start '):
+            if m['text'].startswith('/start ') or m['text'].startswith('//start'):
                 self.ai[chat_id] = {}
                 self.ai[chat_id]['chat_id'] = chat_id
                 self.ai[chat_id]['observation'] = m['text']
