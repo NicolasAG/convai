@@ -24,15 +24,16 @@ def main(args):
         print "got %d examples" % len(data)
 
         print "building data..."
+        feat_objects, dim = features.initialize_features(feature_list)
         # show a progression bar on the screen
-        for feat in feature_list:
+        for feat in feat_objects:
             print "feature %s" % feat
             bar = pyprind.ProgBar(len(data), monitor=False, stream=sys.stdout)
             data_features = []
             for idx, msg in enumerate(data):
                 # create list of Feature instances
-                feature_object = features.get(msg['article'], msg['context'], msg['candidate'], [feat])
-                feature_object = feature_object[0]  # only one feature at a time
+                feat.set(msg['article'], msg['context'], msg['candidate'])
+                feature_object = feat
                 data_features.append(feature_object.feat.tolist())
                 bar.update()
             # saving feature file

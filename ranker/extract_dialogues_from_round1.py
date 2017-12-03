@@ -47,7 +47,7 @@ def reformat(json_data, voted_only=False):
         for usr in dialog['users']:
             if usr['userType'] == 'Bot':
                bid = usr['id']
-        
+
         both_human = (bid is None)
 
         if valid_chat(dialog['thread'], k=2):

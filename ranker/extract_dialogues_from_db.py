@@ -85,7 +85,7 @@ def valid_chat(usr_turns, bot_turns, k=2):
 
     ## TODO: Check for bad language
     polite = True
-    
+
     ## Check that user voted at least 95% of all bot messages
     # novote = filter(lambda turn: turn['evaluation']==0, bot_turns)
     # voted = float(len(novote)) / len(bot_turns) < 0.15  # voted at least 95% of all bot turns

@@ -110,9 +110,21 @@ def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1):
                   },
         ...
     } '''
+    lengths = 0.
+    n = 0.
+    vocab = {}
     for data_file, data in raw_data.iteritems():
         for idx, msg in enumerate(data):
             article = msg['article']
+
+            lengths += len(msg['candidate'].split())
+            n += 1.
+            for tok in msg['candidate'].split():
+                if tok not in vocab:
+                    vocab[tok] = 1.
+                else:
+                    vocab[tok] += 1.
+
             if article not in article2file2id:
                 article2file2id[article] = {}
 
@@ -121,6 +133,8 @@ def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1):
             else:
                 article2file2id[article][data_file].append(idx)
     print "got %d unique articles" % len(article2file2id)
+    print "avg turn length: %g" % (lengths/n)
+    print "vocabulary size: %d" % len(vocab)
 
     train_max_n = int(n * (1-val_prop-test_prop))  # size of training data
     valid_max_n = int(n * val_prop)  # size of valid data
@@ -147,8 +161,8 @@ def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1):
     # create list of Feature instances
     if feature_list is None:
         feature_list = TARGET_TO_FEATURES[target]
-    feature_objects = _features.get(article=None, context=None, candidate=None, feature_list=feature_list)
-    input_size = np.sum([f.dim for f in feature_objects])
+    feature_objects, dim = _features.initialize_features(feature_list)
+    input_size = dim
     del feature_objects  # now that we have the input_size, don't need those anymore
 
     # construct data to save & return
@@ -218,7 +232,7 @@ def sample_parameters(t):
     # force 3*300 features for input of size > 900
     default_features = ['AverageWordEmbedding_Candidate', 'AverageWordEmbedding_User', 'AverageWordEmbedding_Article']
     features = filter(lambda f : f not in default_features, ALL_FEATURES)
-    
+
     # map from hidden sizes to "used_before" flag
     hidd_sizes = dict(
         [(k, False) for k in [
@@ -464,6 +478,7 @@ def main(args):
             model_path='models/%s' % args.mode, model_id=model_id, model_name=model_name
         )
 
+        '''
         with tf.Session() as sess:
             print "Training the network..."
             estimator.train(
@@ -485,6 +500,7 @@ def main(args):
             valid_acc = np.mean(max_valid)
             print "best avg. train accuracy: %g" % train_acc
             print "best avg. valid accuracy: %g" % valid_acc
+        '''
         print "done."
 
 
