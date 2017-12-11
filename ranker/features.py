@@ -724,22 +724,26 @@ class ConfusionWords(Feature):
          3: last response - boolean value if the candidate response contains any words from the list
          4: last response - float percentage of words which are flagged in the confusion list
         """
-        if candidate is None or context is None:
+        if candidate is None or len(candidate) < 1 or context is None:
             self.feat = None
         else:
-            candidate = candidate.lower()
-            last_response = context[-1].lower()
+            try:
+                candidate = candidate.lower()
+                last_response = context[-1].lower()
 
-            candidate_confusion_words_count = self.count(candidate)
-            last_response_confusion_words_count = self.count(last_response)
+                candidate_confusion_words_count = self.count(candidate)
+                last_response_confusion_words_count = self.count(last_response)
 
-            self.feat = np.zeros(4)
-            if candidate_confusion_words_count > 0:
-                self.feat[0] = 1
-            if last_response_confusion_words_count > 0:
-                self.feat[2] = 1
-            self.feat[1] = (1.0 * candidate_confusion_words_count) / len(word_tokenize(candidate))
-            self.feat[3] = (1.0 * last_response_confusion_words_count) / len(word_tokenize(last_response))
+                self.feat = np.zeros(4)
+                if candidate_confusion_words_count > 0:
+                    self.feat[0] = 1
+                if last_response_confusion_words_count > 0:
+                    self.feat[2] = 1
+                self.feat[1] = (1.0 * candidate_confusion_words_count) / len(word_tokenize(candidate))
+                self.feat[3] = (1.0 * last_response_confusion_words_count) / len(word_tokenize(last_response))
+            except:
+                logging.error(candidate)
+                self.feat = None
 
 
 class ProfanityWords(Feature):
