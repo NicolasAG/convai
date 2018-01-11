@@ -2,25 +2,23 @@ import zmq
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
-import requests
+
 import os
 import json
 import time
-import random
-import collections
+
 import config
 conf = config.get_config()
 import random
-import emoji
-import numpy as np
+
 # import storage
 from model_selection_mturk import ModelID, ModelSelectionAgent
-import multiprocessing
+
 from Queue import Queue
 from threading import Thread
 import logging
 from datetime import datetime
-import traceback
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(name)s.%(funcName)s +%(lineno)s: %(levelname)-8s [%(process)d] %(message)s',

@@ -1,24 +1,17 @@
-import zmq
-import sys
 import config
-import random
 import spacy
 import re
 import time
-import numpy as np
-import emoji
 import json
 import cPickle as pkl
-from datetime import datetime
 from ranker import features
 from ranker.estimators import Estimator, LONG_TERM_MODE, SHORT_TERM_MODE
-from Queue import Queue
-from threading import Thread
 import multiprocessing
-from multiprocessing import Pool, Process
 import uuid
-from models.wrapper import Dual_Encoder_Wrapper, Human_Imitator_Wrapper, HREDQA_Wrapper, CandidateQuestions_Wrapper, DumbQuestions_Wrapper, DRQA_Wrapper, NQG_Wrapper, Echo_Wrapper, Topic_Wrapper, FactGenerator_Wrapper, AliceBot_Wrapper
-from models.wrapper import HRED_Wrapper
+from models.wrapper import Dual_Encoder_Wrapper, Human_Imitator_Wrapper, HRED_Wrapper, HREDQA_Wrapper,\
+    CandidateQuestions_Wrapper, DumbQuestions_Wrapper, DRQA_Wrapper, NQG_Wrapper, Echo_Wrapper, Topic_Wrapper,\
+    FactGenerator_Wrapper, AliceBot_Wrapper
+
 import logging
 logging.basicConfig(
     level=logging.INFO,

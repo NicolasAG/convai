@@ -358,8 +358,9 @@ class CandidateQuestions_Wrapper(Model_Wrapper):
         # Use these questions if no suitable questions are found
         # TODO: do not hardcode these, use a dictionary
         self.dict_fname = dict_fname
-        self.canned_questions = ["That's a short article, don't you think? Not sure what's it about.",
-                                 "Apparently I am too dumb for this article. What's it about?"]
+        # self.canned_questions = ["That's a short article, don't you think? Not sure what's it about.",
+        #                          "Apparently I am too dumb for this article. What's it about?"]
+        self.canned_questions = ["I don't have a lot of other questions about this article. Maybe you can ask me one?"]
         self.models = {}
         self.canned_freq_user = {}   # Only allow one canned response per user
 
@@ -803,14 +804,15 @@ class AliceBot_Wrapper(Model_Wrapper):
         response = ''
         try:
             response = self.aliceBot.compute_responses(clean_context, None)
-            # prune response for presence of Alexa, Socialbot or MILA
+            # prune response for presence of Alexa Prize Socialbot or Alexa or MILA
+            if 'Alexa Prize Socialbot' in response:
+                response = response.replace('Alexa Prize Socialbot', 'RLLChatBot')
             if 'Alexa' in response:
-                response.replace('Alexa', 'Botty')
-            if 'Socialbot' in response:
-                response.replace('Socialbot', 'Convbot')
+                response = response.replace('Alexa', 'ConvAI')
             if 'MILA' in response:
-                response.replace('MILA', 'Hogwarts')
+                response = response.replace('MILA', 'Hogwarts')
         except Exception as e:
             logging.error("Error generating alicebot response")
         context.append(self._format_to_model(response, len(context)))
         return response, context
+

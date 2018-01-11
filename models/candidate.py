@@ -57,7 +57,7 @@ class CandidateQuestions(object):
             self.entities.append(ent)
             self.entities_str.append(ent.text)
         logging.info(ents)
-    
+
     # get the spacy token given string
     def _get_entity(self,token_str):
         # multiple tokens are present having same text but different ent_type_
