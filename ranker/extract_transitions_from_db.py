@@ -7,7 +7,9 @@ from collections import defaultdict, Counter
 import copy
 import sys
 import pyprind
-import nltk
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+LEMM = WordNetLemmatizer()
 
 import features as F
 import inspect
@@ -27,6 +29,10 @@ DB_PORT = 8091
 DB_CLIENT = '132.206.3.23'
 # NICO_ID = "A30GSVXFJOXNTS"
 # KOUSTUV_ID = "A1W0QQF93UM08"
+
+WELCOME_MSG = "hello! i hope you're doing well. i am doing fantastic today! " \
++ "let me go through the article real quick and we will start talking about it."
+
 
 
 class Vocabulary(object):
@@ -51,7 +57,13 @@ class Vocabulary(object):
         return len(self.word2idx)
 
 
-def build_data():
+def lemmatize(string):
+    tokens = word_tokenize(string)
+    result = map(lambda w: LEMM.lemmatize(w), tokens)
+    return ' '.join(result)
+
+
+def build_data(lemm):
     """
     Collect messages from db.dialogs
     Build a mapping from article to dictionary, where each dictionary is made of:
@@ -59,6 +71,7 @@ def build_data():
     - candidate: proposed utterance
     - reward: 0 or 1
     - custom_enc: hand-crafted encoding of (article, context, candidate)
+    :param lemm: lemmatize the article and conversations?
     :return: the mapping
     """
     client = pymongo.MongoClient(DB_CLIENT, DB_PORT)
@@ -81,12 +94,16 @@ def build_data():
         # get the conversation article
         article = conv['chat_state']['context']  # conversation article
         article = article.lower().strip()
+        if lemm:
+            article = lemmatize(article)
         # store the article is not already there
         if article not in data:
             data[article] = []
 
-        context = [ "hello! i hope you're doing well. i am doing fantastic today! " \
-                    + "let me go through the article real quick and we will start talking about it." ]
+        if lemm:
+            context = [ lemmatize(WELCOME_MSG) ]
+        else:
+            context = [ WELCOME_MSG ]
 
         # loop through each turn for this conversation
         for turn_idx, turn in enumerate(conv['chat_state']['turns']):
@@ -101,6 +118,8 @@ def build_data():
                 for option_idx, option in turn['options'].items():
                     if option_idx != '/end' and option['model_name'] == 'fact_gen':
                         user_resp = option['context'][-2].lower().strip()
+                        if lemm:
+                            user_resp = lemmatize(user_resp)
                         context.append(user_resp)
                         break
 
@@ -115,6 +134,8 @@ def build_data():
                     continue
 
                 candidate = option['text'].lower().strip()
+                if lemm:
+                    candidate = lemmatize(candidate)
 
                 if choice_idx == option_idx:
                     r = 1
@@ -122,6 +143,7 @@ def build_data():
                     r = 0
 
                 data[article].append({
+                        'chat_id': option['chat_unique_id'],
                         'context': copy.deepcopy(context),
                         'candidate': candidate,
                         'reward': r,
@@ -138,6 +160,8 @@ def build_data():
 
             # after all options, append the chosen text to context
             chosen_text = turn['options'][choice_idx]['text'].lower().strip()
+            if lemm:
+                chosen_text = lemmatize(chosen_text)
             context.append(chosen_text)
 
         # end of conversation
@@ -198,11 +222,28 @@ def split(json_data, n_conv, n_ex, valid_prop, test_prop):
 def build_vocab(data, threshold):
     counter = Counter()  # count number of words
 
+    # take words from welcome message
+    welcome_msg_tokens = word_tokenize(WELCOME_MSG)
+    counter.update(welcome_msg_tokens)
+
     for article, examples in data.items():
-        # take word from the article
-        article_tokens = nltk.tokenize.word_tokenize(article)
+        # take words from the article
+        article_tokens = word_tokenize(article)
         counter.update(article_tokens)
-        # TODO: take words from the conversations: candidates + user turns
+
+        conversation_ids = []
+        for ex in examples:
+            # take words from each candidate response
+            candidate_tokens = word_tokenize(ex['candidate'])
+            counter.update(candidate_tokens)
+
+            # check that this conversation has not been seen before
+            if ex['chat_id'] not in conversation_ids:
+                conversation_ids.append(ex['chat_id'])
+                # take words from the the user messages
+                for sentence in ex['context'][2::2]:
+                    sent_tokens = word_tokenize(sentence)
+                    counter.update(sent_tokens)
 
     # if the word frequency is less than 'threshold', then word is discarded
     words = [w for w, cnt in counter.items() if cnt >= threshold]
@@ -225,6 +266,8 @@ def build_vocab(data, threshold):
 
 def main():
     parser = argparse.ArgumentParser(description='Create pickle data for training, testing ranker neural net')
+    parser.add_argument('-l', '--lemmatize', action='store_true',
+            help="lemmatize article and conversations")
     parser.add_argument('-vp', '--valid_proportion', type=float, default=0.1,
             help="proportion of data to make validation set")
     parser.add_argument('-tp', '--test_proportion', type=float, default=0.1,
@@ -237,7 +280,7 @@ def main():
 
     logger.info("")
     logger.info("Get conversations from database and build data...")
-    json_data, n_conv, n_ex = build_data()
+    json_data, n_conv, n_ex = build_data(args.lemmatize)
     logger.info("Got %d unique articles from %d conversations. Total: %d examples" % (
             len(json_data), n_conv, n_ex
     ))
@@ -301,7 +344,6 @@ def main():
     with open(file_path, 'wb') as f:
         pkl.dump(vocab, f)
     logger.info("done.")
-
 
 
 if __name__ == '__main__':
