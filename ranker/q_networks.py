@@ -83,7 +83,7 @@ class DeepQNetwork(torch.nn.Module):
     # - Encodes dialog history into a 2 layer RNN
     # - Encodes individual candidate response into a 1 layer RNN
     # - Feed encodings to a MLP that predicts Q(s,a)
-    def __init__(self, embeddings, fixed_embeddings,
+    def __init__(self, mode, embeddings, fixed_embeddings,
             sentence_hs, sentence_rnn_bidir, sentence_rnn_dropout,
             article_hs, article_rnn_bidir, article_rnn_dropout,
             utterance_hs, utterance_rnn_bidir, utterance_rnn_dropout,
@@ -92,6 +92,8 @@ class DeepQNetwork(torch.nn.Module):
             custom_enc_hs, mlp_activation, mlp_dropout):
         """
         Build the deep q-network to predict q-values
+        :param mode: one of 'rnn+mlp' or 'rnn+rnn+mlp' to decide if we have one
+                        or two hierachical RNNs
         :param embeddings : |vocab| x |token_hs| numpy array
         :param fixed_embeddings : freeze word embeddings during training
 
@@ -132,28 +134,32 @@ class DeepQNetwork(torch.nn.Module):
         self.embed.weight = torch.nn.Parameter(embeddings, requires_grad=(not fixed_embeddings))
 
         self.sentence_rnn = RNN_GATES[self.gate](input_size = self.embed.embedding_dim,
-                                                hidden_size = self.sentence_hs,
-                                                batch_first = True, # ~(batch, seq, hs)
-                                                dropout = sentence_rnn_dropout,
-                                                bidirectional = sentence_rnn_bidir)
+                                                 hidden_size = self.sentence_hs,
+                                                 batch_first = True, # ~(batch, seq, hs)
+                                                 dropout = sentence_rnn_dropout,
+                                                 bidirectional = sentence_rnn_bidir)
 
         self.article_rnn = RNN_GATES[self.gate](input_size = self.sentence_hs,
-                                               hidden_size = self.article_hs,
-                                               batch_first = True, # ~(batch, seq, hs)
-                                               dropout = article_rnn_dropout,
-                                               bidirectional = article_rnn_bidir)
-
-        self.utterance_rnn = RNN_GATES[self.gate](input_size = self.embed.embedding_dim,
-                                                 hidden_size = self.utterance_hs,
-                                                 batch_first = True, # ~(batch, seq, hs)
-                                                 dropout = utterance_rnn_dropout,
-                                                 bidirectional = utterance_rnn_bidir)
-
-        self.context_rnn = RNN_GATES[self.gate](input_size = self.utterance_hs,
-                                               hidden_size = self.context_hs,
-                                               batch_first = True, # ~(batch, seq, hs)
-                                               dropout = context_rnn_dropout,
-                                               bidirectional = context_rnn_bidir)
+                                                hidden_size = self.article_hs,
+                                                batch_first = True, # ~(batch, seq, hs)
+                                                dropout = article_rnn_dropout,
+                                                bidirectional = article_rnn_bidir)
+        if mode == 'rnn+mlp':
+            self.utterance_rnn = self.sentence_rnn
+        else:
+            self.utterance_rnn = RNN_GATES[self.gate](input_size = self.embed.embedding_dim,
+                                                      hidden_size = self.utterance_hs,
+                                                      batch_first = True, # ~(batch, seq, hs)
+                                                      dropout = utterance_rnn_dropout,
+                                                      bidirectional = utterance_rnn_bidir)
+        if mode == 'rnn+mlp':
+            self.context_rnn = self.article_rnn
+        else:
+            self.context_rnn = RNN_GATES[self.gate](input_size = self.utterance_hs,
+                                                    hidden_size = self.context_hs,
+                                                    batch_first = True, # ~(batch, seq, hs)
+                                                    dropout = context_rnn_dropout,
+                                                    bidirectional = context_rnn_bidir)
 
         self.state_space = self.article_hs + self.context_hs  # state = (article, context)
 
