@@ -13,6 +13,7 @@ with `[...].json` as json files containing the raw data, and `[...].features/` a
 With `s` the state composed of (article, context), `a` the action composed of (candidate), `r` the reward (either 0 or 1) and `vec` the custom encoding of (article, context, candidate).
 - `features.py` : util file to compute hand-engineered features for (article, context, candidate) triples.
 - `models/` : folder containing trained models. Each sub directory is for the type of model and its validation accuracy.
+- `q_data_loader` : custom torch dataset representing the dataset.
 - `q_networks.py` : pytorch implementation of deep and very deep Q-neural networks to predict a q-value for each candidate utterance at any given timestep.
 - `q_train.py` : _TODO_ implementation of pytorch training loop for q-networks.
 - `test.py` : implementation of tensorflow test loop for estimators.

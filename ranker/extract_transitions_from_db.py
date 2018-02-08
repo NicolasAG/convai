@@ -1,25 +1,26 @@
+import features as F
+
+import inspect
+import logging
+import time
 import json
 import pymongo
 import argparse
 import cPickle as pkl
-import time
-from collections import defaultdict, Counter
 import copy
 import sys
 import pyprind
+from collections import defaultdict, Counter
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 LEMM = WordNetLemmatizer()
-
-import features as F
-import inspect
 
 ALL_FEATURES = []
 for name, obj in inspect.getmembers(F):
     if inspect.isclass(obj) and name not in ['SentimentIntensityAnalyzer', 'Feature']:
         ALL_FEATURES.append(name)
 
-import logging
+
 logger = logging.getLogger(__name__)
 
 logger.info("using ALL features: %s" % ALL_FEATURES)
@@ -31,8 +32,7 @@ DB_CLIENT = '132.206.3.23'
 # KOUSTUV_ID = "A1W0QQF93UM08"
 
 WELCOME_MSG = "hello! i hope you're doing well. i am doing fantastic today! " \
-+ "let me go through the article real quick and we will start talking about it."
-
+              "let me go through the article real quick and we will start talking about it."
 
 
 class Vocabulary(object):
@@ -70,6 +70,7 @@ def build_data(lemm):
     - context: list of utterances
     - candidate: proposed utterance
     - reward: 0 or 1
+    - quality: score of the entire conversation int from 1 to 5
     - custom_enc: hand-crafted encoding of (article, context, candidate)
     :param lemm: lemmatize the article and conversations?
     :return: the mapping
@@ -82,6 +83,7 @@ def build_data(lemm):
 
     n_conv = 0
     n_ex = 0
+    n_quality = [0, 0, 0, 0, 0]  # number of conversations for each quality score: from 1 to 5
 
     results = list(db.dialogs.find({'review': 'accepted'}))
 
@@ -90,6 +92,10 @@ def build_data(lemm):
     for conv in results:
         n_conv += 1
         logger.info("conversation %d / %d ..." % (n_conv, len(results)))
+
+        # count conversation quality:
+        conv_quality = int(conv['chat_state']['metrics']['quality'])
+        n_quality[conv_quality-1] += 1
 
         # get the conversation article
         article = conv['chat_state']['context']  # conversation article
@@ -147,7 +153,8 @@ def build_data(lemm):
                         'context': copy.deepcopy(context),
                         'candidate': candidate,
                         'reward': r,
-                        'custom_enc':list(
+                        'quality': conv_quality,
+                        'custom_enc': list(
                             F.get(
                                 feature_objects, custom_hs,
                                 article, context, candidate
@@ -168,15 +175,14 @@ def build_data(lemm):
 
     # end of accepted HITs
 
-    return data, n_conv, n_ex
+    return data, n_conv, n_ex, n_quality
 
 
-def split(json_data, n_conv, n_ex, valid_prop, test_prop):
+def split(json_data, n_ex, valid_prop, test_prop):
     """
     :param json_data: mapping from article to list of dictionary
         where each dictionary is made of 'context', 'candidate', 'reward',
         'custom_enc'
-    :param n_conv: total number of conversations accross articles
     :param n_ex: total number of examples accross articles
     :param valid_prop: proportion of data to make the validation set
     :param test_prop: proportion of data to make the test set
@@ -254,8 +260,12 @@ def build_vocab(data, threshold):
     # add special tokens
     vocab.add_word('<pad>')
     vocab.add_word('<unk>')
-    # vocab.add_word('<eos>')  # end-of-sentence to split sentences within an article
-    # vocab.add_word('<eot>')  # end-of-turn to split turns within a dialog
+
+    vocab.add_word('<sos>')  # start-of-sentence
+    vocab.add_word('<eos>')  # end-of-sentence to split sentences within an article
+
+    vocab.add_word('<sot>')  # start-of-turn
+    vocab.add_word('<eot>')  # end-of-turn to split turns within a dialog
 
     # add all other words
     for w in words:
@@ -267,23 +277,28 @@ def build_vocab(data, threshold):
 def main():
     parser = argparse.ArgumentParser(description='Create pickle data for training, testing ranker neural net')
     parser.add_argument('-l', '--lemmatize', action='store_true',
-            help="lemmatize article and conversations")
+                        help="lemmatize article and conversations")
     parser.add_argument('-vp', '--valid_proportion', type=float, default=0.1,
-            help="proportion of data to make validation set")
+                        help="proportion of data to make validation set")
     parser.add_argument('-tp', '--test_proportion', type=float, default=0.1,
-            help="proportion of data to make testing set")
+                        help="proportion of data to make testing set")
     parser.add_argument('-vt', '--vocab_threshold', type=int, default=1,
-            help="minimum number of times a word must occur to be in vocabulary")
+                        help="minimum number of times a word must occur to be in vocabulary")
     args = parser.parse_args()
     logger.info("")
     logger.info(args)
 
     logger.info("")
     logger.info("Get conversations from database and build data...")
-    json_data, n_conv, n_ex = build_data(args.lemmatize)
+    json_data, n_conv, n_ex, n_quality = build_data(args.lemmatize)
     logger.info("Got %d unique articles from %d conversations. Total: %d examples" % (
             len(json_data), n_conv, n_ex
     ))
+    logger.info(" - 'very bad'  conversations: %d / %d = %f" % (n_quality[0], n_conv, n_quality[0] / float(n_conv)))
+    logger.info(" - 'bad'       conversations: %d / %d = %f" % (n_quality[1], n_conv, n_quality[1] / float(n_conv)))
+    logger.info(" - 'medium'    conversations: %d / %d = %f" % (n_quality[2], n_conv, n_quality[2] / float(n_conv)))
+    logger.info(" - 'good'      conversations: %d / %d = %f" % (n_quality[3], n_conv, n_quality[3] / float(n_conv)))
+    logger.info(" - 'very good' conversations: %d / %d = %f" % (n_quality[4], n_conv, n_quality[4] / float(n_conv)))
 
     # print some instances to debug.
     '''
@@ -307,7 +322,7 @@ def main():
     # split data into train, valid, test sets
     logger.info("")
     logger.info("Split into train, valid, test sets")
-    train, valid, test = split(json_data, n_conv, n_ex, args.valid_proportion, args.test_proportion)
+    train, valid, test = split(json_data, n_ex, args.valid_proportion, args.test_proportion)
     logger.info("[train] %d unique articles. Total: %d examples" % (
             len(train[0]), train[1]
     ))
@@ -348,4 +363,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

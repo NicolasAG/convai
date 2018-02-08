@@ -34,7 +34,7 @@ class QNetwork(torch.nn.Module):
     def __init__(self, input_size, mlp_activation, mlp_dropout):
         """
         Build the q-network to predict q-values
-        :param input_size: hidden size of the (article, context, candidate) encodding
+        :param input_size: hidden size of the (article, context, candidate) encoding
         :param mlp_activation: activation function to use in each mlp layer
         :param mlp_dropout: if non-zero, will add a dropout layer in the mlp
         """
@@ -64,7 +64,7 @@ class QNetwork(torch.nn.Module):
     def forward(self, x):
         """
         Perform a forward pass on a batch of (article, dialog, candidate)
-        encoddings to predict Q-values.
+        encodings to predict Q-values.
 
         :param x: list of custom encoddings to predict Q-values of (article, dialog, candidate) triples
                   torch.Variable with Tensor ~ (batch, input_size)
@@ -84,16 +84,16 @@ class DeepQNetwork(torch.nn.Module):
     # - Encodes individual candidate response into a 1 layer RNN
     # - Feed encodings to a MLP that predicts Q(s,a)
     def __init__(self, mode, embeddings, fixed_embeddings,
-            sentence_hs, sentence_rnn_bidir, sentence_rnn_dropout,
-            article_hs, article_rnn_bidir, article_rnn_dropout,
-            utterance_hs, utterance_rnn_bidir, utterance_rnn_dropout,
-            context_hs, context_rnn_bidir, context_rnn_dropout,
-            rnn_gate,
-            custom_enc_hs, mlp_activation, mlp_dropout):
+                 sentence_hs, sentence_rnn_bidir, sentence_rnn_dropout,
+                 article_hs, article_rnn_bidir, article_rnn_dropout,
+                 utterance_hs, utterance_rnn_bidir, utterance_rnn_dropout,
+                 context_hs, context_rnn_bidir, context_rnn_dropout,
+                 rnn_gate,
+                 custom_enc_hs, mlp_activation, mlp_dropout):
         """
         Build the deep q-network to predict q-values
         :param mode: one of 'rnn+mlp' or 'rnn+rnn+mlp' to decide if we have one
-                        or two hierachical RNNs
+                        or two hierarchical RNNs
         :param embeddings : |vocab| x |token_hs| numpy array
         :param fixed_embeddings : freeze word embeddings during training
 
@@ -115,51 +115,51 @@ class DeepQNetwork(torch.nn.Module):
 
         :param rnn_gate: one of 'rnn', 'gru', or 'lstm'
 
-        :param custom_enc_hs: hidden size of custom encodding of (article, dialog, candidate) triples
+        :param custom_enc_hs: hidden size of custom encoding of (article, dialog, candidate) triples
         :param mlp_activation: activation function to use in each mlp layer
         :param mlp_dropout: if non-zero, will add a dropout layer in the mlp
         """
         super(DeepQNetwork, self).__init__()
 
-        self.sentence_hs = sentence_hs   # article sentence vector size
-        self.article_hs = article_hs     # full article vector size
-        self.utterance_hs = utterance_hs # dialog utterance vector size
-        self.context_hs = context_hs     # full dialog vector size
+        self.sentence_hs = sentence_hs    # article sentence vector size
+        self.article_hs = article_hs      # full article vector size
+        self.utterance_hs = utterance_hs  # dialog utterance vector size
+        self.context_hs = context_hs      # full dialog vector size
         self.gate = rnn_gate
 
         self.mlp_activation = mlp_activation
 
-        embeddings = torch.from_numpy(embeddings).float()  # convert nupy array to torch float tensor
-        self.embed = torch.nn.Embedding(embeddings.size(0), embeddings.size(1)) # embedding layer ~(vocab x token_hs)
+        embeddings = torch.from_numpy(embeddings).float()  # convert numpy array to torch float tensor
+        self.embed = torch.nn.Embedding(embeddings.size(0), embeddings.size(1))  # embedding layer ~(vocab x token_hs)
         self.embed.weight = torch.nn.Parameter(embeddings, requires_grad=(not fixed_embeddings))
 
-        self.sentence_rnn = RNN_GATES[self.gate](input_size = self.embed.embedding_dim,
-                                                 hidden_size = self.sentence_hs,
-                                                 batch_first = True, # ~(batch, seq, hs)
-                                                 dropout = sentence_rnn_dropout,
-                                                 bidirectional = sentence_rnn_bidir)
+        self.sentence_rnn = RNN_GATES[self.gate](input_size=self.embed.embedding_dim,
+                                                 hidden_size=self.sentence_hs,
+                                                 batch_first=True,  # ~(batch, seq, hs)
+                                                 dropout=sentence_rnn_dropout,
+                                                 bidirectional=sentence_rnn_bidir)
 
-        self.article_rnn = RNN_GATES[self.gate](input_size = self.sentence_hs,
-                                                hidden_size = self.article_hs,
-                                                batch_first = True, # ~(batch, seq, hs)
-                                                dropout = article_rnn_dropout,
-                                                bidirectional = article_rnn_bidir)
+        self.article_rnn = RNN_GATES[self.gate](input_size=self.sentence_hs,
+                                                hidden_size=self.article_hs,
+                                                batch_first=True,  # ~(batch, seq, hs)
+                                                dropout=article_rnn_dropout,
+                                                bidirectional=article_rnn_bidir)
         if mode == 'rnn+mlp':
             self.utterance_rnn = self.sentence_rnn
         else:
-            self.utterance_rnn = RNN_GATES[self.gate](input_size = self.embed.embedding_dim,
-                                                      hidden_size = self.utterance_hs,
-                                                      batch_first = True, # ~(batch, seq, hs)
-                                                      dropout = utterance_rnn_dropout,
-                                                      bidirectional = utterance_rnn_bidir)
+            self.utterance_rnn = RNN_GATES[self.gate](input_size=self.embed.embedding_dim,
+                                                      hidden_size=self.utterance_hs,
+                                                      batch_first=True,  # ~(batch, seq, hs)
+                                                      dropout=utterance_rnn_dropout,
+                                                      bidirectional=utterance_rnn_bidir)
         if mode == 'rnn+mlp':
             self.context_rnn = self.article_rnn
         else:
-            self.context_rnn = RNN_GATES[self.gate](input_size = self.utterance_hs,
-                                                    hidden_size = self.context_hs,
-                                                    batch_first = True, # ~(batch, seq, hs)
-                                                    dropout = context_rnn_dropout,
-                                                    bidirectional = context_rnn_bidir)
+            self.context_rnn = RNN_GATES[self.gate](input_size=self.utterance_hs,
+                                                    hidden_size=self.context_hs,
+                                                    batch_first=True,  # ~(batch, seq, hs)
+                                                    dropout=context_rnn_dropout,
+                                                    bidirectional=context_rnn_bidir)
 
         self.state_space = self.article_hs + self.context_hs  # state = (article, context)
 
@@ -168,7 +168,7 @@ class DeepQNetwork(torch.nn.Module):
         self.fc_3 = torch.nn.Linear(self.state_space/4, self.state_space/4)
 
         self.action_space = self.utterance_hs + custom_enc_hs  # action = (candidate, custom_features)
-        self.advantage_space = self.state_space/4 + self.action_space # advantage = (state, action)
+        self.advantage_space = self.state_space/4 + self.action_space  # advantage = (state, action)
 
         # layers to predict value function V(s)
         self.fc_value_1 = torch.nn.Linear(self.state_space/4, self.state_space/8)
@@ -227,14 +227,14 @@ class DeepQNetwork(torch.nn.Module):
         output, lengths_ = pad_packed_sequence(output, batch_first=True)
         assert lengths == lengths_
 
-        # grab the encodding of the sentence, not the padded part!
-        encodding = output[
+        # grab the encoding of the sentence, not the padded part!
+        encoding = output[
             range(output.size(0)),  # take each sentence
             list(map(lambda l: l-1, lengths)),  # at their last index (ie: length-1)
-            :  # take full encodding
+            :  # take full encoding
         ] # ~ (bs, hs)
 
-        return encodding
+        return encoding
 
 
     def forward(self,
@@ -264,14 +264,14 @@ class DeepQNetwork(torch.nn.Module):
         :param cand_lengths: number of tokens for each candidate
                              torch Tensor ~ (batch)
 
-        :param custom_enc: list of custom (article, dialog, candidate) triples encoddings
+        :param custom_enc: list of custom (article, dialog, candidate) triples encodings
                            torch.Variable with tensor ~ (batch, custom_enc_hs)
         """
         # encode article sentences
         sentences_emb = self.embed(sentences)  # ~(bs x #sent, max_len, embed)
         sentences_enc = self._encode_with(self.sentence_rnn,
                                           sentences_emb,
-                                          sent_lengths) # ~(bs x #sent, hs)
+                                          sent_lengths)  # ~(bs x #sent, hs)
         # populate article embeddings
         max_article_len = max(article_lengths)
         article_emb = to_var(torch.zeros(len(article_lengths),
@@ -284,14 +284,13 @@ class DeepQNetwork(torch.nn.Module):
         # encode articles
         article_enc = self._encode_with(self.article_rnn,
                                         article_emb,
-                                        article_lengths) # ~(bs, article_hs)
-
+                                        article_lengths)  # ~(bs, article_hs)
 
         # encode context utterances
         utterances_emb = self.embed(utterances)
         utterances_enc = self._encode_with(self.utterance_rnn,
                                            utterances_emb,
-                                           utt_lengths) # ~(bs x #utt, hs)
+                                           utt_lengths)  # ~(bs x #utt, hs)
         # populate context embeddings
         max_context_len = max(context_lengths)
         context_emb = to_var(torch.zeros(len(context_lengths),
@@ -304,15 +303,13 @@ class DeepQNetwork(torch.nn.Module):
         # encode contexts
         context_enc = self._encode_with(self.context_rnn,
                                         context_emb,
-                                        context_lengths) # ~(bs, context_hs)
-
+                                        context_lengths)  # ~(bs, context_hs)
 
         # encode candidate responses
         candidate_emb = self.embed(candidates)  # ~(bs, max_len, embed)
         candidate_enc = self._encode_with(self.utterance_rnn,
                                           candidate_emb,
-                                          cand_lengths) # ~(bs, hs)
-
+                                          cand_lengths)  # ~(bs, hs)
 
         # Predict Q-values based on article_enc, context_enc, candidate_enc, and custom_enc
         state_enc = torch.cat((article_enc, context_enc), 1)  # ~ (bs, hs)
@@ -323,15 +320,14 @@ class DeepQNetwork(torch.nn.Module):
         # Dueling Q-network: value prediction
         value = ACTIVATIONS[self.mlp_activation](self.fc_value_1(state_enc))
         value = self.dropout(value)  # dropout layer
-        value = self.fc_value_2(value) # last layer: no activation
+        value = self.fc_value_2(value)  # last layer: no activation
 
         # Dueling Q-network: advantage prediction
-        advantage = torch.cat((state_enc, candidate_enc, custom_enc), 1) # ~(bs, hs)
+        advantage = torch.cat((state_enc, candidate_enc, custom_enc), 1)  # ~(bs, hs)
         advantage = ACTIVATIONS[self.mlp_activation](self.fc_adv_1(advantage))
         advantage = ACTIVATIONS[self.mlp_activation](self.fc_adv_2(advantage))
-        advantage = self.dropout(advantage)  # dropout layer
-        advantage = self.fc_adv_3(advantage) # last layer: no activation
+        advantage = self.dropout(advantage)   # dropout layer
+        advantage = self.fc_adv_3(advantage)  # last layer: no activation
 
         q_value = value + advantage  # ~(bs, 1)
         return q_value
-
