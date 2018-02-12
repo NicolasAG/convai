@@ -3,9 +3,6 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
-import time
-import cPickle as pkl
-
 
 ACTIVATIONS = {
     'swish': lambda x: x * F.sigmoid(x),
@@ -59,7 +56,7 @@ class QNetwork(torch.nn.Module):
         # fully connected parameters
         for fc in [self.fc_1, self.fc_2, self.fc_3, self.fc_4]:
             fc.weight.data.uniform_(-0.1, 0.1)
-            fc.bias.fill_(0.0)
+            fc.bias.data.fill_(0.0)
 
     def forward(self, x):
         """
@@ -203,7 +200,42 @@ class DeepQNetwork(torch.nn.Module):
                    self.fc_value_1, self.fc_value_2,
                    self.fc_adv_1, self.fc_adv_2, self.fc_adv_3]:
             fc.weight.data.uniform_(-0.1, 0.1)
-            fc.bias.fill_(0.0)
+            fc.bias.data.fill_(0.0)
+
+    def _sort_by_length(self, sequence, lengths):
+        """
+        Sort a Tensor content by the length of each sequence
+        :param sequence: LongTensor ~ (bs, ...)
+        :param lengths: list of lengths ~ (bs)
+        :return: LongTensor with sorted content & list of sorted indices
+        """
+        # Sort lengths
+        _, sorted_idx = torch.sort(torch.LongTensor(lengths), dim=0, descending=True)
+        # Match sorted_idx tensor dim with sequence tensor dim
+        if sequence.dim() == 3:
+            sorted_idx = sorted_idx[:, None, None]
+        elif sequence.dim() == 2:
+            sorted_idx = sorted_idx[:, None]
+        else:
+            raise NotImplementedError("Unknown number of dim: %d" % sequence.dim())
+        # Fill in the additional dimensions
+        sorted_idx = sorted_idx.expand_as(sequence)
+        # Sort variable tensor by indexing at the sorted_idx
+        sequence = torch.gather(sequence, 0, sorted_idx)
+        return sequence, sorted_idx
+
+    def _unsort_tensor(self, sorted_tensor, sorted_idx):
+        """
+        Revert a Tensor to its original order. Undo the `_sort_by_length` function
+        :param sorted_tensor: Tensor with content sorted by length ~ (bs, hs)
+        :param sorted_idx: list of ordered indices ~ (bs)
+        :return: Unsorted Tensor
+        """
+        # Sort the sorted idx to get the original positional idx
+        _, pos_idx = torch.sort(sorted_idx, 0)
+        # Unsort the tensor
+        original = torch.gather(sorted_tensor, 0, pos_idx)
+        return original
 
     def _encode_with(self, rnn, sequences, lengths):
         """
@@ -232,10 +264,9 @@ class DeepQNetwork(torch.nn.Module):
             range(output.size(0)),  # take each sentence
             list(map(lambda l: l-1, lengths)),  # at their last index (ie: length-1)
             :  # take full encoding
-        ] # ~ (bs, hs)
+        ]  # ~ (bs, hs)
 
         return encoding
-
 
     def forward(self,
                 sentences, article_lengths, sent_lengths,
@@ -267,51 +298,83 @@ class DeepQNetwork(torch.nn.Module):
         :param custom_enc: list of custom (article, dialog, candidate) triples encodings
                            torch.Variable with tensor ~ (batch, custom_enc_hs)
         """
+        ###
+        # ARTICLE
+        ###
+        # sort sentences by length
+        sorted_sentences, sorted_indices = self._sort_by_length(sentences, sent_lengths)
         # encode article sentences
-        sentences_emb = self.embed(sentences)  # ~(bs x #sent, max_len, embed)
+        sentences_emb = self.embed(sorted_sentences)  # ~(bs x #sent, max_len, embed)
         sentences_enc = self._encode_with(self.sentence_rnn,
                                           sentences_emb,
-                                          sent_lengths)  # ~(bs x #sent, hs)
+                                          sorted(sent_lengths, reverse=True))  # ~(bs x #sent, hs)
+        # recover original order of sentences
+        sentences_enc = self._unsort_tensor(sentences_enc, sorted_indices)
+
         # populate article embeddings
-        max_article_len = max(article_lengths)
         article_emb = to_var(torch.zeros(len(article_lengths),
-                                         max_article_len,
+                                         max(article_lengths),
                                          sentences_enc.size(1)))
         start = 0
         for idx, length in enumerate(article_lengths):
             article_emb[idx, 0:length, :] = sentences_enc[start: start+length]
             start += length
+        # sort articles by length
+        sorted_article_embs, sorted_indices = self._sort_by_length(article_emb, article_lengths)
         # encode articles
         article_enc = self._encode_with(self.article_rnn,
-                                        article_emb,
-                                        article_lengths)  # ~(bs, article_hs)
+                                        sorted_article_embs,
+                                        sorted(article_lengths, reverse=True))  # ~(bs, article_hs)
+        # recover original article order
+        article_enc = self._unsort_tensor(article_enc, sorted_indices)
 
+        ###
+        # CONTEXTS
+        ###
+        # sort utterances by length
+        sorted_utterances, sorted_indices = self._sort_by_length(utterances, utt_lengths)
         # encode context utterances
-        utterances_emb = self.embed(utterances)
+        utterances_emb = self.embed(sorted_utterances)  # ~(bs, max_len, embed)
         utterances_enc = self._encode_with(self.utterance_rnn,
                                            utterances_emb,
-                                           utt_lengths)  # ~(bs x #utt, hs)
+                                           sorted(utt_lengths, reverse=True))  # ~(bs x #utt, hs)
+        # recover original order of utterances
+        utterances_enc = self._unsort_tensor(utterances_enc, sorted_indices)
+
         # populate context embeddings
-        max_context_len = max(context_lengths)
         context_emb = to_var(torch.zeros(len(context_lengths),
-                                         max_context_len,
+                                         max(context_lengths),
                                          utterances_enc.size(1)))
         start = 0
         for idx, length in enumerate(context_lengths):
             context_emb[idx, 0:length, :] = utterances_enc[start: start+length]
             start += length
+        # sort contexts by length
+        sorted_context_embs, sorted_indices = self._sort_by_length(context_emb, context_lengths)
         # encode contexts
         context_enc = self._encode_with(self.context_rnn,
-                                        context_emb,
-                                        context_lengths)  # ~(bs, context_hs)
+                                        sorted_context_embs,
+                                        sorted(context_lengths, reverse=True))  # ~(bs, context_hs)
+        # recover original order of contexts
+        context_enc = self._unsort_tensor(context_enc, sorted_indices)
 
+        ###
+        # CANDIDATE RESPONSES
+        ###
+        # sort candidate responses by length
+        sorted_candidates, sorted_indices = self._sort_by_length(candidates, cand_lengths)
         # encode candidate responses
-        candidate_emb = self.embed(candidates)  # ~(bs, max_len, embed)
+        candidate_emb = self.embed(sorted_candidates)  # ~(bs, max_len, embed)
         candidate_enc = self._encode_with(self.utterance_rnn,
                                           candidate_emb,
-                                          cand_lengths)  # ~(bs, hs)
+                                          sorted(cand_lengths, reverse=True))  # ~(bs, hs)
+        # recover original order of candidate responses
+        candidate_enc = self._unsort_tensor(candidate_enc, sorted_indices)
 
-        # Predict Q-values based on article_enc, context_enc, candidate_enc, and custom_enc
+        ###
+        # Q-VALUES
+        ###
+        # Encode state-encoding : (article, context)
         state_enc = torch.cat((article_enc, context_enc), 1)  # ~ (bs, hs)
         state_enc = ACTIVATIONS[self.mlp_activation](self.fc_1(state_enc))
         state_enc = ACTIVATIONS[self.mlp_activation](self.fc_2(state_enc))
@@ -323,6 +386,7 @@ class DeepQNetwork(torch.nn.Module):
         value = self.fc_value_2(value)  # last layer: no activation
 
         # Dueling Q-network: advantage prediction
+        # input to advantage prediction : (state, candidate, custom_enc)
         advantage = torch.cat((state_enc, candidate_enc, custom_enc), 1)  # ~(bs, hs)
         advantage = ACTIVATIONS[self.mlp_activation](self.fc_adv_1(advantage))
         advantage = ACTIVATIONS[self.mlp_activation](self.fc_adv_2(advantage))
