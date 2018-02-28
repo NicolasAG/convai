@@ -66,7 +66,7 @@ def lemmatize(string):
 def build_data(lemm):
     """
     Collect messages from db.dialogs
-    Build a mapping from article to dictionary, where each dictionary is made of:
+    Build a mapping from article to list of dictionaries, where each dictionary is made of:
     - context: list of utterances
     - candidate: proposed utterance
     - reward: 0 or 1

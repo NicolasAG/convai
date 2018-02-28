@@ -84,7 +84,7 @@ class ConversationDataset(data.Dataset):
             elif entry['quality'] > 2:  # quality = 3|4 /5
                 reward *= 0.8
             else:  # quality = 1|2 /5
-                reward *= entry['quality']
+                reward *= 0.2
 
         if self.mode == 'mlp':
             # in a simple MLP setting, only need the custom encoding and the target reward

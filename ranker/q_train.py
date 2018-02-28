@@ -15,6 +15,11 @@ import time
 import sys
 import os
 
+# logging.basicConfig(
+#     level=logging.DEBUG,
+#     format="%(asctime)s %(name)s.%(funcName)s l%(lineno)s [%(levelname)s]: %(message)s"
+# )
+
 logger = logging.getLogger(__name__)
 
 
@@ -231,6 +236,111 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
     return epoch_huber_loss, epoch_mse_loss
 
 
+def one_episode(dqn, huber, mse, data_loader, optimizer=None):
+    """
+    Performs one epoch over the specified data
+    :param dqn: q-network to perform forward pass
+    :param huber: huber loss function
+    :param mse: mse loss function
+    :param data_loader: data iterator
+    :param optimizer: optimizer to perform gradient descent.
+                        if None, do not train.
+    :return: average huber loss, mse loss
+    """
+    epoch_huber_loss = 0.0
+    epoch_mse_loss = 0.0
+    nb_batches = 0.0
+
+    if args.mode == 'mlp':
+        # TODO: find a way to get (state, action, reward, next_state)
+
+        for i, (custom_encs, rewards) in enumerate(data_loader):
+            # IF in training mode
+            if optimizer:
+                # Reset gradients
+                optimizer.zero_grad()
+
+            # Convert Tensors to Variables
+            custom_encs = to_var(custom_encs)
+            rewards = to_var(rewards)
+
+            # Forward pass: predict q-values
+            q_values = dqn(custom_encs)
+
+            # Compute loss
+            huber_loss = huber(q_values, rewards)
+            mse_loss = mse(q_values, rewards)
+            if args.verbose:
+                logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
+                    i + 1, huber_loss.data[0], mse_loss.data[0]
+                ))
+
+            # IF in training mode
+            if optimizer:
+                # Compute loss gradients w.r.t parameters
+                huber_loss.backward()
+                # Update parameters
+                optimizer.step()
+
+            epoch_huber_loss += huber_loss.data[0]
+            epoch_mse_loss += mse_loss.data[0]
+            nb_batches += 1
+
+    else:
+        # TODO: find a way to get (state, action, reward, next_state)
+        # state = (article, context)
+        # action = (candidate +custom_enc?)
+        # next_state = (article, context+candidate)
+        # reward = reward
+        for i, (articles_tensors, n_sents, l_sents,
+                contexts_tensors, n_turns, l_turns,
+                candidates_tensors, n_tokens,
+                custom_encs, rewards) in enumerate(data_loader):
+            # IF in training mode
+            if optimizer:
+                # Reset gradients
+                optimizer.zero_grad()
+
+            # Convert Tensors to Variables
+            articles_tensors = to_var(articles_tensors)
+            contexts_tensors = to_var(contexts_tensors)
+            candidates_tensors = to_var(candidates_tensors)
+            custom_encs = to_var(custom_encs)
+            rewards = to_var(rewards)
+
+            # Forward pass: predict q-values <--> select_action
+            q_values = dqn(
+                articles_tensors, n_sents, l_sents,
+                contexts_tensors, n_turns, l_turns,
+                candidates_tensors, n_tokens,
+                custom_encs
+            )
+
+            # Compute loss
+            huber_loss = huber(q_values, rewards)
+            mse_loss = mse(q_values, rewards)
+            if args.verbose:
+                logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
+                    i + 1, huber_loss.data[0], mse_loss.data[0]
+                ))
+
+            # IF in training mode
+            if optimizer:
+                # Compute loss gradients w.r.t parameters
+                huber_loss.backward()
+                # Update parameters
+                optimizer.step()
+
+            epoch_huber_loss += huber_loss.data[0]
+            epoch_mse_loss += mse_loss.data[0]
+            nb_batches += 1
+
+    epoch_huber_loss /= nb_batches
+    epoch_mse_loss /= nb_batches
+
+    return epoch_huber_loss, epoch_mse_loss
+
+
 def main():
     train_loader, valid_loader, test_loader,\
         vocab, embeddings, custom_hs = get_data(args.data_f, args.vocab_f)
@@ -240,6 +350,7 @@ def main():
     if args.mode == 'mlp':
         model_name = "QNetwork"
         dqn = QNetwork(custom_hs, args.mlp_activation, args.mlp_dropout)
+
     else:
         if args.mode == 'rnn+mlp':
             model_name = 'DeepQNetwork'
@@ -247,8 +358,8 @@ def main():
         elif args.mode == 'rnn+rnn+mlp':
             model_name = 'VeryDeepQNetwork'
         else:
-            logger.info("ERROR: Unknown mode: %s" % args.mode)
-            return
+            raise NotImplementedError("ERROR: Unknown mode: %s" % args.mode)
+
         dqn = DeepQNetwork(
             args.mode, embeddings, args.fix_embeddings,
             args.sentence_hs, args.sentence_bidir, args.sentence_dropout,
@@ -305,6 +416,7 @@ def main():
     # TODO: update to do Q-learning like in : http://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
 
     for epoch in range(args.epochs):
+        logger.info("***********************************")
         # Perform one epoch and return average losses:
         train_huber_loss, train_mse_loss = one_epoch(
             dqn, huber, mse, train_loader, optimizer=optimizer
