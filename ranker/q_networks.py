@@ -427,5 +427,5 @@ class DeepQNetwork(torch.nn.Module):
         advantage = self.dropout(advantage)   # dropout layer
         advantage = self.fc_adv_3(advantage)  # last layer: no activation
 
-        q_value = value + advantage  # ~(bs, 1)
-        return q_value
+        # q_value = value + advantage  # ~(bs, 1)
+        return value, advantage

@@ -63,15 +63,35 @@ def lemmatize(string):
     return ' '.join(result)
 
 
+def _get_user_response(turn, lemm):
+    """
+    Get the user response right before this turn
+    :param turn: turn with a bunch of options
+    :param lemm: lemmatize the conversations?
+    :return: user message just before
+    """
+    for option_idx, option in turn['options'].items():
+        if option_idx != '/end' and option['model_name'] == 'fact_gen':
+            user_resp = option['context'][-2].lower().strip()
+            if lemm:
+                user_resp = lemmatize(user_resp)
+            return user_resp
+
+    raise ValueError("Can't find a user response")
+
 def build_data(lemm):
     """
     Collect messages from db.dialogs
     Build a mapping from article to list of dictionaries, where each dictionary is made of:
-    - context: list of utterances
-    - candidate: proposed utterance
+    - state: list of context turns
+    - action: proposed candidate turn &
+              custom_enc: list of hand-crafted encoding of (article, context, candidate)
     - reward: 0 or 1
+    - next_state: list of context turns + candidate turn + user turn,
+                  or None if action wasn't taken
+    - next_actions: list of possible candidates & hand-crafted encodings after next_state,
+                    or None if actio wasn't taken
     - quality: score of the entire conversation int from 1 to 5
-    - custom_enc: hand-crafted encoding of (article, context, candidate)
     :param lemm: lemmatize the article and conversations?
     :return: the mapping
     """
@@ -121,17 +141,13 @@ def build_data(lemm):
 
             # add user response to previous turn to the context
             if turn_idx > 0:
-                for option_idx, option in turn['options'].items():
-                    if option_idx != '/end' and option['model_name'] == 'fact_gen':
-                        user_resp = option['context'][-2].lower().strip()
-                        if lemm:
-                            user_resp = lemmatize(user_resp)
-                        context.append(user_resp)
-                        break
+                user_resp = _get_user_response(turn, lemm)
+                context.append(user_resp)
 
             # if chose to finish, this is the last turn so we can break
             if choice_idx == '/end':
                 break
+
 
             # loop through each candidate option
             for option_idx, option in turn['options'].items():
@@ -139,31 +155,86 @@ def build_data(lemm):
                 if option_idx == '/end':
                     continue
 
+                # Store candidate response
                 candidate = option['text'].lower().strip()
                 if lemm:
                     candidate = lemmatize(candidate)
 
+                # Compute custom encoding
+                custom_encoding = list(
+                    F.get(
+                        feature_objects, custom_hs,
+                        article, context, candidate
+                    )
+                )
+
+                ###
+                # Compute next state & next action
+                ###
                 if choice_idx == option_idx:
-                    r = 1
+                    # user took this candidate, we have data for next state & actions
+                    if turn_idx+1 >= len(conv['chat_state']['turns']):
+                        logger.warning("This is the last turn! Next state & action will be None")
+                        next_state = None
+                        next_actions = None
+
+                    else:
+                        next_turn = conv['chat_state']['turns'][turn_idx+1]
+
+                        #  Next state = context + chosen candidate + user turn
+                        next_state = copy.deepcopy(context)
+                        next_state.append(candidate)
+                        next_state.append(
+                            _get_user_response(next_turn, lemm)
+                        )
+
+                        # Compute possible next actions
+                        next_actions = []
+                        # loop through each next candidate option
+                        for next_option_idx, next_option in next_turn['options'].items():
+                            # don't consider the /end option
+                            if next_option_idx == '/end':
+                                continue
+
+                            # Store candidate response
+                            next_candidate = next_option['text'].lower().strip()
+                            if lemm:
+                                next_candidate = lemmatize(next_candidate)
+
+                            # Compute next custom encoding
+                            next_custom_encoding = list(
+                                F.get(
+                                    feature_objects, custom_hs,
+                                    article, next_state, next_candidate
+                                )
+                            )
+
+                            next_actions.append({
+                                'candidate': next_candidate,
+                                'custom_enc': next_custom_encoding
+                            })
+
                 else:
-                    r = 0
+                    ###
+                    # Candidate not taken, no next data for this conversation
+                    ###
+                    next_state = None
+                    next_actions = None
 
                 data[article].append({
-                        'chat_id': option['chat_unique_id'],
-                        'context': copy.deepcopy(context),
+                    'chat_id': option['chat_unique_id'],
+                    'state': copy.deepcopy(context),
+                    'action': {
                         'candidate': candidate,
-                        'reward': r,
-                        'quality': conv_quality,
-                        'custom_enc': list(
-                            F.get(
-                                feature_objects, custom_hs,
-                                article, context, candidate
-                            )
-                        )
+                        'custom_enc': custom_encoding
+                    },
+                    'reward': 1 if (choice_idx == option_idx) else 0,
+                    'next_state': next_state,
+                    'next_actions': next_actions,
+                    'quality': conv_quality
                 })
-
                 n_ex += 1  # increment example counter
-                # bar.update()  # update progress bar
+
 
             # after all options, append the chosen text to context
             chosen_text = turn['options'][choice_idx]['text'].lower().strip()
@@ -183,7 +254,7 @@ def split(json_data, n_ex, valid_prop, test_prop):
     :param json_data: mapping from article to list of dictionary
         where each dictionary is made of 'context', 'candidate', 'reward',
         'custom_enc'
-    :param n_ex: total number of examples accross articles
+    :param n_ex: total number of examples across articles
     :param valid_prop: proportion of data to make the validation set
     :param test_prop: proportion of data to make the test set
     :return: train, valid, test tuples where each tuple is made of:
@@ -240,14 +311,14 @@ def build_vocab(data, threshold):
         conversation_ids = []
         for ex in examples:
             # take words from each candidate response
-            candidate_tokens = word_tokenize(ex['candidate'])
+            candidate_tokens = word_tokenize(ex['action']['candidate'])
             counter.update(candidate_tokens)
 
             # check that this conversation has not been seen before
             if ex['chat_id'] not in conversation_ids:
                 conversation_ids.append(ex['chat_id'])
                 # take words from the the user messages
-                for sentence in ex['context'][2::2]:
+                for sentence in ex['state'][2::2]:
                     sent_tokens = word_tokenize(sentence)
                     counter.update(sent_tokens)
 
@@ -308,7 +379,7 @@ def main():
             logger.info(article)
             to_print = map(
                     lambda ele: {
-                        'ctxt':ele['context'],
+                        'ctxt':ele['state'],
                         'cand':ele['candidate'],
                         'r':ele['reward']},
                     json_data[article]

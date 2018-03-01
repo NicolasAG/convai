@@ -52,43 +52,58 @@ class ConversationDataset(data.Dataset):
             lengths.append(len(phrase_idx))
         return indices, len(indices), lengths
 
+    def _rescale_rewards(self, r, quality):
+        if r > 0:
+            # rescale based on quality measure
+            if quality == 5:  # quality = 5 /5
+                r *= 1.
+            elif quality > 2:  # quality = 3|4 /5
+                r *= 0.8
+            else:  # quality = 1|2 /5
+                r *= 0.2
+        return r
+
     def __getitem__(self, item):
         """
         Returns one data tuple.
-        if only using an MLP, return (custom_enc, reward)
+        if only using an MLP, return (custom_enc, reward, next_custom_enc)
         if using RNN and MLP, return (
-            article_sentences, number of sentences, sentence lengths
-            context_utterances, number of turns, turn length
-            candidate_tokens, number of tokens
-            custom_enc, reward
+            article_sentences, number of sentences, sentence lengths,
+            context_utterances, number of turns, turn length,
+            candidate_tokens, number of tokens,
+            custom_enc, reward,
+            next_context_utterances, number of turns, turn length,
+            next_candidates, number of candidates, candidate length,
+            next_custom_encs
         )
         """
         article, idx = self.ids[item]
         entry = self.json_data[article][idx]
         '''
         'chat_id': <string>,
-        'context': <list of strings>,
-        'candidate': <string>,
+        'state': <list of strings> ie: context,
+        'action': {
+            'candidate': <string>  ie: candidate,
+            'custom_enc': <list of float>
+        },
         'reward': <int {0,1}>,
+        'next_state': <list of strings || None> ie: next_context,
+        'next_actions': <list of actions || None> ie: next possible actions
         'quality': <int {1,2,3,4,5}>,
-        'custom_enc': <list of float>
         '''
-        context = entry['context']
-        candidate = entry['candidate']
-        custom_enc = entry['custom_enc']
-        reward = entry['reward']
-        if reward > 0:
-            # rescale quality measure
-            if entry['quality'] == 5:  # quality = 5 /5
-                reward *= 1.
-            elif entry['quality'] > 2:  # quality = 3|4 /5
-                reward *= 0.8
-            else:  # quality = 1|2 /5
-                reward *= 0.2
+        context = entry['state']
+        candidate = entry['action']['candidate']
+        custom_enc = entry['action']['custom_enc']
+        reward = self._rescale_rewards(entry['reward'], entry['quality'])
+
+        next_state = entry['next_state']
+        next_candidates = [a['candidate'] for a in entry['next_actions']]
+        next_custom_encs = [a['custom_enc'] for a in entry['next_actions']]
+
 
         if self.mode == 'mlp':
-            # in a simple MLP setting, only need the custom encoding and the target reward
-            return torch.Tensor(custom_enc), reward
+            # in a simple MLP setting, only need the custom encoding, the reward, the next possible custom encodings
+            return custom_encs, rewards, next_custom_encs
 
         else:
             # convert from string to idx
@@ -106,10 +121,24 @@ class ConversationDataset(data.Dataset):
                 start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
                 end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
             )
+
+            next_state, n_nextS_turn, l_nextS_turn = self.convert_big_string_to_idx(
+                next_state,
+                start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
+                end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
+            )
+            next_candidates, n_next_candidate, l_next_candidate = self.convert_big_string_to_idx(
+                next_candidates,
+                start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
+                end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
+            )
             return article, n_sent, l_sent,\
                 context, n_turn, l_turn,\
-                torch.Tensor(candidate), len(candidate),\
-                torch.Tensor(custom_enc), reward
+                candidate, custom_encs, rewards,\
+                next_state, n_nextS_turn, l_nextS_turn,\
+                next_candidates, n_next_candidate, l_next_candidate,\
+                next_custom_encs
+
 
     def __len__(self):
         return len(self.ids)

@@ -204,12 +204,13 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
             rewards = to_var(rewards)
 
             # Forward pass: predict q-values
-            q_values = dqn(
+            state_values, action_advantages = dqn(
                 articles_tensors, n_sents, l_sents,
                 contexts_tensors, n_turns, l_turns,
                 candidates_tensors, n_tokens,
                 custom_encs
             )
+            q_values = state_values + action_advantages
 
             # Compute loss
             huber_loss = huber(q_values, rewards)
@@ -236,10 +237,12 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
     return epoch_huber_loss, epoch_mse_loss
 
 
-def one_episode(dqn, huber, mse, data_loader, optimizer=None):
+def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
     """
     Performs one epoch over the specified data
+    :param itt: iteration number
     :param dqn: q-network to perform forward pass
+    :param dqn_target: target network
     :param huber: huber loss function
     :param mse: mse loss function
     :param data_loader: data iterator
@@ -308,17 +311,30 @@ def one_episode(dqn, huber, mse, data_loader, optimizer=None):
             custom_encs = to_var(custom_encs)
             rewards = to_var(rewards)
 
-            # Forward pass: predict q-values <--> select_action
-            q_values = dqn(
+            # TODO: update to do Q-learning like in : http://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+
+            # Forward pass: predict state-action values
+            state_values, action_advantages = dqn(
                 articles_tensors, n_sents, l_sents,
                 contexts_tensors, n_turns, l_turns,
                 candidates_tensors, n_tokens,
                 custom_encs
             )
+            q_values = state_values + action_advantages  # ~(bs,)
+
+            # Compute next-state values
+            next_state_values, _ = target_dqn(
+                articles_tensors, n_sents, l_sents,
+                # TODO: compute next context,
+                # TODO: give dummy candidates,
+                # TODO: give dummy custom enc
+            )
+            # Temporal Difference error
+            expected_state_action_values = rewards + (args.gamma * next_state_values)
 
             # Compute loss
-            huber_loss = huber(q_values, rewards)
-            mse_loss = mse(q_values, rewards)
+            huber_loss = huber(q_values, expected_state_action_values)
+            mse_loss = mse(q_values, expected_state_action_values)
             if args.verbose:
                 logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
                     i + 1, huber_loss.data[0], mse_loss.data[0]
@@ -330,6 +346,11 @@ def one_episode(dqn, huber, mse, data_loader, optimizer=None):
                 huber_loss.backward()
                 # Update parameters
                 optimizer.step()
+
+                ## update target dqn
+                if itt % args.update_frequence == 0:
+                    target_dqn.load_state_dict(dqn.state_dict())
+
 
             epoch_huber_loss += huber_loss.data[0]
             epoch_mse_loss += mse_loss.data[0]
@@ -350,6 +371,7 @@ def main():
     if args.mode == 'mlp':
         model_name = "QNetwork"
         dqn = QNetwork(custom_hs, args.mlp_activation, args.mlp_dropout)
+        dqn_target = QNetwork(custom_hs, args.mlp_activation, args.mlp_dropout)
 
     else:
         if args.mode == 'rnn+mlp':
@@ -361,6 +383,15 @@ def main():
             raise NotImplementedError("ERROR: Unknown mode: %s" % args.mode)
 
         dqn = DeepQNetwork(
+            args.mode, embeddings, args.fix_embeddings,
+            args.sentence_hs, args.sentence_bidir, args.sentence_dropout,
+            args.article_hs, args.article_bidir, args.article_dropout,
+            args.utterance_hs, args.utterance_bidir, args.utterance_dropout,
+            args.context_hs, args.context_bidir, args.context_dropout,
+            args.rnn_gate,
+            custom_hs, args.mlp_activation, args.mlp_dropout
+        )
+        dqn_target = DeepQNetwork(
             args.mode, embeddings, args.fix_embeddings,
             args.sentence_hs, args.sentence_bidir, args.sentence_dropout,
             args.article_hs, args.article_bidir, args.article_dropout,
@@ -494,6 +525,8 @@ if __name__ == '__main__':
                         help="Maximum number of training passes to do on the full train set")
     parser.add_argument("-bs", "--batch_size", type=int, default=128,
                         help="batch size during training")
+    parser.add_argument("--update_frequence", type=int, default=1000,
+                        help="number of iterations to do before updating target dqn")
 
     # TODO: check if using the next one
     parser.add_argument("-pm", "--previous_model", default=None,
