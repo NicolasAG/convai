@@ -321,13 +321,13 @@ def collate_fn(data):
         non_final_next_custom_encs = [s for s in next_custom_encs if s is not None]
         # ~(bs-, n_actions, enc_size)
 
-        return articles_tensor, n_sents, l_sents, \
-            contexts_tensor, n_turns, l_turns, \
-            candidates_tensor, n_tokens, \
+        return articles_tensor, torch.LongTensor(n_sents), torch.LongTensor(l_sents), \
+            contexts_tensor, torch.LongTensor(n_turns), torch.LongTensor(l_turns), \
+            candidates_tensor, torch.LongTensor(n_tokens), \
             custom_encs, torch.Tensor(rewards), \
             non_final_mask, \
-            non_final_next_state_tensor, n_non_final_next_turns, l_non_final_next_turns, \
-            non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates, \
+            non_final_next_state_tensor, torch.LongTensor(n_non_final_next_turns), torch.LongTensor(l_non_final_next_turns), \
+            non_final_next_candidates_tensor, torch.LongTensor(n_non_final_next_candidates), torch.LongTensor(l_non_final_next_candidates), \
             non_final_next_custom_encs
 
 

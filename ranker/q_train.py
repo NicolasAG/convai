@@ -208,8 +208,13 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
 
             # Convert Tensors to Variables
             articles_tensors = to_var(articles_tensors)
+            n_sents = to_var(n_sents)
+            l_sents = to_var(l_sents)
             contexts_tensors = to_var(contexts_tensors)
+            n_turns = to_var(n_turns)
+            l_turns = to_var(l_turns)
             candidates_tensors = to_var(candidates_tensors)
+            n_tokens = to_var(n_tokens)
             custom_encs = to_var(custom_encs)
             rewards = to_var(rewards)
 
@@ -364,10 +369,16 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
 
             # Convert Tensors to Variables
             articles_tensors = to_var(articles_tensors)
+            n_sents = to_var(n_sents)
+            l_sents = to_var(l_sents)
             contexts_tensors = to_var(contexts_tensors)
+            n_turns = to_var(n_turns)
+            l_turns = to_var(l_turns)
             candidates_tensors = to_var(candidates_tensors)
+            n_tokens = to_var(n_tokens)
             custom_encs = to_var(custom_encs)
             rewards = to_var(rewards)
+            # ...
 
             # TODO: update to do Q-learning like in : http://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
 
@@ -503,8 +514,6 @@ def main():
 
     logger.info("")
     logger.info("Training model...")
-
-    # TODO: update to do Q-learning like in : http://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
 
     for epoch in range(args.epochs):
         logger.info("***********************************")
