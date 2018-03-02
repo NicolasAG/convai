@@ -29,32 +29,32 @@ MODE_TO_FLAG = {
 }
 
 
-TARGET_TO_FEATURES = {
-    'r': [
-        'AverageWordEmbedding_Candidate', 'AverageWordEmbedding_User', 'AverageWordEmbedding_Article',
-        'Similarity_CandidateUser',
-        'NonStopWordOverlap', 'BigramOverlap', 'TrigramOverlap', 'EntityOverlap',
-        'GenericTurns',
-        'WhWords', 'IntensifierWords', 'ConfusionWords', 'ProfanityWords', 'Negation',
-        'LastUserLength', 'CandidateLength',
-        'DialogActCandidate', 'DialogActLastUser',
-        'SentimentScoreCandidate', 'SentimentScoreLastUser'
-    ],
-    'R': [
-        'AverageWordEmbedding_Candidate', 'AverageWordEmbedding_User', 'AverageWordEmbedding_LastK',
-        'AverageWordEmbedding_kUser', 'AverageWordEmbedding_Article',
-        'Similarity_CandidateUser',
-        'Similarity_CandidateLastK', 'Similarity_CandidateLastK_noStop',
-        'Similarity_CandidateKUser', 'Similarity_CandidateKUser_noStop',
-        'Similarity_CandidateArticle', 'Similarity_CandidateArticle_noStop',
-        'NonStopWordOverlap', 'BigramOverlap', 'TrigramOverlap', 'EntityOverlap',
-        'GenericTurns',
-        'WhWords', 'IntensifierWords', 'ConfusionWords', 'ProfanityWords', 'Negation',
-        'DialogLength', 'LastUserLength', 'CandidateLength', 'ArticleLength',
-        'DialogActCandidate', 'DialogActLastUser',
-        'SentimentScoreCandidate', 'SentimentScoreLastUser'
-    ]
-}
+# TARGET_TO_FEATURES = {
+#     'r': [
+#         'AverageWordEmbedding_Candidate', 'AverageWordEmbedding_User', 'AverageWordEmbedding_Article',
+#         'Similarity_CandidateUser',
+#         'NonStopWordOverlap', 'BigramOverlap', 'TrigramOverlap', 'EntityOverlap',
+#         'GenericTurns',
+#         'WhWords', 'IntensifierWords', 'ConfusionWords', 'ProfanityWords', 'Negation',
+#         'LastUserLength', 'CandidateLength',
+#         'DialogActCandidate', 'DialogActLastUser',
+#         'SentimentScoreCandidate', 'SentimentScoreLastUser'
+#     ],
+#     'R': [
+#         'AverageWordEmbedding_Candidate', 'AverageWordEmbedding_User', 'AverageWordEmbedding_LastK',
+#         'AverageWordEmbedding_kUser', 'AverageWordEmbedding_Article',
+#         'Similarity_CandidateUser',
+#         'Similarity_CandidateLastK', 'Similarity_CandidateLastK_noStop',
+#         'Similarity_CandidateKUser', 'Similarity_CandidateKUser_noStop',
+#         'Similarity_CandidateArticle', 'Similarity_CandidateArticle_noStop',
+#         'NonStopWordOverlap', 'BigramOverlap', 'TrigramOverlap', 'EntityOverlap',
+#         'GenericTurns',
+#         'WhWords', 'IntensifierWords', 'ConfusionWords', 'ProfanityWords', 'Negation',
+#         'DialogLength', 'LastUserLength', 'CandidateLength', 'ArticleLength',
+#         'DialogActCandidate', 'DialogActLastUser',
+#         'SentimentScoreCandidate', 'SentimentScoreLastUser'
+#     ]
+# }
 
 
 def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1):
@@ -64,7 +64,7 @@ def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1):
     :param target: field of each dictionary instance to estimate
         either 'R' for final dialog score, or 'r' for immediate reward
     :param feature_list: list of feature names (str) to load.
-        if none will take the ones defined in TARGET_TO_FEATURES.
+        if none will take ALL of them.
     :param val_prop: proportion of data to consider for validation set.
         Will also define the number of train/valid folds
     :param test_prop: proportion of data to consider for test set
@@ -110,8 +110,8 @@ def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1):
                   },
         ...
     } '''
-    lengths = 0.
-    n = 0.
+    lengths = 0.  # length of candidate
+    n = 0.  # number of examples
     vocab = {}
     for data_file, data in raw_data.iteritems():
         for idx, msg in enumerate(data):
@@ -120,10 +120,10 @@ def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1):
             lengths += len(msg['candidate'].split())
             n += 1.
             for tok in msg['candidate'].split():
-                if tok not in vocab:
-                    vocab[tok] = 1.
-                else:
+                try:
                     vocab[tok] += 1.
+                except KeyError:
+                    vocab[tok] = 1.
 
             if article not in article2file2id:
                 article2file2id[article] = {}
@@ -160,10 +160,9 @@ def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1):
 
     # create list of Feature instances
     if feature_list is None:
-        feature_list = TARGET_TO_FEATURES[target]
-    feature_objects, dim = _features.initialize_features(feature_list)
-    input_size = dim
-    del feature_objects  # now that we have the input_size, don't need those anymore
+        # feature_list = TARGET_TO_FEATURES[target]
+        feature_list = ALL_FEATURES
+    _, input_size = _features.initialize_features(feature_list)
 
     # construct data to save & return
     remain_x = []  # np.zeros((remain_n, input_size))
@@ -478,7 +477,6 @@ def main(args):
             model_path='models/%s' % args.mode, model_id=model_id, model_name=model_name
         )
 
-        '''
         with tf.Session() as sess:
             print "Training the network..."
             estimator.train(
@@ -490,7 +488,7 @@ def main(args):
                 save=True,
                 pretrained=pretrained,
                 previous_accuracies=previous_accuracies,
-                verbose=True
+                verbose=args.verbose
             )
             max_train = [max(estimator.train_accuracies[i]) for i in range(-n_folds, 0)]
             max_valid = [max(estimator.valid_accuracies[i]) for i in range(-n_folds, 0)]
@@ -500,7 +498,7 @@ def main(args):
             valid_acc = np.mean(max_valid)
             print "best avg. train accuracy: %g" % train_acc
             print "best avg. valid accuracy: %g" % valid_acc
-        '''
+
         print "done."
 
 
@@ -508,6 +506,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("data", nargs='+', type=str, help="List of files to consider for training")
     parser.add_argument("mode", choices=['short_term', 'long_term'], type=str, help="What reward should the estimator predict")
+    parser.add_argument("-v",  "--verbose", action="store_true", help="Be verbose")
     parser.add_argument("-g",  "--gpu", type=int, default=0, help="GPU number to use")
     parser.add_argument("-ex", "--explore", type=int, default=None, help="Number of times to sample parameters. If None, will use the one provided")
     parser.add_argument("-t",  "--threshold", type=float, default=0.63, help="minimum accuracy to reach in order to save the model (only used in exploration mode)")

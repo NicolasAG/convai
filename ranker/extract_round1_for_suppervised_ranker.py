@@ -57,7 +57,7 @@ def reformat(json_data, voted_only=False):
             # get evaluations for that conversation from all humans involved
             full_evals = defaultdict(float)
             for evl in dialog['evaluation']:
-                full_evals[evl['userId']] = (2.0*evl['quality'] + 1.0*evl['breadth'] + 1.0*evl['engagement']) / 4.0
+                full_evals[evl['userId']] = evl['quality']
             if len(full_evals) == 0:
                 print "Warning: no full evaluation found for this conversation, skipping it"
                 continue
@@ -71,7 +71,7 @@ def reformat(json_data, voted_only=False):
                 if len(msg['text'].strip().split()) == 0 or not is_regular_alphabet(msg['text'].strip().lower()):
                     continue
 
-                # if begining of the converesation, just fill in the context
+                # if beginning of the conversation, just fill in the context
                 if len(context) == 0:
                     context.append(msg['text'].strip().lower())
                     last_sender_id = msg['userId']
@@ -160,7 +160,7 @@ def reformat(json_data, voted_only=False):
                         context.append(m['text'].strip().lower())
                         last_sender_id = m['userId']
 
-                # if the (lonly) human talked
+                # if the (lonely) human talked
                 else:
                     c = copy.deepcopy(context)
                     # same human spoke twice in a row:
@@ -181,7 +181,7 @@ def reformat(json_data, voted_only=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='Create json data for training, testing ranker neural net.')
     parser.add_argument('--voted_only', action='store_true', help='only consider messages which has been voted')
     args = parser.parse_args()
     print args

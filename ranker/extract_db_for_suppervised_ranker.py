@@ -126,7 +126,8 @@ def reformat(json_data, voted_only=False):
             full_eval = []
             for evl in dialog['evaluation']:
                 if evl['userId'] == uid:
-                    full_eval.append( (2.0*evl['quality'] + 1.0*evl['breadth'] + 1.0*evl['engagement']) / 4.0 )
+                    # full_eval.append( (2.0*evl['quality'] + 1.0*evl['breadth'] + 1.0*evl['engagement']) / 4.0 )
+                    full_eval.append(evl['quality'])
             if len(full_eval) < 1:
                 print "Error: no evaluation found for this conversation (%s), skipping it" % dialog['dialogId']
                 continue
@@ -144,13 +145,13 @@ def reformat(json_data, voted_only=False):
                 if len(msg['text'].strip().split()) == 0 or not is_regular_alphabet(msg['text'].strip().lower()):
                     continue
 
-                # if begining of the converesation, just fill in the context
+                # if beginning of the conversation, just fill in the context
                 if len(context) == 0:
                     context.append(msg['text'].strip().lower())
                     last_sender_id = msg['userId']
 
                 # if the human talked
-                if msg['userId'] == uid:
+                elif msg['userId'] == uid:
                     c = copy.deepcopy(context)
                     # human spoke twice in a row:
                     if last_sender_id == msg['userId']:
@@ -210,7 +211,7 @@ def reformat(json_data, voted_only=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Create pickle data for training, testing ranker neural net')
+    parser = argparse.ArgumentParser(description='Create json data for training, testing ranker neural net')
     parser.add_argument('--voted_only', action='store_true', help='consider only voted messages')
     args = parser.parse_args()
     print args
