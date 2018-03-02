@@ -1,6 +1,6 @@
 import torch
 from torch.autograd import Variable
-from q_networks import to_var, QNetwork, DeepQNetwork
+from q_networks import to_var, to_tensor, QNetwork, DeepQNetwork
 from q_data_loader import get_loader
 from extract_transitions_from_db import Vocabulary
 from embedding_metrics import w2v
@@ -82,7 +82,7 @@ def get_data(data_f, vocab_f):
 
     # take arbitrarily the first training example to find the size of the custom encoding
     first_article = train_data.keys()[0]
-    custom_hs = len(train_data[first_article][0]['custom_enc'])
+    custom_hs = len(train_data[first_article][0]['action']['custom_enc'])
 
     return train_loader, valid_loader, test_loader, vocab, embeddings, custom_hs
 
@@ -154,11 +154,11 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
     nb_batches = 0.0
 
     if args.mode == 'mlp':
-        for i, (custom_encs, rewards) in enumerate(data_loader):
-            # IF in training mode
-            if optimizer:
-                # Reset gradients
-                optimizer.zero_grad()
+        '''
+        data loader returns:
+            custom_encs, torch.Tensor(rewards), non_final_mask, non_final_next_custom_encs
+        '''
+        for i, (custom_encs, rewards, _, _) in enumerate(data_loader):
 
             # Convert Tensors to Variables
             custom_encs = to_var(custom_encs)
@@ -177,6 +177,8 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
 
             # IF in training mode
             if optimizer:
+                # Reset gradients
+                optimizer.zero_grad()
                 # Compute loss gradients w.r.t parameters
                 huber_loss.backward()
                 # Update parameters
@@ -187,14 +189,22 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
             nb_batches += 1
 
     else:
+        '''
+        data loader returns:
+            articles_tensor, n_sents, l_sents, \
+            contexts_tensor, n_turns, l_turns, \
+            candidates_tensor, n_tokens, \
+            custom_encs, torch.Tensor(rewards), \
+            non_final_mask, \
+            non_final_next_state_tensor, n_non_final_next_turns, l_non_final_next_turns, \
+            non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates, \
+            non_final_next_custom_encs
+        '''
         for i, (articles_tensors, n_sents, l_sents,
                 contexts_tensors, n_turns, l_turns,
                 candidates_tensors, n_tokens,
-                custom_encs, rewards) in enumerate(data_loader):
-            # IF in training mode
-            if optimizer:
-                # Reset gradients
-                optimizer.zero_grad()
+                custom_encs, rewards,
+                _, _, _, _, _, _, _, _) in enumerate(data_loader):
 
             # Convert Tensors to Variables
             articles_tensors = to_var(articles_tensors)
@@ -222,6 +232,8 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
 
             # IF in training mode
             if optimizer:
+                # Reset gradients
+                optimizer.zero_grad()
                 # Compute loss gradients w.r.t parameters
                 huber_loss.backward()
                 # Update parameters
@@ -255,24 +267,55 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
     nb_batches = 0.0
 
     if args.mode == 'mlp':
-        # TODO: find a way to get (state, action, reward, next_state)
-
-        for i, (custom_encs, rewards) in enumerate(data_loader):
-            # IF in training mode
-            if optimizer:
-                # Reset gradients
-                optimizer.zero_grad()
+        '''
+        data loader returns:
+            custom_encs, torch.Tensor(rewards), non_final_mask, non_final_next_custom_encs
+        '''
+        for i, (custom_encs, rewards,
+                non_final_mask, non_final_next_custom_encs) in enumerate(data_loader):
 
             # Convert Tensors to Variables
-            custom_encs = to_var(custom_encs)
-            rewards = to_var(rewards)
+            custom_encs = to_var(custom_encs)            # ~(bs, enc)
+            rewards = to_var(rewards)                    # ~(bs,)
 
-            # Forward pass: predict q-values
-            q_values = dqn(custom_encs)
+            # non_final_next_custom_encs = to_var(
+            #     non_final_next_custom_encs,
+            #     volatile=True
+            # )  # ~(bs-, n_actions, enc)
+
+            # Forward pass: predict current state-action value
+            q_values = dqn(custom_encs)  # ~(bs)
+
+            # Compute Q(s', a') for all next state-action pairs.
+            # [--Double DQN: use real dqn for argmax_a and use target dqn to measure q(s', a*)--]
+            max_actions = []  # ~(bs-, enc)
+            for actions in non_final_next_custom_encs:
+                # We don't want to backprop through the expected action values and volatile
+                # will save us on temporarily changing the model parameters'
+                # requires_grad to False!
+                actions = to_var(actions, volatile=True)  # ~(actions, enc)
+                next_qs = dqn(actions)  # ~(actions,)
+                max_q_val, max_idx = next_qs.max(0)
+                # append custom_enc of the max action according to current dqn
+                max_actions.append(actions[max_idx])
+
+            next_state_action_values = to_var(torch.zeros(args.batch_size))
+            next_state_action_values[non_final_mask] = target_dqn(
+                to_var(
+                    to_tensor(max_actions),
+                    volatile=True
+                )
+            )  # ~(bs)
+            # Now, we don't want to mess up the loss with a volatile flag, so let's
+            # clear it. After this, we'll just end up with a Variable that has
+            # requires_grad=False
+            next_state_action_values.volatile = False
+            # Compute the expected Q values
+            expected_state_action_values = (next_state_action_values * args.gamma) + rewards
 
             # Compute loss
-            huber_loss = huber(q_values, rewards)
-            mse_loss = mse(q_values, rewards)
+            huber_loss = huber(q_values, expected_state_action_values)
+            mse_loss = mse(q_values, expected_state_action_values)
             if args.verbose:
                 logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
                     i + 1, huber_loss.data[0], mse_loss.data[0]
@@ -280,29 +323,44 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
 
             # IF in training mode
             if optimizer:
+                # Reset gradients
+                optimizer.zero_grad()
                 # Compute loss gradients w.r.t parameters
                 huber_loss.backward()
+                # Clip gradients
+                for param in dqn.parameters():
+                    param.grad.data.clamp_(-1, 1)
                 # Update parameters
                 optimizer.step()
+
+                ## update target dqn
+                if itt % args.update_frequence == 0:
+                    target_dqn.load_state_dict(dqn.state_dict())
 
             epoch_huber_loss += huber_loss.data[0]
             epoch_mse_loss += mse_loss.data[0]
             nb_batches += 1
 
     else:
-        # TODO: find a way to get (state, action, reward, next_state)
-        # state = (article, context)
-        # action = (candidate +custom_enc?)
-        # next_state = (article, context+candidate)
-        # reward = reward
+        '''
+        data loader returns:
+            articles_tensor, n_sents, l_sents, \
+            contexts_tensor, n_turns, l_turns, \
+            candidates_tensor, n_tokens, \
+            custom_encs, torch.Tensor(rewards), \
+            non_final_mask, \
+            non_final_next_state_tensor, n_non_final_next_turns, l_non_final_next_turns, \
+            non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates, \
+            non_final_next_custom_encs
+        '''
         for i, (articles_tensors, n_sents, l_sents,
                 contexts_tensors, n_turns, l_turns,
                 candidates_tensors, n_tokens,
-                custom_encs, rewards) in enumerate(data_loader):
-            # IF in training mode
-            if optimizer:
-                # Reset gradients
-                optimizer.zero_grad()
+                custom_encs, rewards,
+                non_final_mask,
+                non_final_next_state_tensor, n_non_final_next_turns, l_non_final_next_turns,
+                non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates,
+                non_final_next_custom_encs) in enumerate(data_loader):
 
             # Convert Tensors to Variables
             articles_tensors = to_var(articles_tensors)
@@ -342,6 +400,8 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
 
             # IF in training mode
             if optimizer:
+                # Reset gradients
+                optimizer.zero_grad()
                 # Compute loss gradients w.r.t parameters
                 huber_loss.backward()
                 # Update parameters

@@ -97,13 +97,18 @@ class ConversationDataset(data.Dataset):
         reward = self._rescale_rewards(entry['reward'], entry['quality'])
 
         next_state = entry['next_state']
-        next_candidates = [a['candidate'] for a in entry['next_actions']]
-        next_custom_encs = [a['custom_enc'] for a in entry['next_actions']]
+        if entry['next_actions']:
+            next_candidates = [a['candidate'] for a in entry['next_actions']]
+            next_custom_encs = [a['custom_enc'] for a in entry['next_actions']]
+        else:
+            next_candidates = None
+            next_custom_encs = None
 
 
         if self.mode == 'mlp':
             # in a simple MLP setting, only need the custom encoding, the reward, the next possible custom encodings
-            return custom_encs, rewards, next_custom_encs
+            return torch.Tensor(custom_enc), reward, next_custom_encs
+            #          ~(enc_size)            ~(1)   ~(n_actions, enc_size)
 
         else:
             # convert from string to idx
@@ -122,21 +127,34 @@ class ConversationDataset(data.Dataset):
                 end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
             )
 
-            next_state, n_nextS_turn, l_nextS_turn = self.convert_big_string_to_idx(
-                next_state,
-                start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
-                end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
-            )
-            next_candidates, n_next_candidate, l_next_candidate = self.convert_big_string_to_idx(
-                next_candidates,
-                start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
-                end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
-            )
-            return article, n_sent, l_sent,\
-                context, n_turn, l_turn,\
-                candidate, custom_encs, rewards,\
-                next_state, n_nextS_turn, l_nextS_turn,\
-                next_candidates, n_next_candidate, l_next_candidate,\
+            if next_state:
+                next_state, n_next_turn, l_next_turn = self.convert_big_string_to_idx(
+                    next_state,
+                    start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
+                    end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
+                )
+            else:
+                next_state = None
+                n_next_turn = 0
+                l_next_turn = []
+
+            if next_candidates:
+                next_candidates, n_next_candidate, l_next_candidate = self.convert_big_string_to_idx(
+                    next_candidates,
+                    start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
+                    end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
+                )
+            else:
+                next_candidates = None
+                n_next_candidate = 0
+                l_next_candidate = []
+
+            return article, n_sent, l_sent, \
+                context, n_turn, l_turn, \
+                candidate, len(candidate), \
+                torch.Tensor(custom_enc), reward, \
+                next_state, n_next_turn, l_next_turn, \
+                next_candidates, n_next_candidate, l_next_candidate, \
                 next_custom_encs
 
 
@@ -188,18 +206,41 @@ def collate_fn(data):
     """
     assert Q_NETWORK_MODE is not None
     if Q_NETWORK_MODE == 'mlp':
-        custom_encs, rewards = zip(*data)
+        custom_encs, rewards, next_custom_encs = zip(*data)
 
         # Merge custom encodings (from tuple of 1D tensor to 2D tensor)
         custom_encs = torch.stack(custom_encs, 0)  # ~ (batch, custom_hs)
 
-        return custom_encs, torch.Tensor(rewards)
+        # Compute mask of non-final states
+        non_final_mask = torch.ByteTensor(
+            map(lambda s: s is not None, next_custom_encs)
+        )
+
+        # filter out None custom encs
+        non_final_next_custom_encs = [s for s in next_custom_encs if s is not None]
+        # ~(bs-, n_actions, enc_size)
+
+        return custom_encs, torch.Tensor(rewards), non_final_mask, non_final_next_custom_encs
+        #       ~(bs, enc)        ~(bs,)              ~(bs)          ~(bs-, n_actions, enc)
 
     else:
         articles, n_sents, l_sents, \
             contexts, n_turns, l_turns, \
             candidates, n_tokens, \
-            custom_encs, rewards = zip(*data)
+            custom_encs, rewards, \
+            next_states, n_next_turns, l_next_turns, \
+            next_candidates, n_next_candidates, l_next_candidates, \
+            next_custom_encs = zip(*data)
+
+        #############################################
+        # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
+        # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
+        # candidates : tuple of Tensors. ~(bs, n_tokens)
+        # custom_encs : tuple of Tensors. ~(bs, enc)
+        # next_states : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
+        # next_candidates : tuple of list of candidate. each candidate is a Tensor ~(bs, n_actions, n_tokens)
+        # next_custom_encs : tuple of list of Tensors. ~(bs, n_actions, enc)
+        #############################################
 
         # n_sents, n_turns, n_tokens, rewards can be return as is: ~(batch_size)
 
@@ -236,10 +277,58 @@ def collate_fn(data):
         # Merge custom encodings (from tuple of 1D tensor to 2D tensor)
         custom_encs = torch.stack(custom_encs, 0)  # ~ (batch, custom_hs)
 
+        ######################
+
+        # Compute mask of non-final states
+        non_final_mask = torch.ByteTensor(
+            map(lambda s: s is not None, next_states)
+        )
+
+        # filter out 0 values from n_next_turn, n_next_candidates
+        n_non_final_next_turns = map(lambda t: t!=0, n_next_turns)
+        n_non_final_next_candidates = map(lambda t: t!=0, n_next_candidates)
+
+        # Flatten length of each sentence (from tuple of 1D list to 1D list)
+        # we want the number of tokens for each sentence ~ (batch x #sent/context)
+        l_non_final_next_turns = [length for turns in l_next_turns for length in turns]
+        l_non_final_next_candidates = [length for candidates in l_next_candidates for length in candidates]
+
+        # Merge next state utterances (from tuple of list of 1D Tensor to 2D tensor):
+        # from tuple of list of turns =to=> (batch x n_turns, max_len)
+        non_final_next_state_tensor = torch.zeros(len(l_non_final_next_turns),
+                                                  max(l_non_final_next_turns)).long()
+        i = 0
+        for cntxt in next_states:
+            if cntxt:
+                for turn in cntxt:
+                    end = l_non_final_next_turns[i]
+                    non_final_next_state_tensor[i, :end] = turn[:end]
+                    i += 1
+
+        # Merge next state candidates (from tuple of list of 1D Tensor to 2D tensor):
+        # from tuple of list of candidates =to=> (batch x n_actions, max_len)
+        non_final_next_candidates_tensor = torch.zeros(len(l_non_final_next_candidates),
+                                                       max(l_non_final_next_candidates)).long()
+        i = 0
+        for candidates in next_candidates:
+            if candidates:
+                for action in candidates:
+                    end = l_non_final_next_candidates[i]
+                    non_final_next_candidates_tensor[i, :end] = action[:end]
+                    i += 1
+
+        # filter out None custom encs
+        non_final_next_custom_encs = [s for s in next_custom_encs if s is not None]
+        # ~(bs-, n_actions, enc_size)
+
         return articles_tensor, n_sents, l_sents, \
             contexts_tensor, n_turns, l_turns, \
             candidates_tensor, n_tokens, \
-            custom_encs, torch.Tensor(rewards)
+            custom_encs, torch.Tensor(rewards), \
+            non_final_mask, \
+            non_final_next_state_tensor, n_non_final_next_turns, l_non_final_next_turns, \
+            non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates, \
+            non_final_next_custom_encs
 
 
 def get_loader(json, vocab, q_net_mode, batch_size, shuffle, num_workers):

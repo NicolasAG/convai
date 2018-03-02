@@ -2,6 +2,7 @@
 #########################
 # BUFFER
 #########################
+"""
 import random
 
 Transition = namedtuple(
@@ -16,7 +17,7 @@ class ReplayMemory(object):
         self.position = 0
 
     def push(self, *args):
-        """Saves a transition"""
+        '''Saves a transition'''
         if len(self.memory) < self.capacity:
             self.memory.append(None)
         self.memory[self.position] = Transition(*args)
@@ -27,7 +28,7 @@ class ReplayMemory(object):
 
     def __len__(self):
         return len(self.memory)
-
+"""
 
 #########################
 # Q-Networks
@@ -52,10 +53,16 @@ RNN_GATES = {
 }
 
 
-def to_var(x):
+def to_var(x, volatile=False):
     if torch.cuda.is_available():
         x = x.cuda()
-    return Variable(x)
+    return Variable(x, volatile=volatile)
+
+def to_tensor(x, type=torch.Tensor):
+    if torch.cuda.is_available():
+        return type(x).cuda()
+    else:
+        return type(x)
 
 
 class QNetwork(torch.nn.Module):
@@ -244,6 +251,7 @@ class DeepQNetwork(torch.nn.Module):
         :return: LongTensor with sorted content & list of sorted indices
         """
         # Sort lengths
+        # _, sorted_idx = torch.sort(to_tensor(lengths, torch.LongTensor), dim=0, descending=True)
         _, sorted_idx = torch.sort(torch.LongTensor(lengths), dim=0, descending=True)
         # Match sorted_idx tensor dim with sequence tensor dim
         if sequence.dim() == 3:
