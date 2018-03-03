@@ -132,7 +132,7 @@ class ConversationDataset(data.Dataset):
                     next_state,
                     start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
                     end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
-                )
+                )  # list of Tensor. Each Tensor is an utterance
             else:
                 next_state = None
                 n_next_turn = 0
@@ -143,7 +143,7 @@ class ConversationDataset(data.Dataset):
                     next_candidates,
                     start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
                     end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
-                )
+                )  # list of Tensors. Each Tensor is a candidate
             else:
                 next_candidates = None
                 n_next_candidate = 0

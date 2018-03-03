@@ -2,7 +2,7 @@ import torch
 from torch.autograd import Variable
 from q_networks import to_var, to_tensor, QNetwork, DeepQNetwork
 from q_data_loader import get_loader
-from extract_transitions_from_db import Vocabulary
+from extract_amt_for_q_ranker import Vocabulary
 from embedding_metrics import w2v
 
 import numpy as np
@@ -158,11 +158,11 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
         data loader returns:
             custom_encs, torch.Tensor(rewards), non_final_mask, non_final_next_custom_encs
         '''
-        for i, (custom_encs, rewards, _, _) in enumerate(data_loader):
+        for step, (custom_encs, rewards, _, _) in enumerate(data_loader):
 
             # Convert Tensors to Variables
-            custom_encs = to_var(custom_encs)
-            rewards = to_var(rewards)
+            custom_encs = to_var(custom_encs)  # ~(bs, enc)
+            rewards = to_var(rewards)  # ~(bs)
 
             # Forward pass: predict q-values
             q_values = dqn(custom_encs)
@@ -172,7 +172,7 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
             mse_loss = mse(q_values, rewards)
             if args.verbose:
                 logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
-                    i + 1, huber_loss.data[0], mse_loss.data[0]
+                    step + 1, huber_loss.data[0], mse_loss.data[0]
                 ))
 
             # IF in training mode
@@ -200,23 +200,23 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
             non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates, \
             non_final_next_custom_encs
         '''
-        for i, (articles_tensors, n_sents, l_sents,
+        for step, (articles_tensors, n_sents, l_sents,
                 contexts_tensors, n_turns, l_turns,
                 candidates_tensors, n_tokens,
                 custom_encs, rewards,
                 _, _, _, _, _, _, _, _) in enumerate(data_loader):
 
             # Convert Tensors to Variables
-            articles_tensors = to_var(articles_tensors)
-            n_sents = to_var(n_sents)
-            l_sents = to_var(l_sents)
-            contexts_tensors = to_var(contexts_tensors)
-            n_turns = to_var(n_turns)
-            l_turns = to_var(l_turns)
-            candidates_tensors = to_var(candidates_tensors)
-            n_tokens = to_var(n_tokens)
-            custom_encs = to_var(custom_encs)
-            rewards = to_var(rewards)
+            articles_tensors = to_var(articles_tensors)  # ~(bs x n_sentences, max_len)
+            n_sents = to_var(n_sents)  # ~(bs)
+            l_sents = to_var(l_sents)  # ~(bs x n_sentences)
+            contexts_tensors = to_var(contexts_tensors)  # ~(bs x n_turns, max_len)
+            n_turns = to_var(n_turns)  # ~(bs)
+            l_turns = to_var(l_turns)  # ~(bs x n_turns)
+            candidates_tensors = to_var(candidates_tensors)  # ~(bs, max_len)
+            n_tokens = to_var(n_tokens)  # ~(bs)
+            custom_encs = to_var(custom_encs)  # ~(bs, enc)
+            rewards = to_var(rewards)  # ~(bs)
 
             # Forward pass: predict q-values
             state_values, action_advantages = dqn(
@@ -232,7 +232,7 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
             mse_loss = mse(q_values, rewards)
             if args.verbose:
                 logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
-                    i + 1, huber_loss.data[0], mse_loss.data[0]
+                    step + 1, huber_loss.data[0], mse_loss.data[0]
                 ))
 
             # IF in training mode
@@ -257,7 +257,7 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
 def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
     """
     Performs one epoch over the specified data
-    :param itt: iteration number
+    :param itt: number of past iterations
     :param dqn: q-network to perform forward pass
     :param dqn_target: target network
     :param huber: huber loss function
@@ -276,7 +276,7 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
         data loader returns:
             custom_encs, torch.Tensor(rewards), non_final_mask, non_final_next_custom_encs
         '''
-        for i, (custom_encs, rewards,
+        for step, (custom_encs, rewards,
                 non_final_mask, non_final_next_custom_encs) in enumerate(data_loader):
 
             # Convert Tensors to Variables
@@ -323,7 +323,7 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
             mse_loss = mse(q_values, expected_state_action_values)
             if args.verbose:
                 logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
-                    i + 1, huber_loss.data[0], mse_loss.data[0]
+                    step + 1, huber_loss.data[0], mse_loss.data[0]
                 ))
 
             # IF in training mode
@@ -339,7 +339,7 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
                 optimizer.step()
 
                 ## update target dqn
-                if itt % args.update_frequence == 0:
+                if (itt+step) % args.update_frequence == 0:
                     target_dqn.load_state_dict(dqn.state_dict())
 
             epoch_huber_loss += huber_loss.data[0]
@@ -358,7 +358,7 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
             non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates, \
             non_final_next_custom_encs
         '''
-        for i, (articles_tensors, n_sents, l_sents,
+        for step, (articles_tensors, n_sents, l_sents,
                 contexts_tensors, n_turns, l_turns,
                 candidates_tensors, n_tokens,
                 custom_encs, rewards,
@@ -368,45 +368,89 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
                 non_final_next_custom_encs) in enumerate(data_loader):
 
             # Convert Tensors to Variables
-            articles_tensors = to_var(articles_tensors)
-            n_sents = to_var(n_sents)
-            l_sents = to_var(l_sents)
-            contexts_tensors = to_var(contexts_tensors)
-            n_turns = to_var(n_turns)
-            l_turns = to_var(l_turns)
-            candidates_tensors = to_var(candidates_tensors)
-            n_tokens = to_var(n_tokens)
-            custom_encs = to_var(custom_encs)
-            rewards = to_var(rewards)
-            # ...
+            # state:
+            articles_tensors_t = to_var(articles_tensors)  # ~(bs x n_sentences, max_len)
+            n_sents_t = to_var(n_sents)  # ~(bs)
+            l_sents_t = to_var(l_sents)  # ~(bs x n_sentences)
+            contexts_tensors_t = to_var(contexts_tensors)  # ~(bs x n_turns, max_len)
+            n_turns_t = to_var(n_turns)  # ~(bs)
+            l_turns_t = to_var(l_turns)  # ~(bs x n_turns)
+            # action:
+            candidates_tensors_t = to_var(candidates_tensors)  # ~(bs, max_len)
+            n_tokens_t = to_var(n_tokens)  # ~(bs)
+            custom_encs_t = to_var(custom_encs)  # ~(bs, enc)
+            # reward:
+            rewards_t = to_var(rewards)  # ~(bs)
 
-            # TODO: update to do Q-learning like in : http://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
-
-            # Forward pass: predict state-action values
+            # Forward pass: predict current state-action value
             state_values, action_advantages = dqn(
-                articles_tensors, n_sents, l_sents,
-                contexts_tensors, n_turns, l_turns,
-                candidates_tensors, n_tokens,
-                custom_encs
+                articles_tensors_t, n_sents_t, l_sents_t,
+                contexts_tensors_t, n_turns_t, l_turns_t,
+                candidates_tensors_t, n_tokens_t,
+                custom_encs_t
             )
             q_values = state_values + action_advantages  # ~(bs,)
 
-            # Compute next-state values
-            next_state_values, _ = target_dqn(
-                articles_tensors, n_sents, l_sents,
-                # TODO: compute next context,
-                # TODO: give dummy candidates,
-                # TODO: give dummy custom enc
-            )
-            # Temporal Difference error
-            expected_state_action_values = rewards + (args.gamma * next_state_values)
+
+            # Next state:
+            # We don't want to backprop through the expected action values and volatile
+            # will save us on temporarily changing the model parameters'
+            # requires_grad to False!
+
+            # TODO: filter out article for which next state is None!
+            articles_tensors_tp1 = to_var(articles_tensors, volatile=True)  # ~(bs x n_sentences, max_len)
+            n_sents_tp1 = to_var(n_sents, volatile=True)  # ~(bs)
+            l_sents_tp1 = to_var(l_sents, volatile=True)  # ~(bs x n_sentences)
+            contexts_tensors_tp1 = to_var(non_final_next_state_tensor,
+                                          volatile=True)  # ~(bs- x n_turns, max_len)
+            n_turns_tp1 = to_var(n_non_final_next_turns, volatile=True)  # ~(bs-)
+            l_turns_tp1 = to_var(l_non_final_next_turns, volatile=True)  # ~(bs- x n_turns)
+
+            # Compute Q(s', a') for all next state-action pairs.
+            # [--Double DQN: use real dqn for argmax_a and use target dqn to measure q(s', a*)--]
+            max_actions = {
+                'candidate': [],  # ~(bs-, max_len)
+                'n_tokens': [],   # ~(bs)
+                'custom_enc': []  # ~(bs-, enc)
+            }
+            for idx in range(len(non_final_next_custom_encs)):
+                # TODO...
+                cutom_encs_tp1 = non_final_next_custom_encs[idx]
+
+            for actions in non_final_next_custom_encs:
+                # We don't want to backprop through the expected action values and volatile
+                # will save us on temporarily changing the model parameters'
+                # requires_grad to False!
+                actions = to_var(actions, volatile=True)  # ~(actions, enc)
+                next_qs = dqn(actions)  # ~(actions,)
+                max_q_val, max_idx = next_qs.max(0)
+                # append custom_enc of the max action according to current dqn
+                max_actions.append(actions[max_idx])
+
+            next_state_values = to_var(torch.zeros(args.batch_size))
+            next_action_advantages = to_var(torch.zeros(args.batch_size))
+            next_state_values[non_final_mask], next_action_advantages[non_final_mask] = target_dqn(
+                articles_tensors_tp1, n_sents_tp1, l_sents_tp1,
+                contexts_tensors_tp1, n_turns_tp1, l_turns_tp1,
+                to_var(to_tensor(max_actions['candidate']), volatile=True),
+                to_var(to_tensor(max_actions['n_tokens']), volatile=True),
+                to_var(to_tensor(max_actions['custom_enc']), volatile=True)
+            )  # ~(bs)
+            next_state_action_values = next_state_values + next_action_advantages
+            # Now, we don't want to mess up the loss with a volatile flag, so let's
+            # clear it. After this, we'll just end up with a Variable that has
+            # requires_grad=False
+            next_state_action_values.volatile = False
+            # Compute the expected Q values
+            expected_state_action_values = (next_state_action_values * args.gamma) + rewards_t
+
 
             # Compute loss
             huber_loss = huber(q_values, expected_state_action_values)
             mse_loss = mse(q_values, expected_state_action_values)
             if args.verbose:
                 logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
-                    i + 1, huber_loss.data[0], mse_loss.data[0]
+                    step + 1, huber_loss.data[0], mse_loss.data[0]
                 ))
 
             # IF in training mode
@@ -419,7 +463,7 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
                 optimizer.step()
 
                 ## update target dqn
-                if itt % args.update_frequence == 0:
+                if (itt+step) % args.update_frequence == 0:
                     target_dqn.load_state_dict(dqn.state_dict())
 
 
@@ -430,7 +474,7 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
     epoch_huber_loss /= nb_batches
     epoch_mse_loss /= nb_batches
 
-    return epoch_huber_loss, epoch_mse_loss
+    return epoch_huber_loss, epoch_mse_loss, step
 
 
 def main():
@@ -515,12 +559,18 @@ def main():
     logger.info("")
     logger.info("Training model...")
 
+    iterations_done = 0
     for epoch in range(args.epochs):
         logger.info("***********************************")
         # Perform one epoch and return average losses:
-        train_huber_loss, train_mse_loss = one_epoch(
-            dqn, huber, mse, train_loader, optimizer=optimizer
+        # train_huber_loss, train_mse_loss = one_epoch(
+        #     dqn, huber, mse, train_loader, optimizer=optimizer
+        # )
+        train_huber_loss, train_mse_loss, steps = one_episode(
+            iterations_done,
+            dqn, dqn_target, huber, mse, train_loader, optimizer=optimizer
         )
+        iterations_done += steps
         # Save train losses
         train_losses.append((train_huber_loss, train_mse_loss))
         logger.info("Epoch: %d - huber loss: %g - mse loss: %g" % (
@@ -529,9 +579,14 @@ def main():
 
         logger.info("computing validation losses...")
         # Compute validation losses
-        valid_huber_loss, valid_mse_loss = one_epoch(
-            dqn, huber, mse, valid_loader, optimizer=None
+        # valid_huber_loss, valid_mse_loss = one_epoch(
+        #     dqn, huber, mse, valid_loader, optimizer=None
+        # )
+        valid_huber_loss, valid_mse_loss, _ = one_episode(
+            iterations_done,
+            dqn, dqn_target, huber, mse, valid_loader, optimizer=None
         )
+
         # Save validation losses
         valid_losses.append((valid_huber_loss, valid_mse_loss))
         logger.info("Valid huber loss: %g - best huber loss: %g" % (
