@@ -231,7 +231,7 @@ def main():
 
     print "\nSaving to json file..."
     file_prefix = "voted" if args.voted_only else "full"
-    with open('./data/%s_data_db_%s.json' % (file_prefix, str(time.time())), 'wb') as handle:
+    with open('./data/supervised_ranker_db_%s_data_%s.json' % (file_prefix, str(time.time())), 'wb') as handle:
         json.dump(full_data, handle)
     print "done."
 

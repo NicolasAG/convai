@@ -407,7 +407,7 @@ def main():
     logger.info("")
     logger.info("Saving to json file...")
     unique_id = str(time.time())
-    file_path = "./data/amt_data_db_%s.json" % unique_id
+    file_path = "./data/q_ranker_amt_data_%s.json" % unique_id
     with open(file_path, 'wb') as f:
         json.dump(
                 {
@@ -426,7 +426,7 @@ def main():
     logger.info("Total vocabulary size: %d" % len(vocab))
 
     logger.info("Saving vocab to pkl file...")
-    file_path = "./data/amt_vocab_%s.pkl" % unique_id
+    file_path = "./data/q_ranker_amt_vocab_%s.pkl" % unique_id
     with open(file_path, 'wb') as f:
         pkl.dump(vocab, f)
     logger.info("done.")
