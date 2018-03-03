@@ -40,9 +40,9 @@ def main(args):
             feature_path = data_file.replace('.json', '.features')
             if not os.path.exists(feature_path):
                 os.makedirs(feature_path)
-            with open("%s/%s.json" % (feature_path, feat), "wb") as handle:
+            with open("%s/%s.json" % (feature_path, feat.__class__.__name__), "wb") as handle:
                 json.dump(data_features, handle)
-            print "saved feature file %s/%s.json" % (feature_path, feat)
+            print "saved feature file %s/%s.json" % (feature_path, feat.__class__.__name__)
 
 
 if __name__ == '__main__':
