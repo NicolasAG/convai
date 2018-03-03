@@ -11,7 +11,7 @@ python train.py ./data/supervised_ranker_amt_data_1520102322.77.json \
     --gpu 1 \
     --batch_size 128 \
     --patience 20 \
-    --hidden_sizes 700 350 175 85 \
+    --hidden_sizes 789 395 197 98 \
     --activation swish \
     --dropout_rate 0.1 \
     --optimizer adam \

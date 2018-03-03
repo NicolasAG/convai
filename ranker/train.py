@@ -57,7 +57,7 @@ MODE_TO_FLAG = {
 # }
 
 
-def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1):
+def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1, cv=True):
     """
     Load data to train ranker. Build `k` fold cross validation train/val data
     :param files: list of data files to load
@@ -68,6 +68,7 @@ def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1):
     :param val_prop: proportion of data to consider for validation set.
         Will also define the number of train/valid folds
     :param test_prop: proportion of data to consider for test set
+    :param cv: split data into cross validation sections
     :return: collections of train x & y, valid x & y, and one test x & y
         x = numpy array of size (data, feature_length)
           ie: np.array( [[f1, f2, ..., fn], ..., [f1, f2, ..., fn]] )
@@ -204,21 +205,32 @@ def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1):
     # reformat train & valid to build k-folds:
     trains = []
     valids = []
-    n = len(remain_y)
-    for k_fold in range(n / valid_max_n):
-        start = valid_max_n * k_fold  # start index of validation set
-        stop =  valid_max_n * (k_fold+1)  # stop index of validation set
-        # define validation set for this fold
-        tmp_valid_x = remain_x[start: stop]
-        tmp_valid_y = remain_y[start: stop]
+    if cv:
+        n = len(remain_y)
+        for k_fold in range(n / valid_max_n):
+            start = valid_max_n * k_fold  # start index of validation set
+            stop =  valid_max_n * (k_fold+1)  # stop index of validation set
+            # define validation set for this fold
+            tmp_valid_x = remain_x[start: stop]
+            tmp_valid_y = remain_y[start: stop]
+            valids.append((tmp_valid_x, tmp_valid_y))
+            print "[fold %d] valid: %s" % (k_fold+1, tmp_valid_x.shape)
+            # define training set for this fold
+            # print "[fold %d] train indices: %s" % (k+fold+1, np.array(range(stop, n+start)) % n)
+            tmp_train_x = remain_x[np.array(range(stop, n+start)) % n]
+            tmp_train_y = remain_y[np.array(range(stop, n+start)) % n]
+            trains.append((tmp_train_x, tmp_train_y))
+            print "[fold %d] train: %s" % (k_fold+1, tmp_train_x.shape)
+    else:
+        tmp_valid_x = remain_x[:valid_max_n]
+        tmp_valid_y = remain_y[:valid_max_n]
         valids.append((tmp_valid_x, tmp_valid_y))
-        print "[fold %d] valid: %s" % (k_fold+1, tmp_valid_x.shape)
-        # define training set for this fold
-        # print "[fold %d] train indices: %s" % (k+fold+1, np.array(range(stop, n+start)) % n)
-        tmp_train_x = remain_x[np.array(range(stop, n+start)) % n]
-        tmp_train_y = remain_y[np.array(range(stop, n+start)) % n]
+        print "valid: %s" % (tmp_valid_x.shape,)
+        tmp_train_x = remain_x[valid_max_n:]
+        tmp_train_y = remain_y[valid_max_n:]
         trains.append((tmp_train_x, tmp_train_y))
-        print "[fold %d] train: %s" % (k_fold+1, tmp_train_x.shape)
+        print "train: %s" % (tmp_train_x.shape,)
+
     print "test: %s" % (test_x.shape,)
 
     return trains, valids, (test_x, test_y), feature_list
