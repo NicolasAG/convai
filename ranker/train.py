@@ -86,13 +86,13 @@ def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1):
     '''
     n = 0  # total number of examples
     for data_file in files:
-        if target == 'r' and 'data/voted_data_' in data_file:
+        if target == 'r' and ('voted_data_' in data_file or 'amt_data_' in data_file):
             with open(data_file, 'rb') as handle:
                 raw_data[data_file] = json.load(handle)
                 n += len(raw_data[data_file])
                 # get the time id of the data
                 # file_ids.append(data_file.split('_')[-1].replace('pkl', ''))
-        elif target == 'R' and 'data/full_data_' in data_file:
+        elif target == 'R' and 'full_data_' in data_file:
             with open(data_file, 'rb') as handle:
                 raw_data[data_file] = json.load(handle)
                 n += len(raw_data[data_file])
