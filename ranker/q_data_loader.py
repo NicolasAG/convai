@@ -285,16 +285,16 @@ def collate_fn(data):
         )
 
         # filter out 0 values from n_next_turn, n_next_candidates
-        n_non_final_next_turns = map(lambda t: t!=0, n_next_turns)
-        n_non_final_next_candidates = map(lambda t: t!=0, n_next_candidates)
+        n_non_final_next_turns = map(lambda t: t!=0, n_next_turns)  # ~(bs-)
+        n_non_final_next_candidates = map(lambda t: t!=0, n_next_candidates)  # ~(bs-)
 
         # Flatten length of each sentence (from tuple of 1D list to 1D list)
-        # we want the number of tokens for each sentence ~ (batch x #sent/context)
-        l_non_final_next_turns = [length for turns in l_next_turns for length in turns]
-        l_non_final_next_candidates = [length for candidates in l_next_candidates for length in candidates]
+        # we want the number of tokens for each sentence
+        l_non_final_next_turns = [length for turns in l_next_turns for length in turns]  # ~(bs- x #turns/context)
+        l_non_final_next_candidates = [length for candidates in l_next_candidates for length in candidates]  # ~(bs- x #candidates)
 
         # Merge next state utterances (from tuple of list of 1D Tensor to 2D tensor):
-        # from tuple of list of turns =to=> (batch x n_turns, max_len)
+        # from tuple of list of turns =to=> (bs- x n_turns, max_len)
         non_final_next_state_tensor = torch.zeros(len(l_non_final_next_turns),
                                                   max(l_non_final_next_turns)).long()
         i = 0
@@ -306,7 +306,7 @@ def collate_fn(data):
                     i += 1
 
         # Merge next state candidates (from tuple of list of 1D Tensor to 2D tensor):
-        # from tuple of list of candidates =to=> (batch x n_actions, max_len)
+        # from tuple of list of candidates =to=> (bs- x n_actions, max_len)
         non_final_next_candidates_tensor = torch.zeros(len(l_non_final_next_candidates),
                                                        max(l_non_final_next_candidates)).long()
         i = 0
@@ -321,8 +321,8 @@ def collate_fn(data):
         non_final_next_custom_encs = [s for s in next_custom_encs if s is not None]
         # ~(bs-, n_actions, enc_size)
 
-        return articles_tensor, torch.LongTensor(n_sents), torch.LongTensor(l_sents), \
-            contexts_tensor, torch.LongTensor(n_turns), torch.LongTensor(l_turns), \
+        return articles, articles_tensor, torch.LongTensor(n_sents), torch.LongTensor(l_sents), \
+            contexts, contexts_tensor, torch.LongTensor(n_turns), torch.LongTensor(l_turns), \
             candidates_tensor, torch.LongTensor(n_tokens), \
             custom_encs, torch.Tensor(rewards), \
             non_final_mask, \

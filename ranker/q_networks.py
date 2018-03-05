@@ -69,7 +69,7 @@ class QNetwork(torch.nn.Module):
         Perform a forward pass on a batch of (article, dialog, candidate)
         encodings to predict Q-values.
 
-        :param x: list of custom encoddings to predict Q-values of (article, dialog, candidate) triples
+        :param x: list of custom encodings to predict Q-values of (article, dialog, candidate) triples
                   torch.Variable with Tensor ~ (batch, input_size)
         """
         out = ACTIVATIONS[self.mlp_activation](self.fc_1(x))
@@ -390,5 +390,5 @@ class DeepQNetwork(torch.nn.Module):
         advantage = self.dropout(advantage)   # dropout layer
         advantage = self.fc_adv_3(advantage)  # last layer: no activation
 
-        # q_value = value + advantage  # ~(bs, 1)
-        return value, advantage
+        q_value = value + advantage  # ~(bs, 1)
+        return q_value

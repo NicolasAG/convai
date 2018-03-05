@@ -191,8 +191,8 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
     else:
         '''
         data loader returns:
-            articles_tensor, n_sents, l_sents, \
-            contexts_tensor, n_turns, l_turns, \
+            articles, articles_tensor, n_sents, l_sents, \
+            contexts, contexts_tensor, n_turns, l_turns, \
             candidates_tensor, n_tokens, \
             custom_encs, torch.Tensor(rewards), \
             non_final_mask, \
@@ -200,8 +200,8 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
             non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates, \
             non_final_next_custom_encs
         '''
-        for step, (articles_tensors, n_sents, l_sents,
-                contexts_tensors, n_turns, l_turns,
+        for step, (_, articles_tensors, n_sents, l_sents,
+                _, contexts_tensors, n_turns, l_turns,
                 candidates_tensors, n_tokens,
                 custom_encs, rewards,
                 _, _, _, _, _, _, _, _) in enumerate(data_loader):
@@ -219,13 +219,13 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
             rewards = to_var(rewards)  # ~(bs)
 
             # Forward pass: predict q-values
-            state_values, action_advantages = dqn(
+            q_values = dqn(
                 articles_tensors, n_sents, l_sents,
                 contexts_tensors, n_turns, l_turns,
                 candidates_tensors, n_tokens,
                 custom_encs
             )
-            q_values = state_values + action_advantages
+            # q_values = state_values + action_advantages
 
             # Compute loss
             huber_loss = huber(q_values, rewards)
@@ -280,8 +280,8 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
                 non_final_mask, non_final_next_custom_encs) in enumerate(data_loader):
 
             # Convert Tensors to Variables
-            custom_encs = to_var(custom_encs)            # ~(bs, enc)
-            rewards = to_var(rewards)                    # ~(bs,)
+            custom_encs = to_var(custom_encs)  # ~(bs, enc)
+            rewards = to_var(rewards)  # ~(bs,)
 
             # non_final_next_custom_encs = to_var(
             #     non_final_next_custom_encs,
@@ -298,16 +298,16 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
                 # We don't want to backprop through the expected action values and volatile
                 # will save us on temporarily changing the model parameters'
                 # requires_grad to False!
-                actions = to_var(actions, volatile=True)  # ~(actions, enc)
+                actions = to_var(to_tensor(actions), volatile=True)  # ~(actions, enc)
                 next_qs = dqn(actions)  # ~(actions,)
-                max_q_val, max_idx = next_qs.max(0)
+                max_q_val, max_idx = next_qs.data.max(0)
                 # append custom_enc of the max action according to current dqn
-                max_actions.append(actions[max_idx])
+                max_actions.append(actions.data[max_idx])
 
             next_state_action_values = to_var(torch.zeros(args.batch_size))
             next_state_action_values[non_final_mask] = target_dqn(
                 to_var(
-                    to_tensor(max_actions),
+                    torch.stack(max_actions),
                     volatile=True
                 )
             )  # ~(bs)
@@ -349,8 +349,8 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
     else:
         '''
         data loader returns:
-            articles_tensor, n_sents, l_sents, \
-            contexts_tensor, n_turns, l_turns, \
+            articles, articles_tensor, n_sents, l_sents, \
+            contexts, contexts_tensor, n_turns, l_turns, \
             candidates_tensor, n_tokens, \
             custom_encs, torch.Tensor(rewards), \
             non_final_mask, \
@@ -358,8 +358,8 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
             non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates, \
             non_final_next_custom_encs
         '''
-        for step, (articles_tensors, n_sents, l_sents,
-                contexts_tensors, n_turns, l_turns,
+        for step, (articles, articles_tensors, n_sents, l_sents,
+                contexts, contexts_tensors, n_turns, l_turns,
                 candidates_tensors, n_tokens,
                 custom_encs, rewards,
                 non_final_mask,
@@ -383,24 +383,43 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
             rewards_t = to_var(rewards)  # ~(bs)
 
             # Forward pass: predict current state-action value
-            state_values, action_advantages = dqn(
+            q_values = dqn(
                 articles_tensors_t, n_sents_t, l_sents_t,
                 contexts_tensors_t, n_turns_t, l_turns_t,
                 candidates_tensors_t, n_tokens_t,
                 custom_encs_t
             )
-            q_values = state_values + action_advantages  # ~(bs,)
+            # q_values = state_values + action_advantages  # ~(bs,)
 
 
             # Next state:
+            # Filter out article for which next state is None!
+            n_sents_tp1 = []  # ~(bs-)
+            l_sents_tp1 = []  # ~(bs- x n_sent) where each tensor is a sentence
+            for idx, article in enumerate(articles):
+                # article = list of tensors
+                if non_final_mask[idx] == 1:
+                    assert n_sents[idx] == len(article)
+                    n_sents_tp1.append(len(article))
+                    l_sents_tp1.extend([len(sent) for sent in article])
+            articles_tensors_tp1 = torch.zeros(len(l_sents_tp1), max(l_sents_tp1)).long()  # ~(bs- x n_sent, max_len)
+            i = 0
+            for idx, artcl in enumerate(articles):
+                # article = list of tensors
+                if non_final_mask[idx] == 1:
+                    for sent in artcl:
+                        assert len(sent) == l_sents_tp1[i]
+                        end = l_sents_tp1[i]
+                        articles_tensors_tp1[i, :end] = sent[:end]
+                        i += 1
+
             # We don't want to backprop through the expected action values and volatile
             # will save us on temporarily changing the model parameters'
             # requires_grad to False!
+            articles_tensors_tp1 = to_var(articles_tensors_tp1, volatile=True)  # ~(bs- x n_sentences, max_len)
+            n_sents_tp1 = to_var(to_tensor(n_sents_tp1), volatile=True)  # ~(bs-)
+            l_sents_tp1 = to_var(to_tensor(l_sents_tp1), volatile=True)  # ~(bs- x n_sentences)
 
-            # TODO: filter out article for which next state is None!
-            articles_tensors_tp1 = to_var(articles_tensors, volatile=True)  # ~(bs x n_sentences, max_len)
-            n_sents_tp1 = to_var(n_sents, volatile=True)  # ~(bs)
-            l_sents_tp1 = to_var(l_sents, volatile=True)  # ~(bs x n_sentences)
             contexts_tensors_tp1 = to_var(non_final_next_state_tensor,
                                           volatile=True)  # ~(bs- x n_turns, max_len)
             n_turns_tp1 = to_var(n_non_final_next_turns, volatile=True)  # ~(bs-)
@@ -410,40 +429,109 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
             # [--Double DQN: use real dqn for argmax_a and use target dqn to measure q(s', a*)--]
             max_actions = {
                 'candidate': [],  # ~(bs-, max_len)
-                'n_tokens': [],   # ~(bs)
+                'n_tokens': [],   # ~(bs-)
                 'custom_enc': []  # ~(bs-, enc)
             }
+            past_n_sentences = 0
+            past_n_turns = 0
+            past_n_actions = 0
             for idx in range(len(non_final_next_custom_encs)):
-                # TODO...
-                cutom_encs_tp1 = non_final_next_custom_encs[idx]
-
-            for actions in non_final_next_custom_encs:
                 # We don't want to backprop through the expected action values and volatile
                 # will save us on temporarily changing the model parameters'
                 # requires_grad to False!
-                actions = to_var(actions, volatile=True)  # ~(actions, enc)
-                next_qs = dqn(actions)  # ~(actions,)
-                max_q_val, max_idx = next_qs.max(0)
-                # append custom_enc of the max action according to current dqn
-                max_actions.append(actions[max_idx])
 
-            next_state_values = to_var(torch.zeros(args.batch_size))
-            next_action_advantages = to_var(torch.zeros(args.batch_size))
-            next_state_values[non_final_mask], next_action_advantages[non_final_mask] = target_dqn(
+                tmp_n_actions = n_non_final_next_candidates[idx]
+
+                ### article
+                # grab number of sentences for that article (x n_actions)
+                tmp_n_sents = to_var(
+                    to_tensor([n_sents_tp1.data[idx]] * tmp_n_actions),
+                    volatile=True
+                )  # ~(n_actions)
+                # grab length of each sentence for that article (x n_actions)
+                tmp_l_sents = l_sents_tp1.data[past_n_sentences: past_n_sentences+n_sents_tp1.data[idx]]  # ~(n_sentences)
+                tmp_l_sents = to_var(
+                    torch.cat([tmp_l_sents] * tmp_n_actions),
+                    volatile=True
+                )  # ~(n_actions x n_sentences)
+                # grab articles_for_which_next_state_is_not_None[idx] (x n_actions)
+                tmp_articles_tensors = articles_tensors_tp1.data[past_n_sentences: past_n_sentences+n_sents_tp1.data[idx]]  # ~(n_sent, max_len)
+                tmp_articles_tensors = to_var(
+                    torch.cat([tmp_articles_tensors] * tmp_n_actions),
+                    volatile=True
+                )  # ~(n_actions x n_sentences, max_len)
+
+                past_n_sentences += n_sents_tp1.data[idx]
+
+                ### context
+                # grab number of turns for that context (x n_actions)
+                tmp_n_turns = to_var(
+                    to_tensor([n_turns_tp1.data[idx]] * tmp_n_actions),
+                    volatile=True
+                )  # ~(n_actions)
+                # grab length of each turn for that context (x n_actions)
+                tmp_l_turns = l_turns_tp1.data[past_n_turns: past_n_turns+n_turns_tp1.data[idx]]  # ~(n_turns)
+                tmp_l_turns = to_var(
+                    torch.cat([tmp_l_turns] * tmp_n_actions),
+                    volatile=True
+                )  # ~(n_actions x n_turns)
+                # grab context for which next state is not None[idx] (x n_actions)
+                tmp_contexts_tensors = contexts_tensors_tp1.data[past_n_turns: past_n_turns+n_turns_tp1.data[idx]]  # ~(n_turns, max_len)
+                tmp_contexts_tensors = to_var(
+                    torch.cat([tmp_contexts_tensors] * tmp_n_actions),
+                    volatile=True
+                )  # ~(n_actions x n_turns, max_len)
+
+                past_n_turns += n_turns_tp1.data[idx]
+
+                ### candidate
+                # grab each candidate turns
+                tmp_candidates_tensors = to_var(
+                    non_final_next_candidates_tensor[past_n_actions: past_n_actions+tmp_n_actions],
+                    volatile=True
+                )  # ~(n_actions, max_len)
+                # grab number of tokens for each candidate turns
+                tmp_n_tokens = to_var(
+                    l_non_final_next_candidates[past_n_actions: past_n_actions+tmp_n_actions],
+                    volatile=True
+                )  # ~(n_actions)
+
+                past_n_actions += tmp_n_actions
+
+                ### custom enc
+                # grab candidates custom encodings
+                tmp_custom_encs = to_var(
+                    non_final_next_custom_encs[idx],
+                    volatile=True
+                )  # ~(n_actions, enc)
+
+                tmp_q_val = dqn(
+                    tmp_articles_tensors, tmp_n_sents, tmp_l_sents,
+                    tmp_contexts_tensors, tmp_n_turns, tmp_l_turns,
+                    tmp_candidates_tensors, tmp_n_tokens,
+                    tmp_custom_encs
+                )
+                max_q_val, max_idx = tmp_q_val.data.max(0)
+                # append custom_enc of the max action according to current dqn
+                max_actions['candidate'].append(tmp_candidates_tensors.data[max_idx])
+                max_actions['n_tokens'].append(tmp_n_tokens.data[max_idx])
+                max_actions['custom_enc'].append(tmp_custom_encs.data[max_idx])
+
+            next_state_action_values = to_var(torch.zeros(args.batch_size))
+            next_state_action_values[non_final_mask] = target_dqn(
                 articles_tensors_tp1, n_sents_tp1, l_sents_tp1,
                 contexts_tensors_tp1, n_turns_tp1, l_turns_tp1,
-                to_var(to_tensor(max_actions['candidate']), volatile=True),
+                to_var(torch.stack(max_actions['candidate']), volatile=True),
                 to_var(to_tensor(max_actions['n_tokens']), volatile=True),
-                to_var(to_tensor(max_actions['custom_enc']), volatile=True)
+                to_var(torch.stack(max_actions['custom_enc']), volatile=True)
             )  # ~(bs)
-            next_state_action_values = next_state_values + next_action_advantages
+
             # Now, we don't want to mess up the loss with a volatile flag, so let's
             # clear it. After this, we'll just end up with a Variable that has
             # requires_grad=False
             next_state_action_values.volatile = False
             # Compute the expected Q values
             expected_state_action_values = (next_state_action_values * args.gamma) + rewards_t
-
 
             # Compute loss
             huber_loss = huber(q_values, expected_state_action_values)
