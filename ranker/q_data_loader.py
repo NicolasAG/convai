@@ -212,12 +212,10 @@ def collate_fn(data):
         custom_encs = torch.stack(custom_encs, 0)  # ~ (batch, custom_hs)
 
         # Compute mask of non-final states
-        non_final_mask = torch.ByteTensor(
-            map(lambda s: s is not None, next_custom_encs)
-        )
+        non_final_mask = map(lambda s: s is not None, next_custom_encs)
 
         # filter out None custom encs
-        non_final_next_custom_encs = [s for s in next_custom_encs if s is not None]
+        non_final_next_custom_encs = filter(lambda s: s is not None, next_custom_encs)
         # ~(bs-, n_actions, enc_size)
 
         return custom_encs, torch.Tensor(rewards), non_final_mask, non_final_next_custom_encs
@@ -280,13 +278,11 @@ def collate_fn(data):
         ######################
 
         # Compute mask of non-final states
-        non_final_mask = torch.ByteTensor(
-            map(lambda s: s is not None, next_states)
-        )
+        non_final_mask = map(lambda s: s is not None, next_states)
 
         # filter out 0 values from n_next_turn, n_next_candidates
-        n_non_final_next_turns = map(lambda t: t!=0, n_next_turns)  # ~(bs-)
-        n_non_final_next_candidates = map(lambda t: t!=0, n_next_candidates)  # ~(bs-)
+        n_non_final_next_turns = filter(lambda t: t!=0, n_next_turns)  # ~(bs-)
+        n_non_final_next_candidates = filter(lambda t: t!=0, n_next_candidates)  # ~(bs-)
 
         # Flatten length of each sentence (from tuple of 1D list to 1D list)
         # we want the number of tokens for each sentence
@@ -318,7 +314,7 @@ def collate_fn(data):
                     i += 1
 
         # filter out None custom encs
-        non_final_next_custom_encs = [s for s in next_custom_encs if s is not None]
+        non_final_next_custom_encs = filter(lambda s: s is not None, next_custom_encs)
         # ~(bs-, n_actions, enc_size)
 
         return articles, articles_tensor, torch.LongTensor(n_sents), torch.LongTensor(l_sents), \

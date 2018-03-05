@@ -279,6 +279,8 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
         for step, (custom_encs, rewards,
                 non_final_mask, non_final_next_custom_encs) in enumerate(data_loader):
 
+            # Convert array to Tensor
+            non_final_mask = to_tensor(non_final_mask, torch.ByteTensor)
             # Convert Tensors to Variables
             custom_encs = to_var(custom_encs)  # ~(bs, enc)
             rewards = to_var(rewards)  # ~(bs,)
@@ -292,7 +294,7 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
             q_values = dqn(custom_encs)  # ~(bs)
 
             # Compute Q(s', a') for all next state-action pairs.
-            # [--Double DQN: use real dqn for argmax_a and use target dqn to measure q(s', a*)--]
+            # [-> Double DQN: use real dqn for argmax_a and use target dqn to measure q(s', a*) <-]
             max_actions = []  # ~(bs-, enc)
             for actions in non_final_next_custom_encs:
                 # We don't want to backprop through the expected action values and volatile
@@ -302,15 +304,12 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
                 next_qs = dqn(actions)  # ~(actions,)
                 max_q_val, max_idx = next_qs.data.max(0)
                 # append custom_enc of the max action according to current dqn
-                max_actions.append(actions.data[max_idx])
+                max_actions.append(actions.data[max_idx].view(-1))
 
-            next_state_action_values = to_var(torch.zeros(args.batch_size))
+            next_state_action_values = to_var(torch.zeros(non_final_mask.size()))
             next_state_action_values[non_final_mask] = target_dqn(
-                to_var(
-                    torch.stack(max_actions),
-                    volatile=True
-                )
-            )  # ~(bs)
+                to_var(torch.stack(max_actions), volatile=True)
+            )  # ~(bs-)
             # Now, we don't want to mess up the loss with a volatile flag, so let's
             # clear it. After this, we'll just end up with a Variable that has
             # requires_grad=False
@@ -367,6 +366,8 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
                 non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates,
                 non_final_next_custom_encs) in enumerate(data_loader):
 
+            # Convert array to Tensor
+            non_final_mask = to_tensor(non_final_mask, torch.ByteTensor)
             # Convert Tensors to Variables
             # state:
             articles_tensors_t = to_var(articles_tensors)  # ~(bs x n_sentences, max_len)
@@ -391,6 +392,18 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
             )
             # q_values = state_values + action_advantages  # ~(bs,)
 
+            # print "articles:", articles_tensors_t.size()
+            # print "- n_sentences:", n_sents_t.size()
+            # print "- l_sentences:", l_sents_t.size()
+            # print "contexts:", contexts_tensors_t.size()
+            # print "- n_turns:", n_turns_t.size()
+            # print "- l_turns:", l_turns_t.size()
+            # print "candidate:", candidates_tensors_t.size()
+            # print "- n_tokens:", n_tokens_t.size()
+            # print "custom_encodings:", custom_encs_t.size()
+            # print "--"
+            # print "q_values:", q_values.size()
+            # print "--"
 
             # Next state:
             # Filter out article for which next state is None!
@@ -417,8 +430,8 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
             # will save us on temporarily changing the model parameters'
             # requires_grad to False!
             articles_tensors_tp1 = to_var(articles_tensors_tp1, volatile=True)  # ~(bs- x n_sentences, max_len)
-            n_sents_tp1 = to_var(to_tensor(n_sents_tp1), volatile=True)  # ~(bs-)
-            l_sents_tp1 = to_var(to_tensor(l_sents_tp1), volatile=True)  # ~(bs- x n_sentences)
+            n_sents_tp1 = to_var(to_tensor(n_sents_tp1, torch.LongTensor), volatile=True)  # ~(bs-)
+            l_sents_tp1 = to_var(to_tensor(l_sents_tp1, torch.LongTensor), volatile=True)  # ~(bs- x n_sentences)
 
             contexts_tensors_tp1 = to_var(non_final_next_state_tensor,
                                           volatile=True)  # ~(bs- x n_turns, max_len)
@@ -445,44 +458,52 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
                 ### article
                 # grab number of sentences for that article (x n_actions)
                 tmp_n_sents = to_var(
-                    to_tensor([n_sents_tp1.data[idx]] * tmp_n_actions),
+                    to_tensor([n_sents_tp1.data[idx]] * tmp_n_actions, torch.LongTensor),
                     volatile=True
                 )  # ~(n_actions)
                 # grab length of each sentence for that article (x n_actions)
-                tmp_l_sents = l_sents_tp1.data[past_n_sentences: past_n_sentences+n_sents_tp1.data[idx]]  # ~(n_sentences)
+                tmp_l_sents = l_sents_tp1.data[
+                                  past_n_sentences: int(past_n_sentences+n_sents_tp1.data[idx])
+                              ]  # ~(n_sentences)
                 tmp_l_sents = to_var(
                     torch.cat([tmp_l_sents] * tmp_n_actions),
                     volatile=True
                 )  # ~(n_actions x n_sentences)
                 # grab articles_for_which_next_state_is_not_None[idx] (x n_actions)
-                tmp_articles_tensors = articles_tensors_tp1.data[past_n_sentences: past_n_sentences+n_sents_tp1.data[idx]]  # ~(n_sent, max_len)
+                tmp_articles_tensors = articles_tensors_tp1.data[
+                                           past_n_sentences: int(past_n_sentences+n_sents_tp1.data[idx])
+                                       ]  # ~(n_sent, max_len)
                 tmp_articles_tensors = to_var(
                     torch.cat([tmp_articles_tensors] * tmp_n_actions),
                     volatile=True
                 )  # ~(n_actions x n_sentences, max_len)
 
-                past_n_sentences += n_sents_tp1.data[idx]
+                past_n_sentences += int(n_sents_tp1.data[idx])
 
                 ### context
                 # grab number of turns for that context (x n_actions)
                 tmp_n_turns = to_var(
-                    to_tensor([n_turns_tp1.data[idx]] * tmp_n_actions),
+                    to_tensor([n_turns_tp1.data[idx]] * tmp_n_actions, torch.LongTensor),
                     volatile=True
                 )  # ~(n_actions)
                 # grab length of each turn for that context (x n_actions)
-                tmp_l_turns = l_turns_tp1.data[past_n_turns: past_n_turns+n_turns_tp1.data[idx]]  # ~(n_turns)
+                tmp_l_turns = l_turns_tp1.data[
+                                  past_n_turns: int(past_n_turns+n_turns_tp1.data[idx])
+                              ]  # ~(n_turns)
                 tmp_l_turns = to_var(
                     torch.cat([tmp_l_turns] * tmp_n_actions),
                     volatile=True
                 )  # ~(n_actions x n_turns)
                 # grab context for which next state is not None[idx] (x n_actions)
-                tmp_contexts_tensors = contexts_tensors_tp1.data[past_n_turns: past_n_turns+n_turns_tp1.data[idx]]  # ~(n_turns, max_len)
+                tmp_contexts_tensors = contexts_tensors_tp1.data[
+                                           past_n_turns: int(past_n_turns+n_turns_tp1.data[idx])
+                                       ]  # ~(n_turns, max_len)
                 tmp_contexts_tensors = to_var(
                     torch.cat([tmp_contexts_tensors] * tmp_n_actions),
                     volatile=True
                 )  # ~(n_actions x n_turns, max_len)
 
-                past_n_turns += n_turns_tp1.data[idx]
+                past_n_turns += int(n_turns_tp1.data[idx])
 
                 ### candidate
                 # grab each candidate turns
@@ -501,7 +522,7 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
                 ### custom enc
                 # grab candidates custom encodings
                 tmp_custom_encs = to_var(
-                    non_final_next_custom_encs[idx],
+                    to_tensor(non_final_next_custom_encs[idx]),
                     volatile=True
                 )  # ~(n_actions, enc)
 
@@ -513,18 +534,32 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
                 )
                 max_q_val, max_idx = tmp_q_val.data.max(0)
                 # append custom_enc of the max action according to current dqn
-                max_actions['candidate'].append(tmp_candidates_tensors.data[max_idx])
+                max_actions['candidate'].append(tmp_candidates_tensors.data[max_idx].view(-1))
                 max_actions['n_tokens'].append(tmp_n_tokens.data[max_idx])
-                max_actions['custom_enc'].append(tmp_custom_encs.data[max_idx])
+                max_actions['custom_enc'].append(tmp_custom_encs.data[max_idx].view(-1))
 
-            next_state_action_values = to_var(torch.zeros(args.batch_size))
-            next_state_action_values[non_final_mask] = target_dqn(
+            next_q_values = target_dqn(
                 articles_tensors_tp1, n_sents_tp1, l_sents_tp1,
                 contexts_tensors_tp1, n_turns_tp1, l_turns_tp1,
                 to_var(torch.stack(max_actions['candidate']), volatile=True),
-                to_var(to_tensor(max_actions['n_tokens']), volatile=True),
+                to_var(torch.cat(max_actions['n_tokens']), volatile=True),
                 to_var(torch.stack(max_actions['custom_enc']), volatile=True)
             )  # ~(bs)
+            next_state_action_values = to_var(torch.zeros(non_final_mask.size()))
+            next_state_action_values[non_final_mask] = next_q_values
+
+            # print "non_final articles:", articles_tensors_tp1.size()
+            # print "- n_sentences:", n_sents_tp1.size()
+            # print "- l_sentences:", l_sents_tp1.size()
+            # print "next_contexts:", contexts_tensors_tp1.size()
+            # print "- n_turns:", n_turns_tp1.size()
+            # print "- l_turns:", l_turns_tp1.size()
+            # print "best candidate:", torch.stack(max_actions['candidate']).size()
+            # print "- n_tokens:", len(max_actions['n_tokens'])
+            # print "custom_encodings:", torch.stack(max_actions['custom_enc']).size()
+            # print "--"
+            # print "next_q_values:", next_q_values.size()
+            # print ""
 
             # Now, we don't want to mess up the loss with a volatile flag, so let's
             # clear it. After this, we'll just end up with a Variable that has
@@ -616,6 +651,7 @@ def main():
         logger.info("")
         logger.info("cuda available! Moving variables to cuda %d..." % args.gpu)
         dqn.cuda()
+        dqn_target.cuda()
 
     # get list of parameters to train
     params = filter(lambda p: p.requires_grad, dqn.parameters())
@@ -729,6 +765,8 @@ if __name__ == '__main__':
                         default='adam', help="Optimizer to use")
     parser.add_argument("-lr", "--learning_rate", type=float, default=0.001,
                         help="Learning rate for the optimizer")
+    parser.add_argument("--gamma", type=float, default=0.99,
+                        help="discount factor")
     parser.add_argument("--fix_embeddings", type=str2bool, default='no',
                         help="keep word_embeddings fixed during training")
     parser.add_argument("-p", "--patience", type=int, default=20,
@@ -739,11 +777,6 @@ if __name__ == '__main__':
                         help="batch size during training")
     parser.add_argument("--update_frequence", type=int, default=1000,
                         help="number of iterations to do before updating target dqn")
-
-    # TODO: check if using the next one
-    parser.add_argument("-pm", "--previous_model", default=None,
-                        help="path and prefix_ of the model to continue training from")
-    # TODO: check if using the previous one
 
     # network architecture:
     parser.add_argument("--rnn_gate", choices=['rnn', 'gru', 'lstm'],
