@@ -37,7 +37,7 @@ logging.basicConfig(
 
 NQG_ENDURL = 'http://localhost:8080'
 DRQA_ENDURL = 'http://0.0.0.0:8888'
-FASTTEXT_DIR = '/root/convai/models/fastText/'
+FASTTEXT_DIR = '/home/ml/ksinha4/mlp/convai/models/fastText/'
 
 
 class Model_Wrapper(object):
@@ -353,16 +353,18 @@ class CandidateQuestions_Wrapper(Model_Wrapper):
     ASK A PREDEFINED QUESTION ABOUT AN ENTITY IN THE ARTICLE
     """
 
-    def __init__(self, model_prefix, dict_fname, name):
+    def __init__(self, model_prefix, dict_fname, name, allow_multiple=True):
         super(CandidateQuestions_Wrapper, self).__init__(model_prefix, name)
         # Use these questions if no suitable questions are found
         # TODO: do not hardcode these, use a dictionary
         self.dict_fname = dict_fname
         # self.canned_questions = ["That's a short article, don't you think? Not sure what's it about.",
         #                          "Apparently I am too dumb for this article. What's it about?"]
-        self.canned_questions = ["I don't have a lot of other questions about this article. Maybe you can ask me one?"]
+        self.canned_questions = [
+            "I don't have a lot of other questions about this article. Maybe you can ask me one?"]
         self.models = {}
         self.canned_freq_user = {}   # Only allow one canned response per user
+        self.allow_multiple = allow_multiple
 
     def preprocess(self, chat_id='', article_text='', **kwargs):
         logging.info("Preprocessing CandidateQuestions")
@@ -391,7 +393,7 @@ class CandidateQuestions_Wrapper(Model_Wrapper):
 
         if chat_id in self.models:
             response = self.models[chat_id].get_response()
-            if len(response) < 1 and self.canned_freq_user[chat_id] < 1:
+            if len(response) < 1 and (self.canned_freq_user[chat_id] < 1 or self.allow_multiple):
                 # select canned response
                 response = random.choice(self.canned_questions)
                 self.canned_freq_user[chat_id] += 1
@@ -406,9 +408,10 @@ class DumbQuestions_Wrapper(Model_Wrapper):
     IF USER ASKED A SIMPLE QUESTION RETURN A PREDEFINED ANSWER
     """
 
-    def __init__(self, model_prefix, dict_fname, name):
+    def __init__(self, model_prefix, dict_fname, name, allow_unmatched=True):
         super(DumbQuestions_Wrapper, self).__init__(model_prefix, name)
         self.data = json.load(open(dict_fname, 'r'))
+        self.allow_unmatched = allow_unmatched
 
     # check if user text is match to one of the keys
     def isMatch(self, text):
@@ -429,6 +432,7 @@ class DumbQuestions_Wrapper(Model_Wrapper):
         logging.info('Generating dumb question for user %s.' % user_id)
         ctext = self._format_to_model(text, len(context))
         context.append(ctext)
+        # or self.allow_unmatched: <- dont know why the model is taking so long to build if this flag is set
         if self.isMatch(text):
             key = self.getMatch(text)
             response = random.choice(self.data[key])
@@ -497,10 +501,12 @@ class NQG_Wrapper(Model_Wrapper):
     GENERATES A QUESTION FOR EACH SENTENCE IN THE ARTICLE
     """
 
-    def __init__(self, model_prefix, dict_fname, name):
+    def __init__(self, model_prefix, dict_fname, name, get_all_questions=True):
         super(NQG_Wrapper, self).__init__(model_prefix, name)
         self.questions = {}
         self.seen_user = []
+        # if get_all_questions = True, then do not prune the questions
+        self.get_all_questions = get_all_questions
 
     def preprocess(self, chat_id='', article_text='', **kwargs):
         # extract all sentences from the article
@@ -549,6 +555,8 @@ class NQG_Wrapper(Model_Wrapper):
             logging.info(self.questions[user_id])
             qs = [(i, q) for i, q in enumerate(
                 self.questions[user_id]) if q['used'] == 0]
+            if len(qs) == 0 and self.get_all_questions:
+                qs = [(i, q) for i, q in enumerate(self.questions[user_id])]
             if len(qs) > 0:
                 response = qs[0][1]['pred']
                 if user_id in self.seen_user:
@@ -590,7 +598,7 @@ class Topic_Wrapper(Model_Wrapper):
     IF USER ASKS FOR THE TOPIC, RETURN TOPIC CLASSIFICATION USING FASTTEXT
     """
 
-    def __init__(self, model_prefix, dict_fname, name, dir_name, model_name, top_k=2):
+    def __init__(self, model_prefix, dict_fname, name, dir_name, model_name, top_k=2, check_match=False):
         super(Topic_Wrapper, self).__init__(model_prefix, name)
         # Read the classes once
         self.dir_name = dir_name
@@ -598,6 +606,7 @@ class Topic_Wrapper(Model_Wrapper):
         self.topics = []
         self.predicted = {}
         self.top_k = top_k
+        self.check_match = check_match
         self.query_string = 'cd {} && ./fasttext predict {} /tmp/{}_article.txt {} > /tmp/{}_preds.txt'
         with open(dir_name + 'classes.txt', 'r') as fp:
             for line in fp:
@@ -610,11 +619,14 @@ class Topic_Wrapper(Model_Wrapper):
                               "The article is related to <topic>"]
 
     def isMatch(self, text=''):
-        # catch responses of the style "what is this article about"
-        question_match_1 = ".*what\\s*(is|'?s|does)?\\s?(this|it|the)?\\s?(article)?\\s?(talks?)?\\s?(about)\\s*(\\?)*"
-        # catch also responses of the style : "what do you think of this article"
-        question_match_2 = ".*what\\sdo\\syou\\sthink\\s(of|about)\\s(this|it|the)?\\s?(article)\\s*\\?*"
-        return re.match(question_match_1, text, re.IGNORECASE) or re.match(question_match_2, text, re.IGNORECASE)
+        if self.check_match:
+            # catch responses of the style "what is this article about"
+            question_match_1 = ".*what\\s*(is|'?s|does)?\\s?(this|it|the)?\\s?(article)?\\s?(talks?)?\\s?(about)\\s*(\\?)*"
+            # catch also responses of the style : "what do you think of this article"
+            question_match_2 = ".*what\\sdo\\syou\\sthink\\s(of|about)\\s(this|it|the)?\\s?(article)\\s*\\?*"
+            return re.match(question_match_1, text, re.IGNORECASE) or re.match(question_match_2, text, re.IGNORECASE)
+        else:
+            return True
 
     def preprocess(self, chat_id='', article_text='', **kwargs):
         """Calculate the article topic in preprocess call
@@ -698,8 +710,8 @@ class FactGenerator_Wrapper(Model_Wrapper):
 
     def __init__(self, model_prefix, dict_fname, name):
         super(FactGenerator_Wrapper, self).__init__(model_prefix, name)
-        random_facts_path = '/root/convai/data/facts.txt'
-        all_facts_embedding_path = '/root/convai/data/fact_embedding.mod'
+        random_facts_path = '/home/ml/ksinha4/mlp/convai/data/facts.txt'
+        all_facts_embedding_path = '/home/ml/ksinha4/mlp/convai/data/fact_embedding.mod'
         self.all_facts = codecs.open(
             random_facts_path, 'r', encoding='utf-8').readlines()
         self.all_facts = [all_fact.strip().replace(" .", ".").replace("\"", " ")
@@ -718,7 +730,7 @@ class FactGenerator_Wrapper(Model_Wrapper):
                                   "I don't have an answer for that. But",
                                   "I don't know. But."]
 
-        self.w2v_path = '/root/convai/data/GoogleNews-vectors-negative300.bin'
+        self.w2v_path = '/home/ml/ksinha4/mlp/convai/data/GoogleNews-vectors-negative300.bin'
         self.w2v = KeyedVectors.load_word2vec_format(
             self.w2v_path, binary=True)
         self.w2v_dim = self.w2v['hello'].shape[0]
@@ -806,7 +818,8 @@ class AliceBot_Wrapper(Model_Wrapper):
             response = self.aliceBot.compute_responses(clean_context, None)
             # prune response for presence of Alexa Prize Socialbot or Alexa or MILA
             if 'Alexa Prize Socialbot' in response:
-                response = response.replace('Alexa Prize Socialbot', 'RLLChatBot')
+                response = response.replace(
+                    'Alexa Prize Socialbot', 'RLLChatBot')
             if 'Alexa' in response:
                 response = response.replace('Alexa', 'ConvAI')
             if 'MILA' in response:
@@ -815,4 +828,3 @@ class AliceBot_Wrapper(Model_Wrapper):
             logging.error("Error generating alicebot response")
         context.append(self._format_to_model(response, len(context)))
         return response, context
-
