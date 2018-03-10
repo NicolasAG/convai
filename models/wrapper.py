@@ -512,16 +512,18 @@ class NQG_Wrapper(Model_Wrapper):
         """
         Truncate the question after the first repeated trigram and add a '?'
         """
+        original_answer = qs['pred'].split(' ')
         trigrams = []
         answer = []
-        for tok in qs['pred'].split(' '):
+        for tok in original_answer:
             answer.append(tok)
             trigram = answer[-3:]
             if trigram in trigrams:
-                return ' '.join(answer[:-1])+'?'
+                qs['pred'] = ' '.join(answer[:-1])+'?'
+                return qs
             else:
                 trigrams.append(trigram)
-        return ' '.join(answer)
+        return qs
 
 
     def preprocess(self, chat_id='', article_text='', **kwargs):
