@@ -508,6 +508,22 @@ class NQG_Wrapper(Model_Wrapper):
         # if get_all_questions = True, then do not prune the questions
         self.get_all_questions = get_all_questions
 
+    def _remove_repeated_trigrams(self, qs):
+        """
+        Truncate the question after the first repeated trigram and add a '?'
+        """
+        trigrams = []
+        answer = []
+        for tok in qs['pred'].split(' '):
+            answer.append(tok)
+            trigram = answer[-3:]
+            if trigram in trigrams:
+                return ' '.join(answer[:-1])+'?'
+            else:
+                trigrams.append(trigram)
+        return ' '.join(answer)
+
+
     def preprocess(self, chat_id='', article_text='', **kwargs):
         # extract all sentences from the article
         logging.info('Preprocessing the questions for this article')
@@ -536,8 +552,11 @@ class NQG_Wrapper(Model_Wrapper):
                 if 'source: source:' in preds['pred']:
                     rm_index.append(i)
             rm_index = list(set(rm_index))
-            self.questions[chat_id] = [qs for i, qs in enumerate(
-                self.questions[chat_id]) if i not in set(rm_index)]
+            # remove repeated trigrams
+            self.questions[chat_id] = [
+                self._remove_repeated_trigrams(qs)
+                for i, qs in enumerate(self.questions[chat_id]) if i not in set(rm_index)
+            ]
 
             self.questions[chat_id].sort(key=lambda x:  x["score"])
         except Exception as e:
