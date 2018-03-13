@@ -56,11 +56,11 @@ def get_data(data_f, vocab_f):
     logger.info("Get data loaders...")
     train_loader = get_loader(
         json=train_data, vocab=vocab, q_net_mode=args.mode,
-        batch_size=args.batch_size, shuffle=True, num_workers=2
+        batch_size=args.batch_size, shuffle=True, num_workers=0
     )
     valid_loader = get_loader(
         json=valid_data, vocab=vocab, q_net_mode=args.mode,
-        batch_size=args.batch_size, shuffle=False, num_workers=2
+        batch_size=args.batch_size, shuffle=False, num_workers=0
     )
     test_loader = get_loader(
         json=test_data, vocab=vocab, q_net_mode=args.mode,

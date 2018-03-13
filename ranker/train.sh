@@ -8,7 +8,7 @@ python train.py ./data/supervised_ranker_amt_data_1520102322.77.json \
                 ./data/supervised_ranker_round1_voted_data_1520108828.2.json \
     short_term \
     --verbose \
-    --gpu 1 \
+    --gpu 0 \
     --batch_size 128 \
     --patience 20 \
     --hidden_sizes 789 395 197 98 \
