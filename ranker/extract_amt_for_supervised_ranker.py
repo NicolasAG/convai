@@ -12,7 +12,7 @@ from nltk.tokenize import word_tokenize
 
 
 logger = logging.getLogger(__name__)
-
+logging.basicConfig(level=logging.INFO, format="%(asctime)s: %(name)s: %(levelname)s: %(message)s")
 
 DB_PORT = 8091
 DB_CLIENT = '132.206.3.23'
@@ -23,7 +23,7 @@ WELCOME_MSG = "hello! i hope you're doing well. i am doing fantastic today! " \
               "let me go through the article real quick and we will start talking about it."
 
 
-def _get_user_response(turn,):
+def _get_user_response(turn):
     """
     Get the user response right before this turn
     :param turn: turn with a bunch of options
@@ -35,7 +35,7 @@ def _get_user_response(turn,):
             user_resp = option['context'][-2].lower().strip()
             return user_resp
 
-    raise ValueError("Can't find a user response")
+    raise ValueError("Can't find a user response\nTurn: %s" % json.dumps(turn, indent=2, sort_keys=True))
 
 
 def build_data():
@@ -72,7 +72,8 @@ def build_data():
         context = [ WELCOME_MSG ]
 
         # loop through each turn for this conversation
-        for turn_idx, turn in enumerate(conv['chat_state']['turns']):
+        turn_idx = 0
+        for turn in conv['chat_state']['turns']:
 
             choice_idx = turn['choice']  # choice index
             # skip turn if invalid choice
@@ -108,9 +109,10 @@ def build_data():
                 })
                 n_ex += 1  # increment example counter
 
-            # after all options, append the chosen text to context
+            # after all options, append the chosen text to context & increment counter
             chosen_text = turn['options'][choice_idx]['text'].lower().strip()
             context.append(chosen_text)
+            turn_idx += 1
 
         # end of conversation
 
@@ -121,16 +123,16 @@ def build_data():
 
 def main():
 
-    print "Get conversations from database and build data..."
+    logger.info("Get conversations from database and build data...")
     json_data, n_conv, n_ex, n_quality = build_data()
-    print "Got %d unique articles from %d conversations. Total: %d examples" % (
+    logger.info("Got %d unique articles from %d conversations. Total: %d examples" % (
             len(json_data), n_conv, n_ex
-    )
-    print " - 'very bad'  conversations: %d / %d = %f" % (n_quality[0], n_conv, n_quality[0] / float(n_conv))
-    print " - 'bad'       conversations: %d / %d = %f" % (n_quality[1], n_conv, n_quality[1] / float(n_conv))
-    print " - 'medium'    conversations: %d / %d = %f" % (n_quality[2], n_conv, n_quality[2] / float(n_conv))
-    print " - 'good'      conversations: %d / %d = %f" % (n_quality[3], n_conv, n_quality[3] / float(n_conv))
-    print " - 'very good' conversations: %d / %d = %f" % (n_quality[4], n_conv, n_quality[4] / float(n_conv))
+    ))
+    logger.info(" - 'very bad'  conversations: %d / %d = %f" % (n_quality[0], n_conv, n_quality[0] / float(n_conv)))
+    logger.info(" - 'bad'       conversations: %d / %d = %f" % (n_quality[1], n_conv, n_quality[1] / float(n_conv)))
+    logger.info(" - 'medium'    conversations: %d / %d = %f" % (n_quality[2], n_conv, n_quality[2] / float(n_conv)))
+    logger.info(" - 'good'      conversations: %d / %d = %f" % (n_quality[3], n_conv, n_quality[3] / float(n_conv)))
+    logger.info(" - 'very good' conversations: %d / %d = %f" % (n_quality[4], n_conv, n_quality[4] / float(n_conv)))
 
     '''
     array of dictionaries:
@@ -145,12 +147,30 @@ def main():
     }
     '''
 
-    print "\nSaving to json file..."
+    '''
+    # print some instances to debug.
+    logger.info("")
+    for idx, instance in enumerate(json_data):
+        if idx == 0 or idx == 20:
+            to_print = {
+                'article': instance['article'],
+                'ctxt': instance['context'],
+                'cand': instance['candidate'],
+                'r': instance['r'],
+                'R': instance['R']
+            }
+            logger.info(json.dumps(to_print, indent=2, sort_keys=True))
+            logger.info("")
+            logger.info("")
+            logger.info("")
+    '''
+
+    logger.info("\nSaving to json file...")
     unique_id = str(time.time())
     file_path = "./data/supervised_ranker_amt_data_%s.json" % unique_id
     with open(file_path, 'wb') as f:
         json.dump(json_data, f)
-    print "done."
+    logger.info("done.")
 
 
 if __name__ == '__main__':

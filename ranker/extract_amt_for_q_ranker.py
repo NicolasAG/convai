@@ -77,7 +77,7 @@ def _get_user_response(turn, lemm):
                 user_resp = lemmatize(user_resp)
             return user_resp
 
-    raise ValueError("Can't find a user response")
+    raise ValueError("Can't find a user response\nTurn: %s" % json.dumps(turn, indent=2, sort_keys=True))
 
 def build_data(lemm):
     """
@@ -132,7 +132,8 @@ def build_data(lemm):
             context = [ WELCOME_MSG ]
 
         # loop through each turn for this conversation
-        for turn_idx, turn in enumerate(conv['chat_state']['turns']):
+        turn_idx = 0
+        for turn in conv['chat_state']['turns']:
 
             choice_idx = turn['choice']  # choice index
             # skip turn if invalid choice
@@ -236,11 +237,12 @@ def build_data(lemm):
                 n_ex += 1  # increment example counter
 
 
-            # after all options, append the chosen text to context
+            # after all options, append the chosen text to context & increment counter
             chosen_text = turn['options'][choice_idx]['text'].lower().strip()
             if lemm:
                 chosen_text = lemmatize(chosen_text)
             context.append(chosen_text)
+            turn_idx += 1
 
         # end of conversation
 
@@ -372,23 +374,24 @@ def main():
     logger.info(" - 'very good' conversations: %d / %d = %f" % (n_quality[4], n_conv, n_quality[4] / float(n_conv)))
 
     # print some instances to debug.
-    '''
     logger.info("")
     for idx, article in enumerate(json_data):
         if idx == 0 or idx == 20:
             logger.info(article)
             to_print = map(
                     lambda ele: {
-                        'ctxt':ele['state'],
-                        'cand':ele['candidate'],
-                        'r':ele['reward']},
+                        'ctxt': ele['state'],
+                        'cand': ele['action']['candidate'],
+                        'r': ele['reward'],
+                        'next_state': ele['next_state'],
+                        'next_actions': ele['next_actions']['candidate']
+                    },
                     json_data[article]
             )
             logger.info(json.dumps(to_print, indent=4, sort_keys=True))
             logger.info('')
             logger.info('')
             logger.info('')
-    '''
 
     # split data into train, valid, test sets
     logger.info("")
