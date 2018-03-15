@@ -133,22 +133,23 @@ def build_data(lemm):
 
         # loop through each turn for this conversation
         turn_idx = 0
+        first_turn = True
         for turn in conv['chat_state']['turns']:
 
             choice_idx = turn['choice']  # choice index
             # skip turn if invalid choice
             if choice_idx == '-1' or choice_idx == -1:
+                turn_idx += 1
                 continue
 
             # add user response to previous turn to the context
-            if turn_idx > 0:
+            if not first_turn:
                 user_resp = _get_user_response(turn, lemm)
                 context.append(user_resp)
 
             # if chose to finish, this is the last turn so we can break
             if choice_idx == '/end':
                 break
-
 
             # loop through each candidate option
             for option_idx, option in turn['options'].items():
@@ -173,14 +174,18 @@ def build_data(lemm):
                 # Compute next state & next action
                 ###
                 if choice_idx == option_idx:
+                    next_turn_idx = turn_idx+1
+                    while next_turn_idx < len(conv['chat_state']['turns']) and conv['chat_state']['turns'][next_turn_idx]['choice'] == -1:
+                        next_turn_idx += 1
+
                     # user took this candidate, we have data for next state & actions
-                    if turn_idx+1 >= len(conv['chat_state']['turns']):
-                        logger.warning("This is the last turn! Next state & action will be None")
+                    if next_turn_idx >= len(conv['chat_state']['turns']):
+                        logger.info("This is the last turn (%d)! Next state & action will be None" % next_turn_idx)
                         next_state = None
                         next_actions = None
 
                     else:
-                        next_turn = conv['chat_state']['turns'][turn_idx+1]
+                        next_turn = conv['chat_state']['turns'][next_turn_idx]
 
                         #  Next state = context + chosen candidate + user turn
                         next_state = copy.deepcopy(context)
@@ -242,7 +247,10 @@ def build_data(lemm):
             if lemm:
                 chosen_text = lemmatize(chosen_text)
             context.append(chosen_text)
+
             turn_idx += 1
+            if first_turn:
+                first_turn = False
 
         # end of conversation
 
@@ -376,7 +384,7 @@ def main():
     # print some instances to debug.
     logger.info("")
     for idx, article in enumerate(json_data):
-        if idx == 0 or idx == 20:
+        if idx > 429 and idx < 440:
             logger.info(article)
             to_print = map(
                     lambda ele: {
@@ -384,7 +392,7 @@ def main():
                         'cand': ele['action']['candidate'],
                         'r': ele['reward'],
                         'next_state': ele['next_state'],
-                        'next_actions': ele['next_actions']['candidate']
+                        'next_actions': [i['candidate'] for i in ele['next_actions']] if ele['next_actions'] else 'None'
                     },
                     json_data[article]
             )

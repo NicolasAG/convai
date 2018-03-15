@@ -73,15 +73,17 @@ def build_data():
 
         # loop through each turn for this conversation
         turn_idx = 0
+        first_turn = True
         for turn in conv['chat_state']['turns']:
 
             choice_idx = turn['choice']  # choice index
             # skip turn if invalid choice
             if choice_idx == '-1' or choice_idx == -1:
+                turn_idx += 1
                 continue
 
             # add user response to previous turn to the context
-            if turn_idx > 0:
+            if not first_turn:
                 user_resp = _get_user_response(turn)
                 context.append(user_resp)
 
@@ -113,6 +115,8 @@ def build_data():
             chosen_text = turn['options'][choice_idx]['text'].lower().strip()
             context.append(chosen_text)
             turn_idx += 1
+            if first_turn:
+                first_turn = False
 
         # end of conversation
 
@@ -147,11 +151,11 @@ def main():
     }
     '''
 
-    '''
+
     # print some instances to debug.
     logger.info("")
     for idx, instance in enumerate(json_data):
-        if idx == 0 or idx == 20:
+        if idx > 429 and idx < 440:
             to_print = {
                 'article': instance['article'],
                 'ctxt': instance['context'],
@@ -163,7 +167,7 @@ def main():
             logger.info("")
             logger.info("")
             logger.info("")
-    '''
+
 
     logger.info("\nSaving to json file...")
     unique_id = str(time.time())
