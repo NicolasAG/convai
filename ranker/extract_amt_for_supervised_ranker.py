@@ -6,6 +6,7 @@ import argparse
 import cPickle as pkl
 import copy
 import sys
+import re
 import pyprind
 from collections import defaultdict, Counter
 from nltk.tokenize import word_tokenize
@@ -99,10 +100,13 @@ def build_data():
 
                 # Store candidate response
                 candidate = option['text'].lower().strip()
+                # remove wrong formating if there is any
+                candidate = re.sub('[0-9]->', '', candidate)
+                candidate = candidate.replace('<br />', '')
 
                 data.append({
                     'article': article,
-                    'context': context,
+                    'context': copy.deepcopy(context),
                     'candidate': candidate,
                     'r': 1 if choice_idx == option_idx else -1,
                     'R': conv_quality,
@@ -114,6 +118,7 @@ def build_data():
             # after all options, append the chosen text to context & increment counter
             chosen_text = turn['options'][choice_idx]['text'].lower().strip()
             context.append(chosen_text)
+
             turn_idx += 1
             if first_turn:
                 first_turn = False

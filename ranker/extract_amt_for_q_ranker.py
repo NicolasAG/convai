@@ -9,6 +9,7 @@ import argparse
 import cPickle as pkl
 import copy
 import sys
+import re
 import pyprind
 from collections import defaultdict, Counter
 from nltk.tokenize import word_tokenize
@@ -159,6 +160,10 @@ def build_data(lemm):
 
                 # Store candidate response
                 candidate = option['text'].lower().strip()
+                # remove wrong formating if there is any
+                candidate = re.sub('[0-9]->', '', candidate)
+                candidate = candidate.replace('<br />', '')
+
                 if lemm:
                     candidate = lemmatize(candidate)
 
