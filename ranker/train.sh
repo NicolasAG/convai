@@ -3,7 +3,8 @@
 ########################################
 # Train estimator for immediate reward #
 ########################################
-python train.py ./data/supervised_ranker_amt_data_1520102322.77.json \
+hyperdash run -n "train TF mlp supervised ranker" python train.py \
+                ./data/supervised_ranker_amt_data_1521503826.9.json \
                 ./data/supervised_ranker_db_voted_data_1520108818.78.json \
                 ./data/supervised_ranker_round1_voted_data_1520108828.2.json \
     short_term \
@@ -11,7 +12,7 @@ python train.py ./data/supervised_ranker_amt_data_1520102322.77.json \
     --gpu 0 \
     --batch_size 128 \
     --patience 20 \
-    --hidden_sizes 789 395 197 98 \
+    --hidden_sizes 789 789 394 \
     --activation swish \
     --dropout_rate 0.1 \
     --optimizer adam \
