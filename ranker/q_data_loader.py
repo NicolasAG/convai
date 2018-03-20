@@ -66,8 +66,7 @@ class ConversationDataset(data.Dataset):
     def __getitem__(self, item):
         """
         Returns one data tuple.
-        if only using an MLP, return (custom_enc, reward, next_custom_enc)
-        if using RNN and MLP, return (
+        (
             article_sentences, number of sentences, sentence lengths,
             context_utterances, number of turns, turn length,
             candidate_tokens, number of tokens,
@@ -104,58 +103,57 @@ class ConversationDataset(data.Dataset):
             next_candidates = None
             next_custom_encs = None
 
+        # if self.mode == 'mlp':
+        #     # in a simple MLP setting, only need the custom encoding, the reward, the next possible custom encodings
+        #     return torch.Tensor(custom_enc), reward, next_custom_encs
+        #     #          ~(enc_size)            ~(1)   ~(n_actions, enc_size)
+        # else:
 
-        if self.mode == 'mlp':
-            # in a simple MLP setting, only need the custom encoding, the reward, the next possible custom encodings
-            return torch.Tensor(custom_enc), reward, next_custom_encs
-            #          ~(enc_size)            ~(1)   ~(n_actions, enc_size)
+        # convert from string to idx
+        article_sentences = nltk.tokenize.sent_tokenize(article)
+        article, n_sent, l_sent = self.convert_big_string_to_idx(
+            article_sentences, start_tag='<sos>', end_tag='<eos>'
+        )
+        context, n_turn, l_turn = self.convert_big_string_to_idx(
+            context,
+            start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
+            end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
+        )
+        candidate = self.string_to_idx(
+            candidate,
+            start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
+            end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
+        )
 
+        if next_state:
+            next_state, n_next_turn, l_next_turn = self.convert_big_string_to_idx(
+                next_state,
+                start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
+                end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
+            )  # list of Tensor. Each Tensor is an utterance
         else:
-            # convert from string to idx
-            article_sentences = nltk.tokenize.sent_tokenize(article)
-            article, n_sent, l_sent = self.convert_big_string_to_idx(
-                article_sentences, start_tag='<sos>', end_tag='<eos>'
-            )
-            context, n_turn, l_turn = self.convert_big_string_to_idx(
-                context,
+            next_state = None
+            n_next_turn = 0
+            l_next_turn = []
+
+        if next_candidates:
+            next_candidates, n_next_candidate, l_next_candidate = self.convert_big_string_to_idx(
+                next_candidates,
                 start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
                 end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
-            )
-            candidate = self.string_to_idx(
-                candidate,
-                start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
-                end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
-            )
+            )  # list of Tensors. Each Tensor is a candidate
+        else:
+            next_candidates = None
+            n_next_candidate = 0
+            l_next_candidate = []
 
-            if next_state:
-                next_state, n_next_turn, l_next_turn = self.convert_big_string_to_idx(
-                    next_state,
-                    start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
-                    end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
-                )  # list of Tensor. Each Tensor is an utterance
-            else:
-                next_state = None
-                n_next_turn = 0
-                l_next_turn = []
-
-            if next_candidates:
-                next_candidates, n_next_candidate, l_next_candidate = self.convert_big_string_to_idx(
-                    next_candidates,
-                    start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
-                    end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
-                )  # list of Tensors. Each Tensor is a candidate
-            else:
-                next_candidates = None
-                n_next_candidate = 0
-                l_next_candidate = []
-
-            return article, n_sent, l_sent, \
-                context, n_turn, l_turn, \
-                candidate, len(candidate), \
-                torch.Tensor(custom_enc), reward, \
-                next_state, n_next_turn, l_next_turn, \
-                next_candidates, n_next_candidate, l_next_candidate, \
-                next_custom_encs
+        return article, n_sent, l_sent, \
+            context, n_turn, l_turn, \
+            candidate, len(candidate), \
+            torch.Tensor(custom_enc), reward, \
+            next_state, n_next_turn, l_next_turn, \
+            next_candidates, n_next_candidate, l_next_candidate, \
+            next_custom_encs
 
 
     def __len__(self):
@@ -170,12 +168,12 @@ def collate_fn(data):
     Creates mini-batch tensors from the list of tuples:
     :param data: list of tuples depending on the q-network mode
     :return: what the neural networks expects:
-        this is what QNetwork expects:
+        this is what mlp QNetwork expects:
 
             list of custom encodings of (article, dialog, candidate) triples
             torch.Variable with Tensor ~ (batch, custom_hs)
 
-        this is what DeepQNetwork forward expects:
+        this is what rnn+mlp DeepQNetwork forward expects:
 
             list of sentences to encode to form a bunch of articles
             torch.Variable with Tensor ~ (batch x #sent/article, max_sent_len)
@@ -204,9 +202,25 @@ def collate_fn(data):
             list of custom (article, dialog, candidate) triples encodings
             torch.Variable with tensor ~ (batch, custom_enc_hs)
     """
+    articles, n_sents, l_sents, \
+        contexts, n_turns, l_turns, \
+        candidates, n_tokens, \
+        custom_encs, rewards, \
+        next_states, n_next_turns, l_next_turns, \
+        next_candidates, n_next_candidates, l_next_candidates, \
+        next_custom_encs = zip(*data)
+    #############################################
+    # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
+    # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
+    # candidates : tuple of Tensors. ~(bs, n_tokens)
+    # custom_encs : tuple of Tensors. ~(bs, enc)
+    # next_states : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
+    # next_candidates : tuple of list of candidate. each candidate is a Tensor ~(bs, n_actions, n_tokens)
+    # next_custom_encs : tuple of list of Tensors. ~(bs, n_actions, enc)
+    #############################################
+
     assert Q_NETWORK_MODE is not None
     if Q_NETWORK_MODE == 'mlp':
-        custom_encs, rewards, next_custom_encs = zip(*data)
 
         # Merge custom encodings (from tuple of 1D tensor to 2D tensor)
         custom_encs = torch.stack(custom_encs, 0)  # ~ (batch, custom_hs)
@@ -222,23 +236,6 @@ def collate_fn(data):
         #       ~(bs, enc)        ~(bs,)              ~(bs)          ~(bs-, n_actions, enc)
 
     else:
-        articles, n_sents, l_sents, \
-            contexts, n_turns, l_turns, \
-            candidates, n_tokens, \
-            custom_encs, rewards, \
-            next_states, n_next_turns, l_next_turns, \
-            next_candidates, n_next_candidates, l_next_candidates, \
-            next_custom_encs = zip(*data)
-
-        #############################################
-        # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
-        # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
-        # candidates : tuple of Tensors. ~(bs, n_tokens)
-        # custom_encs : tuple of Tensors. ~(bs, enc)
-        # next_states : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
-        # next_candidates : tuple of list of candidate. each candidate is a Tensor ~(bs, n_actions, n_tokens)
-        # next_custom_encs : tuple of list of Tensors. ~(bs, n_actions, enc)
-        #############################################
 
         # n_sents, n_turns, n_tokens, rewards can be return as is: ~(batch_size)
 

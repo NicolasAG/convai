@@ -138,7 +138,7 @@ def check_param_ambiguity():
         ))
 
 
-def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
+def one_epoch(dqn, huber, mse, data_loader, optimizer=None, test=False):
     """
     Performs one epoch over the specified data
     :param dqn: q-network to perform forward pass
@@ -147,10 +147,12 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
     :param data_loader: data iterator
     :param optimizer: optimizer to perform gradient descent.
                         if None, do not train.
-    :return: average huber loss, mse loss
+    :param test: return accuracy and print some predictions
+    :return: average huber loss, mse loss, (accuracy if test is True)
     """
     epoch_huber_loss = 0.0
     epoch_mse_loss = 0.0
+    epoch_accuracy = 0.0
     nb_batches = 0.0
 
     if args.mode == 'mlp':
@@ -164,12 +166,12 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
             custom_encs = to_var(custom_encs)  # ~(bs, enc)
             rewards = to_var(rewards)  # ~(bs)
 
-            # Forward pass: predict q-values
-            q_values = dqn(custom_encs)
+            # Forward pass: predict rewards
+            predictions = dqn(custom_encs)
 
             # Compute loss
-            huber_loss = huber(q_values, rewards)
-            mse_loss = mse(q_values, rewards)
+            huber_loss = huber(predictions, rewards)
+            mse_loss = mse(predictions, rewards)
             if args.verbose:
                 logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
                     step + 1, huber_loss.data[0], mse_loss.data[0]
@@ -184,6 +186,18 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
                 # Update parameters
                 optimizer.step()
 
+            '''
+            TODO: compute accuracy & print a few examples!
+            print:
+            - article
+            - context
+            - list of candidates
+            - list of real scores
+            - list of predicted scores
+            '''
+            # IF in testing mode, compute accuracy
+            # if test:
+            #     epoch_accuracy += compute_accuracy(predictions, rewards)
             epoch_huber_loss += huber_loss.data[0]
             epoch_mse_loss += mse_loss.data[0]
             nb_batches += 1
@@ -219,17 +233,16 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
             rewards = to_var(rewards)  # ~(bs)
 
             # Forward pass: predict q-values
-            q_values = dqn(
+            predictions = dqn(
                 articles_tensors, n_sents, l_sents,
                 contexts_tensors, n_turns, l_turns,
                 candidates_tensors, n_tokens,
                 custom_encs
             )
-            # q_values = state_values + action_advantages
 
             # Compute loss
-            huber_loss = huber(q_values, rewards)
-            mse_loss = mse(q_values, rewards)
+            huber_loss = huber(predictions, rewards)
+            mse_loss = mse(predictions, rewards)
             if args.verbose:
                 logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
                     step + 1, huber_loss.data[0], mse_loss.data[0]
@@ -244,17 +257,21 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None):
                 # Update parameters
                 optimizer.step()
 
+            # IF in testing mode, compute accuracy
+            # if test:
+            #     epoch_accuracy += compute_accuracy(predictions, rewards)
             epoch_huber_loss += huber_loss.data[0]
             epoch_mse_loss += mse_loss.data[0]
             nb_batches += 1
 
     epoch_huber_loss /= nb_batches
     epoch_mse_loss /= nb_batches
+    epoch_accuracy /= nb_batches
 
-    return epoch_huber_loss, epoch_mse_loss
+    return epoch_huber_loss, epoch_mse_loss, epoch_accuracy
 
 
-def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
+def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None, test=False):
     """
     Performs one epoch over the specified data
     :param itt: number of past iterations
@@ -265,10 +282,12 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
     :param data_loader: data iterator
     :param optimizer: optimizer to perform gradient descent.
                         if None, do not train.
-    :return: average huber loss, mse loss
+    :param test: return accuracy and print some predictions
+    :return: average huber loss, mse loss, (accuracy if test is True), number of batch seen
     """
     epoch_huber_loss = 0.0
     epoch_mse_loss = 0.0
+    epoch_accuracy = 0.0
     nb_batches = 0.0
 
     if args.mode == 'mlp':
@@ -342,6 +361,9 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
                     logger.debug("iteration %d: updating target DQN." % (itt+step))
                     target_dqn.load_state_dict(dqn.state_dict())
 
+            # IF in testing mode, compute accuracy
+            # if test:
+            #     epoch_accuracy += compute_accuracy(predictions, rewards)
             epoch_huber_loss += huber_loss.data[0]
             epoch_mse_loss += mse_loss.data[0]
             nb_batches += 1
@@ -390,8 +412,7 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
                 contexts_tensors_t, n_turns_t, l_turns_t,
                 candidates_tensors_t, n_tokens_t,
                 custom_encs_t
-            )
-            # q_values = state_values + action_advantages  # ~(bs,)
+            ) # ~(bs,)
 
             # print "articles:", articles_tensors_t.size()
             # print "- n_sentences:", n_sents_t.size()
@@ -591,34 +612,47 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
                     logger.debug("iteration %d: updating target DQN." % (itt+step))
                     target_dqn.load_state_dict(dqn.state_dict())
 
-
+            # IF in testing mode, compute accuracy
+            # if test:
+            #     epoch_accuracy += compute_accuracy(predictions, rewards)
             epoch_huber_loss += huber_loss.data[0]
             epoch_mse_loss += mse_loss.data[0]
             nb_batches += 1
 
     epoch_huber_loss /= nb_batches
     epoch_mse_loss /= nb_batches
+    epoch_accuracy /= nb_batches
 
-    return epoch_huber_loss, epoch_mse_loss, step
+    return epoch_huber_loss, epoch_mse_loss, epoch_accuracy, step
 
 
 def main():
+    #######################
+    # Load Data
+    #######################
+
+    # Load toy domain dataset
     if args.debug:
         train_loader, valid_loader, test_loader, \
         vocab, embeddings, custom_hs = get_data("./data/q_ranker_colorful_data.json",
                                                 "./data/q_ranker_colorful_vocab.pkl")
+    # Load regular dataset
     else:
         train_loader, valid_loader, test_loader,\
             vocab, embeddings, custom_hs = get_data(args.data_f, args.vocab_f)
 
+    #######################
+    # Build DQN
+    #######################
     logger.info("")
     logger.info("Building Q-Network...")
     model_name = "colorful_" if args.debug else ""
+    # MLP network
     if args.mode == 'mlp':
         model_name += "RNetwork" if args.predict_rewards else "QNetwork"
         dqn = QNetwork(custom_hs, args.mlp_activation, args.mlp_dropout)
         dqn_target = QNetwork(custom_hs, args.mlp_activation, args.mlp_dropout)
-
+    # RNNs + MLP network
     else:
         if args.mode == 'rnn+mlp':
             model_name += "DeepRNetwork" if args.predict_rewards else "DeepQNetwork"
@@ -655,6 +689,7 @@ def main():
     with open("./models/q_estimator/%s_%s_args.pkl" % (model_name, model_id), 'wb') as f:
         pkl.dump(args, f)
 
+    # moving networks to GPU
     if torch.cuda.is_available():
         logger.info("")
         logger.info("cuda available! Moving variables to cuda %d..." % args.gpu)
@@ -678,50 +713,63 @@ def main():
         logger.info("ERROR: unknown optimizer: %s" % args.optimizer)
         return
 
-
+    # Define losses
     huber = torch.nn.SmoothL1Loss()  # MSE used in -1 < . < 1 ; Absolute used elsewhere
     mse = torch.nn.MSELoss()
 
+    #######################
+    # Start Training
+    #######################
     start_time = time.time()
     best_valid = 100000.
     patience = args.patience
 
-    train_losses = []
-    valid_losses = []
+    train_losses = []  # list of losses for each epoch
+    valid_losses = []  # list of losses for each epoch
 
     logger.info("")
     logger.info("Training model...")
 
     iterations_done = 0
     for epoch in range(args.epochs):
-        logger.info("***********************************")
+        ###
         # Perform one epoch and return average losses:
+        ###
+        logger.info("***********************************")
+
+        # predict rewards
         if args.predict_rewards:
-            train_huber_loss, train_mse_loss = one_epoch(
+            train_huber_loss, train_mse_loss, _ = one_epoch(
                 dqn, huber, mse, train_loader, optimizer=optimizer
             )
+        # predict q values
         else:
-            train_huber_loss, train_mse_loss, steps = one_episode(
-                iterations_done,
-                dqn, dqn_target, huber, mse, train_loader, optimizer=optimizer
+            train_huber_loss, train_mse_loss, _, steps = one_episode(
+                iterations_done, dqn, dqn_target, huber, mse, train_loader, optimizer=optimizer
             )
             iterations_done += steps
+
         # Save train losses
         train_losses.append((train_huber_loss, train_mse_loss))
         logger.info("Epoch: %d - huber loss: %g - mse loss: %g" % (
             epoch+1, train_huber_loss, train_mse_loss
         ))
 
-        logger.info("computing validation losses...")
+
+        ###
         # Compute validation losses
+        ###
+        logger.info("computing validation losses...")
+
+        # predict rewards
         if args.predict_rewards:
-            valid_huber_loss, valid_mse_loss = one_epoch(
-                dqn, huber, mse, valid_loader, optimizer=None
+            valid_huber_loss, valid_mse_loss, _ = one_epoch(
+                dqn, huber, mse, valid_loader
             )
+        # predict q values
         else:
-            valid_huber_loss, valid_mse_loss, _ = one_episode(
-                iterations_done,
-                dqn, dqn_target, huber, mse, valid_loader, optimizer=None
+            valid_huber_loss, valid_mse_loss, _, _ = one_episode(
+                0, dqn, None, huber, mse, valid_loader
             )
 
         # Save validation losses
@@ -730,6 +778,9 @@ def main():
             valid_huber_loss, best_valid
         ))
 
+        ###
+        # Early stopping
+        ###
         if valid_huber_loss < best_valid:
             # Reset best validation loss
             best_valid = valid_huber_loss
@@ -756,9 +807,18 @@ def main():
     # valid = red  -- or - -
     # train = blue -- or - -
 
+    #######################
+    # Testing
+    #######################
+    if args.debug:
+        # predict rewards
+        if args.predict_rewards:
+            test_huber_loss, test_mse_loss, test_accuracy = one_epoch(dqn, huber, mse, test_loader, test=True)
+        # predict q values
+        else:
+            test_huber_loss, test_mse_loss, test_accuracy, _ = one_episode(0, dqn, None, huber, mse, test_loader, test=True)
+        logger.info("\nTest huber loss: %g -- test accuracy: %g" % (test_huber_loss, test_accuracy))
 
-    # Perform testing
-    # if args.debug:
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
