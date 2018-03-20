@@ -5,7 +5,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 ACTIVATIONS = {
-    'swish': lambda x: x * F.sigmoid(x),
+    'swich': lambda x: x * F.sigmoid(x),
     'relu': F.relu,
     'sigmoid': F.sigmoid
 }
