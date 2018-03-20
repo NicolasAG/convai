@@ -56,15 +56,15 @@ def get_data(data_f, vocab_f):
     logger.info("Get data loaders...")
     train_loader = get_loader(
         json=train_data, vocab=vocab, q_net_mode=args.mode,
-        batch_size=args.batch_size, shuffle=True, num_workers=0
+        batch_size=args.batch_size, shuffle=True, num_workers=4
     )
     valid_loader = get_loader(
         json=valid_data, vocab=vocab, q_net_mode=args.mode,
-        batch_size=args.batch_size, shuffle=False, num_workers=0
+        batch_size=args.batch_size, shuffle=False, num_workers=4
     )
     test_loader = get_loader(
         json=test_data, vocab=vocab, q_net_mode=args.mode,
-        batch_size=args.batch_size, shuffle=False, num_workers=2
+        batch_size=args.batch_size, shuffle=False, num_workers=4
     )
     logger.info("done.")
 
@@ -339,6 +339,7 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
 
                 ## update target dqn
                 if (itt+step) % args.update_frequence == 0:
+                    logger.debug("iteration %d: updating target DQN." % (itt+step))
                     target_dqn.load_state_dict(dqn.state_dict())
 
             epoch_huber_loss += huber_loss.data[0]
@@ -587,6 +588,7 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
 
                 ## update target dqn
                 if (itt+step) % args.update_frequence == 0:
+                    logger.debug("iteration %d: updating target DQN." % (itt+step))
                     target_dqn.load_state_dict(dqn.state_dict())
 
 
@@ -601,22 +603,28 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None):
 
 
 def main():
-    train_loader, valid_loader, test_loader,\
-        vocab, embeddings, custom_hs = get_data(args.data_f, args.vocab_f)
+    if args.debug:
+        train_loader, valid_loader, test_loader, \
+        vocab, embeddings, custom_hs = get_data("./data/q_ranker_colorful_data.json",
+                                                "./data/q_ranker_colorful_vocab.pkl")
+    else:
+        train_loader, valid_loader, test_loader,\
+            vocab, embeddings, custom_hs = get_data(args.data_f, args.vocab_f)
 
     logger.info("")
     logger.info("Building Q-Network...")
+    model_name = "colorful_" if args.debug else ""
     if args.mode == 'mlp':
-        model_name = "QNetwork"
+        model_name += "RNetwork" if args.predict_rewards else "QNetwork"
         dqn = QNetwork(custom_hs, args.mlp_activation, args.mlp_dropout)
         dqn_target = QNetwork(custom_hs, args.mlp_activation, args.mlp_dropout)
 
     else:
         if args.mode == 'rnn+mlp':
-            model_name = 'DeepQNetwork'
+            model_name += "DeepRNetwork" if args.predict_rewards else "DeepQNetwork"
             check_param_ambiguity()
         elif args.mode == 'rnn+rnn+mlp':
-            model_name = 'VeryDeepQNetwork'
+            model_name += "VeryDeepRNetwork" if args.predict_rewards else "VeryDeepQNetwork"
         else:
             raise NotImplementedError("ERROR: Unknown mode: %s" % args.mode)
 
@@ -670,6 +678,7 @@ def main():
         logger.info("ERROR: unknown optimizer: %s" % args.optimizer)
         return
 
+
     huber = torch.nn.SmoothL1Loss()  # MSE used in -1 < . < 1 ; Absolute used elsewhere
     mse = torch.nn.MSELoss()
 
@@ -687,14 +696,16 @@ def main():
     for epoch in range(args.epochs):
         logger.info("***********************************")
         # Perform one epoch and return average losses:
-        # train_huber_loss, train_mse_loss = one_epoch(
-        #     dqn, huber, mse, train_loader, optimizer=optimizer
-        # )
-        train_huber_loss, train_mse_loss, steps = one_episode(
-            iterations_done,
-            dqn, dqn_target, huber, mse, train_loader, optimizer=optimizer
-        )
-        iterations_done += steps
+        if args.predict_rewards:
+            train_huber_loss, train_mse_loss = one_epoch(
+                dqn, huber, mse, train_loader, optimizer=optimizer
+            )
+        else:
+            train_huber_loss, train_mse_loss, steps = one_episode(
+                iterations_done,
+                dqn, dqn_target, huber, mse, train_loader, optimizer=optimizer
+            )
+            iterations_done += steps
         # Save train losses
         train_losses.append((train_huber_loss, train_mse_loss))
         logger.info("Epoch: %d - huber loss: %g - mse loss: %g" % (
@@ -703,13 +714,15 @@ def main():
 
         logger.info("computing validation losses...")
         # Compute validation losses
-        # valid_huber_loss, valid_mse_loss = one_epoch(
-        #     dqn, huber, mse, valid_loader, optimizer=None
-        # )
-        valid_huber_loss, valid_mse_loss, _ = one_episode(
-            iterations_done,
-            dqn, dqn_target, huber, mse, valid_loader, optimizer=None
-        )
+        if args.predict_rewards:
+            valid_huber_loss, valid_mse_loss = one_epoch(
+                dqn, huber, mse, valid_loader, optimizer=None
+            )
+        else:
+            valid_huber_loss, valid_mse_loss, _ = one_episode(
+                iterations_done,
+                dqn, dqn_target, huber, mse, valid_loader, optimizer=None
+            )
 
         # Save validation losses
         valid_losses.append((valid_huber_loss, valid_mse_loss))
@@ -743,6 +756,10 @@ def main():
     # valid = red  -- or - -
     # train = blue -- or - -
 
+
+    # Perform testing
+    # if args.debug:
+
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
@@ -758,8 +775,11 @@ if __name__ == '__main__':
     parser.add_argument("vocab_f", type=str, help="Path to pkl vocabbulary file")
     parser.add_argument("mode", choices=['mlp', 'rnn+mlp', 'rnn+rnn+mlp'],
                         default='mlp', help="type of neural network to train")
+    parser.add_argument("--predict_rewards", type=str2bool, default='no',
+                        help="Decide if we predict rewards of q-values")
     parser.add_argument("-g",  "--gpu", type=int, default=0, help="GPU number to use")
     parser.add_argument("-v", "--verbose", type=str2bool, default='no', help="Be verbose")
+    parser.add_argument("-d", "--debug", type=str2bool, default='no', help="use toy domain & print on test set")
     # training parameters:
     parser.add_argument("--optimizer", choices=['adam', 'sgd', 'rmsprop', 'adagrad', 'adadelta'],
                         default='adam', help="Optimizer to use")
@@ -775,7 +795,7 @@ if __name__ == '__main__':
                         help="Maximum number of training passes to do on the full train set")
     parser.add_argument("-bs", "--batch_size", type=int, default=128,
                         help="batch size during training")
-    parser.add_argument("--update_frequence", type=int, default=1000,
+    parser.add_argument("--update_frequence", type=int, default=100,
                         help="number of iterations to do before updating target dqn")
 
     # network architecture:
@@ -811,7 +831,7 @@ if __name__ == '__main__':
                         help="dropout probability in context rnn")
     ## mlp
     parser.add_argument("--mlp_activation", choices=['sigmoid', 'relu', 'swish'],
-                        type=str, default='relu', help="Activation function")
+                        type=str, default='swich', help="Activation function")
     parser.add_argument("--mlp_dropout", type=float, default=0.1,
                         help="dropout probability in mlp")
     args = parser.parse_args()
