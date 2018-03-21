@@ -56,15 +56,15 @@ def get_data(data_f, vocab_f):
     logger.info("Get data loaders...")
     train_loader = get_loader(
         json=train_data, vocab=vocab, q_net_mode=args.mode,
-        batch_size=args.batch_size, shuffle=True, num_workers=4
+        batch_size=args.batch_size, shuffle=True, num_workers=0
     )
     valid_loader = get_loader(
         json=valid_data, vocab=vocab, q_net_mode=args.mode,
-        batch_size=args.batch_size, shuffle=False, num_workers=4
+        batch_size=args.batch_size, shuffle=False, num_workers=0
     )
     test_loader = get_loader(
         json=test_data, vocab=vocab, q_net_mode=args.mode,
-        batch_size=args.batch_size, shuffle=False, num_workers=4
+        batch_size=args.batch_size, shuffle=False, num_workers=0
     )
     logger.info("done.")
 
@@ -147,27 +147,36 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None, test=False):
     :param data_loader: data iterator
     :param optimizer: optimizer to perform gradient descent.
                         if None, do not train.
-    :param test: return accuracy and print some predictions
-    :return: average huber loss, mse loss, (accuracy if test is True)
+    :param test: print some predictions
+    :return: average huber loss, mse loss
     """
     epoch_huber_loss = 0.0
     epoch_mse_loss = 0.0
-    epoch_accuracy = 0.0
     nb_batches = 0.0
+
+    # variable used in test mode (test=True)
+    current_article = None
+    current_context = None
 
     if args.mode == 'mlp':
         '''
         data loader returns:
             custom_encs, torch.Tensor(rewards), non_final_mask, non_final_next_custom_encs
         '''
-        for step, (custom_encs, rewards, _, _) in enumerate(data_loader):
+        for step, (articles, contexts, candidates,
+                   custom_encs, rewards, _, _) in enumerate(data_loader):
+            # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
+            # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
+            # candidates : tuple of Tensors. ~(bs, n_tokens)
+            # custom_encs : Tensor ~(bs, enc)
+            # rewards : Tensor ~(bs,)
 
             # Convert Tensors to Variables
             custom_encs = to_var(custom_encs)  # ~(bs, enc)
             rewards = to_var(rewards)  # ~(bs)
 
             # Forward pass: predict rewards
-            predictions = dqn(custom_encs)
+            predictions = dqn(custom_encs)  # ~(bs)
 
             # Compute loss
             huber_loss = huber(predictions, rewards)
@@ -186,18 +195,15 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None, test=False):
                 # Update parameters
                 optimizer.step()
 
-            '''
-            TODO: compute accuracy & print a few examples!
-            print:
-            - article
-            - context
-            - list of candidates
-            - list of real scores
-            - list of predicted scores
-            '''
-            # IF in testing mode, compute accuracy
-            # if test:
-            #     epoch_accuracy += compute_accuracy(predictions, rewards)
+            # IF in testing mode, print
+            if test:
+                for b_idx in range(len(rewards.data)):
+                    print "article: ", map(lambda sent: sent.numpy(), articles[b_idx])
+                    print "context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
+                    print "candidate: ", candidates[b_idx].numpy()
+                    print "reward: ", rewards.data[b_idx]
+                    print "prediction: ", predictions.data[b_idx].cpu().numpy()
+                    print "*********************************"
             epoch_huber_loss += huber_loss.data[0]
             epoch_mse_loss += mse_loss.data[0]
             nb_batches += 1
@@ -214,16 +220,28 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None, test=False):
             non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates, \
             non_final_next_custom_encs
         '''
-        for step, (_, articles_tensors, n_sents, l_sents,
-                _, contexts_tensors, n_turns, l_turns,
+        for step, (articles, articles_tensors, n_sents, l_sents,
+                contexts, contexts_tensors, n_turns, l_turns,
                 candidates_tensors, n_tokens,
                 custom_encs, rewards,
                 _, _, _, _, _, _, _, _) in enumerate(data_loader):
+            # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
+            # articles_tensor : Tensor ~(bs x n_sents, max_len)
+            # n_sents : Tensor ~(bs)
+            # l_sents : Tensor ~(bs x n_sents)
+            # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
+            # contexts_tensor : Tensor ~(bs x n_turns, max_len)
+            # n_turns : Tensor ~(bs)
+            # l_turns : Tensir ~(bs x n_turns)
+            # candidates_tensor : Tensor ~(bs, max_len)
+            # n_tokens : Tensor ~(bs)
+            # custom_encs : Tensor ~(bs, enc)
+            # rewards : Tensor ~(bs,)
 
             # Convert Tensors to Variables
-            articles_tensors = to_var(articles_tensors)  # ~(bs x n_sentences, max_len)
+            articles_tensors = to_var(articles_tensors)  # ~(bs x n_sents, max_len)
             n_sents = to_var(n_sents)  # ~(bs)
-            l_sents = to_var(l_sents)  # ~(bs x n_sentences)
+            l_sents = to_var(l_sents)  # ~(bs x n_sents)
             contexts_tensors = to_var(contexts_tensors)  # ~(bs x n_turns, max_len)
             n_turns = to_var(n_turns)  # ~(bs)
             l_turns = to_var(l_turns)  # ~(bs x n_turns)
@@ -257,18 +275,23 @@ def one_epoch(dqn, huber, mse, data_loader, optimizer=None, test=False):
                 # Update parameters
                 optimizer.step()
 
-            # IF in testing mode, compute accuracy
-            # if test:
-            #     epoch_accuracy += compute_accuracy(predictions, rewards)
+            # IF in testing mode, print
+            if test:
+                for b_idx in range(len(rewards.data)):
+                    print "article: ", map(lambda sent: sent.numpy(), articles[b_idx])
+                    print "context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
+                    print "candidate: ", candidates_tensors.data[b_idx].numpy()
+                    print "reward: ", rewards.data[b_idx]
+                    print "prediction: ", predictions.data[b_idx].cpu().numpy()
+                    print "*********************************"
             epoch_huber_loss += huber_loss.data[0]
             epoch_mse_loss += mse_loss.data[0]
             nb_batches += 1
 
     epoch_huber_loss /= nb_batches
     epoch_mse_loss /= nb_batches
-    epoch_accuracy /= nb_batches
 
-    return epoch_huber_loss, epoch_mse_loss, epoch_accuracy
+    return epoch_huber_loss, epoch_mse_loss
 
 
 def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None, test=False):
@@ -282,12 +305,11 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None, t
     :param data_loader: data iterator
     :param optimizer: optimizer to perform gradient descent.
                         if None, do not train.
-    :param test: return accuracy and print some predictions
-    :return: average huber loss, mse loss, (accuracy if test is True), number of batch seen
+    :param test: print some predictions
+    :return: average huber loss, mse loss, number of batch seen
     """
     epoch_huber_loss = 0.0
     epoch_mse_loss = 0.0
-    epoch_accuracy = 0.0
     nb_batches = 0.0
 
     if args.mode == 'mlp':
@@ -295,19 +317,22 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None, t
         data loader returns:
             custom_encs, torch.Tensor(rewards), non_final_mask, non_final_next_custom_encs
         '''
-        for step, (custom_encs, rewards,
-                non_final_mask, non_final_next_custom_encs) in enumerate(data_loader):
+        for step, (articles, contexts, candidates,
+                   custom_encs, rewards,
+                   non_final_mask, non_final_next_custom_encs) in enumerate(data_loader):
+            # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
+            # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
+            # candidates : tuple of Tensors. ~(bs, n_tokens)
+            # custom_encs : Tensor ~(bs, enc)
+            # rewards : Tensor ~(bs,)
+            # non_final_mask : boolean list ~(bs)
+            # non_final_next_custom_encs : tuple of list of Tensors: ~(bs-, n_actions, enc)
 
             # Convert array to Tensor
             non_final_mask = to_tensor(non_final_mask, torch.ByteTensor)
             # Convert Tensors to Variables
             custom_encs = to_var(custom_encs)  # ~(bs, enc)
             rewards = to_var(rewards)  # ~(bs,)
-
-            # non_final_next_custom_encs = to_var(
-            #     non_final_next_custom_encs,
-            #     volatile=True
-            # )  # ~(bs-, n_actions, enc)
 
             # Forward pass: predict current state-action value
             q_values = dqn(custom_encs)  # ~(bs)
@@ -361,9 +386,17 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None, t
                     logger.debug("iteration %d: updating target DQN." % (itt+step))
                     target_dqn.load_state_dict(dqn.state_dict())
 
-            # IF in testing mode, compute accuracy
-            # if test:
-            #     epoch_accuracy += compute_accuracy(predictions, rewards)
+            # IF in testing mode, print
+            if test:
+                for b_idx in range(len(rewards.data)):
+                    print "article: ", map(lambda sent: sent.numpy(), articles[b_idx])
+                    print "context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
+                    print "candidate: ", candidates[b_idx].numpy()
+                    print "reward: ", rewards.data[b_idx]
+                    print "q(s,a): ", q_values.data[b_idx].cpu().numpy()
+                    print "q(s', a*): ", next_state_action_values.data[b_idx].cpu().numpy()
+                    print "expected state action values: ", expected_state_action_values.data[b_idx].cpu().numpy()
+                    print "*********************************"
             epoch_huber_loss += huber_loss.data[0]
             epoch_mse_loss += mse_loss.data[0]
             nb_batches += 1
@@ -388,6 +421,18 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None, t
                 non_final_next_state_tensor, n_non_final_next_turns, l_non_final_next_turns,
                 non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates,
                 non_final_next_custom_encs) in enumerate(data_loader):
+            # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
+            # articles_tensor : Tensor ~(bs x n_sents, max_len)
+            # n_sents : Tensor ~(bs)
+            # l_sents : Tensor ~(bs x n_sents)
+            # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
+            # contexts_tensor : Tensor ~(bs x n_turns, max_len)
+            # n_turns : Tensor ~(bs)
+            # l_turns : Tensir ~(bs x n_turns)
+            # candidates_tensor : Tensor ~(bs, max_len)
+            # n_tokens : Tensor ~(bs)
+            # custom_encs : Tensor ~(bs, enc)
+            # rewards : Tensor ~(bs,)
 
             # Convert array to Tensor
             non_final_mask = to_tensor(non_final_mask, torch.ByteTensor)
@@ -612,18 +657,25 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None, t
                     logger.debug("iteration %d: updating target DQN." % (itt+step))
                     target_dqn.load_state_dict(dqn.state_dict())
 
-            # IF in testing mode, compute accuracy
-            # if test:
-            #     epoch_accuracy += compute_accuracy(predictions, rewards)
+            # IF in testing mode, print
+            if test:
+                for b_idx in range(len(rewards.data)):
+                    print "article: ", map(lambda sent: sent.numpy(), articles[b_idx])
+                    print "context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
+                    print "candidate: ", candidates_tensors.data[b_idx].numpy()
+                    print "reward: ", rewards.data[b_idx]
+                    print "q(s,a): ", q_values.data[b_idx].cpu().numpy()
+                    print "q(s', a*): ", next_state_action_values.data[b_idx].cpu().numpy()
+                    print "expected state action values: ", expected_state_action_values.data[b_idx].cpu().numpy()
+                    print "*********************************"
             epoch_huber_loss += huber_loss.data[0]
             epoch_mse_loss += mse_loss.data[0]
             nb_batches += 1
 
     epoch_huber_loss /= nb_batches
     epoch_mse_loss /= nb_batches
-    epoch_accuracy /= nb_batches
 
-    return epoch_huber_loss, epoch_mse_loss, epoch_accuracy, step
+    return epoch_huber_loss, epoch_mse_loss, step
 
 
 def main():
@@ -739,12 +791,12 @@ def main():
 
         # predict rewards
         if args.predict_rewards:
-            train_huber_loss, train_mse_loss, _ = one_epoch(
+            train_huber_loss, train_mse_loss = one_epoch(
                 dqn, huber, mse, train_loader, optimizer=optimizer
             )
         # predict q values
         else:
-            train_huber_loss, train_mse_loss, _, steps = one_episode(
+            train_huber_loss, train_mse_loss, steps = one_episode(
                 iterations_done, dqn, dqn_target, huber, mse, train_loader, optimizer=optimizer
             )
             iterations_done += steps
@@ -763,12 +815,12 @@ def main():
 
         # predict rewards
         if args.predict_rewards:
-            valid_huber_loss, valid_mse_loss, _ = one_epoch(
+            valid_huber_loss, valid_mse_loss = one_epoch(
                 dqn, huber, mse, valid_loader
             )
         # predict q values
         else:
-            valid_huber_loss, valid_mse_loss, _, _ = one_episode(
+            valid_huber_loss, valid_mse_loss, _ = one_episode(
                 0, dqn, None, huber, mse, valid_loader
             )
 
@@ -813,11 +865,11 @@ def main():
     if args.debug:
         # predict rewards
         if args.predict_rewards:
-            test_huber_loss, test_mse_loss, test_accuracy = one_epoch(dqn, huber, mse, test_loader, test=True)
+            test_huber_loss, test_mse_loss = one_epoch(dqn, huber, mse, test_loader, test=True)
         # predict q values
         else:
-            test_huber_loss, test_mse_loss, test_accuracy, _ = one_episode(0, dqn, None, huber, mse, test_loader, test=True)
-        logger.info("\nTest huber loss: %g -- test accuracy: %g" % (test_huber_loss, test_accuracy))
+            test_huber_loss, test_mse_loss, _ = one_episode(0, dqn, None, huber, mse, test_loader, test=True)
+        logger.info("\nTest huber loss: %g" % test_huber_loss)
 
 
 def str2bool(v):

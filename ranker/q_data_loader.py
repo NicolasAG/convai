@@ -167,40 +167,7 @@ def collate_fn(data):
     """
     Creates mini-batch tensors from the list of tuples:
     :param data: list of tuples depending on the q-network mode
-    :return: what the neural networks expects:
-        this is what mlp QNetwork expects:
-
-            list of custom encodings of (article, dialog, candidate) triples
-            torch.Variable with Tensor ~ (batch, custom_hs)
-
-        this is what rnn+mlp DeepQNetwork forward expects:
-
-            list of sentences to encode to form a bunch of articles
-            torch.Variable with Tensor ~ (batch x #sent/article, max_sent_len)
-
-            number of sentences for each article
-            torch Tensor ~ (batch)
-
-            number of tokens for each sentence
-            torch Tensor ~ (batch x #sent/article)
-            ---
-            list of utterances to encode to form a bunch of contexts
-            torch.Variable with Tensor ~ (batch x #utt/context, max_utt_len)
-
-            number of utterances for each context
-            torch Tensor ~ (batch)
-
-            number of tokens for each utterance
-            torch Tensor ~ (batch x #utt/context)
-            ---
-            list of candidate responses
-            torch.Variable with Tensor ~ (batch, max_cand_length)
-
-            number of tokens for each candidate
-            torch Tensor ~ (batch)
-            ---
-            list of custom (article, dialog, candidate) triples encodings
-            torch.Variable with tensor ~ (batch, custom_enc_hs)
+    :return: what the neural networks expects
     """
     articles, n_sents, l_sents, \
         contexts, n_turns, l_turns, \
@@ -232,8 +199,9 @@ def collate_fn(data):
         non_final_next_custom_encs = filter(lambda s: s is not None, next_custom_encs)
         # ~(bs-, n_actions, enc_size)
 
-        return custom_encs, torch.Tensor(rewards), non_final_mask, non_final_next_custom_encs
-        #       ~(bs, enc)        ~(bs,)              ~(bs)          ~(bs-, n_actions, enc)
+        return articles, contexts, candidates, \
+               custom_encs, torch.Tensor(rewards), non_final_mask, non_final_next_custom_encs
+        #       ~(bs, enc)        ~(bs,)              ~(bs)        ~(bs-, n_actions, enc)
 
     else:
 
@@ -285,6 +253,19 @@ def collate_fn(data):
         # we want the number of tokens for each sentence
         l_non_final_next_turns = [length for turns in l_next_turns for length in turns]  # ~(bs- x #turns/context)
         l_non_final_next_candidates = [length for candidates in l_next_candidates for length in candidates]  # ~(bs- x #candidates)
+
+        # None of the examples have a next state!!
+        if len(l_non_final_next_candidates) == 0:
+            assert len(l_non_final_next_turns) == 0
+            print "WARING: none of the examples in this batch have a next state!"
+            return articles, articles_tensor, torch.LongTensor(n_sents), torch.LongTensor(l_sents), \
+                   contexts, contexts_tensor, torch.LongTensor(n_turns), torch.LongTensor(l_turns), \
+                   candidates_tensor, torch.LongTensor(n_tokens), \
+                   custom_encs, torch.Tensor(rewards), \
+                   non_final_mask, \
+                   None, None, None, \
+                   None, None, None, \
+                   None
 
         # Merge next state utterances (from tuple of list of 1D Tensor to 2D tensor):
         # from tuple of list of turns =to=> (bs- x n_turns, max_len)
