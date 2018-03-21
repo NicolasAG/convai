@@ -2,6 +2,8 @@ import torch
 import torch.utils.data as data
 import nltk
 
+logger = logging.getLogger(__name__)
+
 
 class ConversationDataset(data.Dataset):
     """Custom Dataset compatible with torch.utils.data.DataLoader."""
@@ -257,7 +259,7 @@ def collate_fn(data):
         # None of the examples have a next state!!
         if len(l_non_final_next_candidates) == 0:
             assert len(l_non_final_next_turns) == 0
-            print "WARING: none of the examples in this batch have a next state!"
+            logger.info("WARING: none of the examples in this batch have a next state!")
             return articles, articles_tensor, torch.LongTensor(n_sents), torch.LongTensor(l_sents), \
                    contexts, contexts_tensor, torch.LongTensor(n_turns), torch.LongTensor(l_turns), \
                    candidates_tensor, torch.LongTensor(n_tokens), \

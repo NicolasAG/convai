@@ -137,206 +137,268 @@ def check_param_ambiguity():
                 args.article_dropout, args.context_dropout, args.article_dropout
         ))
 
-
-def one_epoch(dqn, huber, mse, data_loader, optimizer=None, test=False):
+def one_epoch(dqn, huber, data_loader, optimizer=None, test=False):
     """
     Performs one epoch over the specified data
     :param dqn: q-network to perform forward pass
     :param huber: huber loss function
-    :param mse: mse loss function
     :param data_loader: data iterator
     :param optimizer: optimizer to perform gradient descent.
                         if None, do not train.
     :param test: print some predictions
-    :return: average huber loss, mse loss
+    :return: average huber loss
+    """
+    if args.mode == 'mlp':
+        epoch_huber_loss, nb_batches = _one_mlp_epoch(
+            dqn, huber, data_loader, optimizer, test
+        )
+    else:
+        epoch_huber_loss, nb_batches = _one_rnn_epoch(
+            dqn, huber, data_loader, optimizer, test
+        )
+
+    epoch_huber_loss /= nb_batches
+
+    return epoch_huber_loss
+
+def _one_mlp_epoch(dqn, huber, data_loader, optimizer, test):
+    """
+    Performs one epoch over the specified data
+    :param dqn: q-network to perform forward pass
+    :param huber: huber loss function
+    :param data_loader: data iterator
+    :param optimizer: optimizer to perform gradient descent.
+                        if None, do not train.
+    :param test: print some predictions
+    :return: epoch huber loss
     """
     epoch_huber_loss = 0.0
-    epoch_mse_loss = 0.0
     nb_batches = 0.0
 
     # variable used in test mode (test=True)
     current_article = None
     current_context = None
 
+    '''
+    data loader returns:
+        articles, contexts, candidates,
+        custom_encs, torch.Tensor(rewards), non_final_mask, non_final_next_custom_encs
+    '''
+    for step, (articles, contexts, candidates,
+               custom_encs, rewards, _, _) in enumerate(data_loader):
+        # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
+        # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
+        # candidates : tuple of Tensors. ~(bs, n_tokens)
+        # custom_encs : Tensor ~(bs, enc)
+        # rewards : Tensor ~(bs,)
+
+        # Convert Tensors to Variables
+        custom_encs = to_var(custom_encs)  # ~(bs, enc)
+        rewards = to_var(rewards)  # ~(bs)
+
+        # Forward pass: predict rewards
+        predictions = dqn(custom_encs)  # ~(bs)
+
+        # Compute loss
+        huber_loss = huber(predictions, rewards)
+        if args.verbose:
+            logger.info("step %.3d - huber loss %.6f" % (
+                step + 1, huber_loss.data[0]
+            ))
+
+        # IF in training mode
+        if optimizer:
+            # Reset gradients
+            optimizer.zero_grad()
+            # Compute loss gradients w.r.t parameters
+            huber_loss.backward()
+            # Update parameters
+            optimizer.step()
+
+        # IF in testing mode, print the first 40 examples of this batch with proba 0.5
+        if test and np.random.choice([0,1]) == 1:
+            print "batch %d" % (step+1)
+            end = min(len(rewards.data), 40)
+            for b_idx in range(end):
+                print "  article: ", map(lambda sent: sent.numpy(), articles[b_idx])
+                print "  context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
+                print "  candidate: ", candidates[b_idx].numpy()
+                print "  reward: ", rewards.data[b_idx]
+                print "  prediction: ", predictions.data[b_idx].cpu().numpy()
+                print "  *********************************"
+        epoch_huber_loss += huber_loss.data[0]
+        nb_batches += 1
+
+    return epoch_huber_loss, nb_batches
+
+def _one_rnn_epoch(dqn, huber, data_loader, optimizer, test):
+    """
+    Performs one epoch over the specified data
+    :param dqn: q-network to perform forward pass
+    :param huber: huber loss function
+    :param data_loader: data iterator
+    :param optimizer: optimizer to perform gradient descent.
+                        if None, do not train.
+    :param test: print some predictions
+    :return: epoch huber loss
+    """
+    epoch_huber_loss = 0.0
+    nb_batches = 0.0
+
+    # variable used in test mode (test=True)
+    current_article = None
+    current_context = None
+
+    '''
+    data loader returns:
+        articles, articles_tensor, n_sents, l_sents, \
+        contexts, contexts_tensor, n_turns, l_turns, \
+        candidates_tensor, n_tokens, \
+        custom_encs, torch.Tensor(rewards), \
+        non_final_mask, \
+        non_final_next_state_tensor, n_non_final_next_turns, l_non_final_next_turns, \
+        non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates, \
+        non_final_next_custom_encs
+    '''
+    for step, (articles, articles_tensors, n_sents, l_sents,
+            contexts, contexts_tensors, n_turns, l_turns,
+            candidates_tensors, n_tokens,
+            custom_encs, rewards,
+            _, _, _, _, _, _, _, _) in enumerate(data_loader):
+        # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
+        # articles_tensor : Tensor ~(bs x n_sents, max_len)
+        # n_sents : Tensor ~(bs)
+        # l_sents : Tensor ~(bs x n_sents)
+        # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
+        # contexts_tensor : Tensor ~(bs x n_turns, max_len)
+        # n_turns : Tensor ~(bs)
+        # l_turns : Tensir ~(bs x n_turns)
+        # candidates_tensor : Tensor ~(bs, max_len)
+        # n_tokens : Tensor ~(bs)
+        # custom_encs : Tensor ~(bs, enc)
+        # rewards : Tensor ~(bs,)
+
+        # Convert Tensors to Variables
+        articles_tensors = to_var(articles_tensors)  # ~(bs x n_sents, max_len)
+        n_sents = to_var(n_sents)  # ~(bs)
+        l_sents = to_var(l_sents)  # ~(bs x n_sents)
+        contexts_tensors = to_var(contexts_tensors)  # ~(bs x n_turns, max_len)
+        n_turns = to_var(n_turns)  # ~(bs)
+        l_turns = to_var(l_turns)  # ~(bs x n_turns)
+        candidates_tensors = to_var(candidates_tensors)  # ~(bs, max_len)
+        n_tokens = to_var(n_tokens)  # ~(bs)
+        custom_encs = to_var(custom_encs)  # ~(bs, enc)
+        rewards = to_var(rewards)  # ~(bs)
+
+        # Forward pass: predict q-values
+        predictions = dqn(
+            articles_tensors, n_sents, l_sents,
+            contexts_tensors, n_turns, l_turns,
+            candidates_tensors, n_tokens,
+            custom_encs
+        )
+
+        # Compute loss
+        huber_loss = huber(predictions, rewards)
+        if args.verbose:
+            logger.info("step %.3d - huber loss %.6f" % (
+                step + 1, huber_loss.data[0]
+            ))
+
+        # IF in training mode
+        if optimizer:
+            # Reset gradients
+            optimizer.zero_grad()
+            # Compute loss gradients w.r.t parameters
+            huber_loss.backward()
+            # Update parameters
+            optimizer.step()
+
+        # IF in testing mode, print the first 40 examples of this batch with proba 0.5
+        if test and np.random.choice([0, 1]) == 1:
+            print "batch %d" % (step + 1)
+            end = min(len(rewards.data), 40)
+            for b_idx in range(end):
+                print "  article: ", map(lambda sent: sent.numpy(), articles[b_idx])
+                print "  context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
+                print "  candidate: ", candidates_tensors.data[b_idx].cpu().numpy()
+                print "  reward: ", rewards.data[b_idx]
+                print "  prediction: ", predictions.data[b_idx].cpu().numpy()
+                print "  *********************************"
+        epoch_huber_loss += huber_loss.data[0]
+        nb_batches += 1
+
+    return epoch_huber_loss, nb_batches
+
+
+def one_episode(itt, dqn, target_dqn, huber, data_loader, optimizer=None, test=False):
+    """
+    Performs one episode over the specified data
+    :param itt: number of past iterations
+    :param dqn: q-network to perform forward pass
+    :param dqn_target: target network
+    :param huber: huber loss function
+    :param data_loader: data iterator
+    :param optimizer: optimizer to perform gradient descent.
+                        if None, do not train.
+    :param test: print some predictions
+    :return: average huber loss, number of batch seen
+    """
     if args.mode == 'mlp':
-        '''
-        data loader returns:
-            custom_encs, torch.Tensor(rewards), non_final_mask, non_final_next_custom_encs
-        '''
-        for step, (articles, contexts, candidates,
-                   custom_encs, rewards, _, _) in enumerate(data_loader):
-            # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
-            # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
-            # candidates : tuple of Tensors. ~(bs, n_tokens)
-            # custom_encs : Tensor ~(bs, enc)
-            # rewards : Tensor ~(bs,)
-
-            # Convert Tensors to Variables
-            custom_encs = to_var(custom_encs)  # ~(bs, enc)
-            rewards = to_var(rewards)  # ~(bs)
-
-            # Forward pass: predict rewards
-            predictions = dqn(custom_encs)  # ~(bs)
-
-            # Compute loss
-            huber_loss = huber(predictions, rewards)
-            mse_loss = mse(predictions, rewards)
-            if args.verbose:
-                logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
-                    step + 1, huber_loss.data[0], mse_loss.data[0]
-                ))
-
-            # IF in training mode
-            if optimizer:
-                # Reset gradients
-                optimizer.zero_grad()
-                # Compute loss gradients w.r.t parameters
-                huber_loss.backward()
-                # Update parameters
-                optimizer.step()
-
-            # IF in testing mode, print
-            if test:
-                for b_idx in range(len(rewards.data)):
-                    print "article: ", map(lambda sent: sent.numpy(), articles[b_idx])
-                    print "context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
-                    print "candidate: ", candidates[b_idx].numpy()
-                    print "reward: ", rewards.data[b_idx]
-                    print "prediction: ", predictions.data[b_idx].cpu().numpy()
-                    print "*********************************"
-            epoch_huber_loss += huber_loss.data[0]
-            epoch_mse_loss += mse_loss.data[0]
-            nb_batches += 1
-
+        epoch_huber_loss, nb_batches = _one_mlp_episode(
+            itt, dqn, target_dqn, huber, data_loader, optimizer, test
+        )
     else:
-        '''
-        data loader returns:
-            articles, articles_tensor, n_sents, l_sents, \
-            contexts, contexts_tensor, n_turns, l_turns, \
-            candidates_tensor, n_tokens, \
-            custom_encs, torch.Tensor(rewards), \
-            non_final_mask, \
-            non_final_next_state_tensor, n_non_final_next_turns, l_non_final_next_turns, \
-            non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates, \
-            non_final_next_custom_encs
-        '''
-        for step, (articles, articles_tensors, n_sents, l_sents,
-                contexts, contexts_tensors, n_turns, l_turns,
-                candidates_tensors, n_tokens,
-                custom_encs, rewards,
-                _, _, _, _, _, _, _, _) in enumerate(data_loader):
-            # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
-            # articles_tensor : Tensor ~(bs x n_sents, max_len)
-            # n_sents : Tensor ~(bs)
-            # l_sents : Tensor ~(bs x n_sents)
-            # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
-            # contexts_tensor : Tensor ~(bs x n_turns, max_len)
-            # n_turns : Tensor ~(bs)
-            # l_turns : Tensir ~(bs x n_turns)
-            # candidates_tensor : Tensor ~(bs, max_len)
-            # n_tokens : Tensor ~(bs)
-            # custom_encs : Tensor ~(bs, enc)
-            # rewards : Tensor ~(bs,)
-
-            # Convert Tensors to Variables
-            articles_tensors = to_var(articles_tensors)  # ~(bs x n_sents, max_len)
-            n_sents = to_var(n_sents)  # ~(bs)
-            l_sents = to_var(l_sents)  # ~(bs x n_sents)
-            contexts_tensors = to_var(contexts_tensors)  # ~(bs x n_turns, max_len)
-            n_turns = to_var(n_turns)  # ~(bs)
-            l_turns = to_var(l_turns)  # ~(bs x n_turns)
-            candidates_tensors = to_var(candidates_tensors)  # ~(bs, max_len)
-            n_tokens = to_var(n_tokens)  # ~(bs)
-            custom_encs = to_var(custom_encs)  # ~(bs, enc)
-            rewards = to_var(rewards)  # ~(bs)
-
-            # Forward pass: predict q-values
-            predictions = dqn(
-                articles_tensors, n_sents, l_sents,
-                contexts_tensors, n_turns, l_turns,
-                candidates_tensors, n_tokens,
-                custom_encs
-            )
-
-            # Compute loss
-            huber_loss = huber(predictions, rewards)
-            mse_loss = mse(predictions, rewards)
-            if args.verbose:
-                logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
-                    step + 1, huber_loss.data[0], mse_loss.data[0]
-                ))
-
-            # IF in training mode
-            if optimizer:
-                # Reset gradients
-                optimizer.zero_grad()
-                # Compute loss gradients w.r.t parameters
-                huber_loss.backward()
-                # Update parameters
-                optimizer.step()
-
-            # IF in testing mode, print
-            if test:
-                for b_idx in range(len(rewards.data)):
-                    print "article: ", map(lambda sent: sent.numpy(), articles[b_idx])
-                    print "context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
-                    print "candidate: ", candidates_tensors.data[b_idx].numpy()
-                    print "reward: ", rewards.data[b_idx]
-                    print "prediction: ", predictions.data[b_idx].cpu().numpy()
-                    print "*********************************"
-            epoch_huber_loss += huber_loss.data[0]
-            epoch_mse_loss += mse_loss.data[0]
-            nb_batches += 1
+        epoch_huber_loss, nb_batches = _one_rnn_episode(
+            itt, dqn, target_dqn, huber, data_loader, optimizer, test
+        )
 
     epoch_huber_loss /= nb_batches
-    epoch_mse_loss /= nb_batches
 
-    return epoch_huber_loss, epoch_mse_loss
+    return epoch_huber_loss, nb_batches
 
-
-def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None, test=False):
+def _one_mlp_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
     """
     Performs one epoch over the specified data
     :param itt: number of past iterations
     :param dqn: q-network to perform forward pass
     :param dqn_target: target network
     :param huber: huber loss function
-    :param mse: mse loss function
     :param data_loader: data iterator
     :param optimizer: optimizer to perform gradient descent.
                         if None, do not train.
     :param test: print some predictions
-    :return: average huber loss, mse loss, number of batch seen
+    :return: epoch huber loss, number of batch seen
     """
     epoch_huber_loss = 0.0
-    epoch_mse_loss = 0.0
     nb_batches = 0.0
 
-    if args.mode == 'mlp':
-        '''
-        data loader returns:
-            custom_encs, torch.Tensor(rewards), non_final_mask, non_final_next_custom_encs
-        '''
-        for step, (articles, contexts, candidates,
-                   custom_encs, rewards,
-                   non_final_mask, non_final_next_custom_encs) in enumerate(data_loader):
-            # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
-            # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
-            # candidates : tuple of Tensors. ~(bs, n_tokens)
-            # custom_encs : Tensor ~(bs, enc)
-            # rewards : Tensor ~(bs,)
-            # non_final_mask : boolean list ~(bs)
-            # non_final_next_custom_encs : tuple of list of Tensors: ~(bs-, n_actions, enc)
+    for step, (articles, contexts, candidates,
+               custom_encs, rewards,
+               non_final_mask, non_final_next_custom_encs) in enumerate(data_loader):
+        # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
+        # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
+        # candidates : tuple of Tensors. ~(bs, n_tokens)
+        # custom_encs : Tensor ~(bs, enc)
+        # rewards : Tensor ~(bs,)
+        # non_final_mask : boolean list ~(bs)
+        # non_final_next_custom_encs : tuple of list of Tensors: ~(bs-, n_actions, enc)
 
-            # Convert array to Tensor
-            non_final_mask = to_tensor(non_final_mask, torch.ByteTensor)
-            # Convert Tensors to Variables
-            custom_encs = to_var(custom_encs)  # ~(bs, enc)
-            rewards = to_var(rewards)  # ~(bs,)
+        # Convert array to Tensor
+        non_final_mask = to_tensor(non_final_mask, torch.ByteTensor)
+        # Convert Tensors to Variables
+        custom_encs = to_var(custom_encs)  # ~(bs, enc)
+        rewards = to_var(rewards)  # ~(bs,)
 
-            # Forward pass: predict current state-action value
-            q_values = dqn(custom_encs)  # ~(bs)
+        # Forward pass: predict current state-action value
+        q_values = dqn(custom_encs)  # ~(bs)
 
+        # ALL next states are None
+        if not non_final_mask.any():
+            expected_state_action_values = rewards
+
+        # At least one state has a next state:
+        else:
             # Compute Q(s', a') for all next state-action pairs.
             # [-> Double DQN: use real dqn for argmax_a and use target dqn to measure q(s', a*) <-]
             max_actions = []  # ~(bs-, enc)
@@ -361,116 +423,132 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None, t
             # Compute the expected Q values
             expected_state_action_values = (next_state_action_values * args.gamma) + rewards
 
-            # Compute loss
-            huber_loss = huber(q_values, expected_state_action_values)
-            mse_loss = mse(q_values, expected_state_action_values)
-            if args.verbose:
-                logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
-                    step + 1, huber_loss.data[0], mse_loss.data[0]
-                ))
+        # Compute loss
+        huber_loss = huber(q_values, expected_state_action_values)
+        if args.verbose:
+            logger.info("step %.3d - huber loss %.6f" % (
+                step + 1, huber_loss.data[0]
+            ))
 
-            # IF in training mode
-            if optimizer:
-                # Reset gradients
-                optimizer.zero_grad()
-                # Compute loss gradients w.r.t parameters
-                huber_loss.backward()
-                # Clip gradients
-                for param in dqn.parameters():
-                    param.grad.data.clamp_(-1, 1)
-                # Update parameters
-                optimizer.step()
+        # IF in training mode
+        if optimizer:
+            # Reset gradients
+            optimizer.zero_grad()
+            # Compute loss gradients w.r.t parameters
+            huber_loss.backward()
+            # Clip gradients
+            for param in dqn.parameters():
+                param.grad.data.clamp_(-1, 1)
+            # Update parameters
+            optimizer.step()
 
-                ## update target dqn
-                if (itt+step) % args.update_frequence == 0:
-                    logger.debug("iteration %d: updating target DQN." % (itt+step))
-                    target_dqn.load_state_dict(dqn.state_dict())
+            ## update target dqn
+            if (itt + step) % args.update_frequence == 0:
+                logger.info("iteration %d: updating target DQN." % (itt + step))
+                target_dqn.load_state_dict(dqn.state_dict())
 
-            # IF in testing mode, print
-            if test:
-                for b_idx in range(len(rewards.data)):
-                    print "article: ", map(lambda sent: sent.numpy(), articles[b_idx])
-                    print "context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
-                    print "candidate: ", candidates[b_idx].numpy()
-                    print "reward: ", rewards.data[b_idx]
-                    print "q(s,a): ", q_values.data[b_idx].cpu().numpy()
-                    print "q(s', a*): ", next_state_action_values.data[b_idx].cpu().numpy()
-                    print "expected state action values: ", expected_state_action_values.data[b_idx].cpu().numpy()
-                    print "*********************************"
-            epoch_huber_loss += huber_loss.data[0]
-            epoch_mse_loss += mse_loss.data[0]
-            nb_batches += 1
+        # IF in testing mode, print the first 40 examples of this batch with proba 0.5
+        if test and np.random.choice([0, 1]) == 1:
+            print "batch %d" % (step + 1)
+            end = min(len(rewards.data), 40)
+            for b_idx in range(end):
+                print "  article: ", map(lambda sent: sent.numpy(), articles[b_idx])
+                print "  context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
+                print "  candidate: ", candidates[b_idx].numpy()
+                print "  reward: ", rewards.data[b_idx]
+                print "  q(s,a): ", q_values.data[b_idx].cpu().numpy()
+                # print "  q(s', a*): ", next_state_action_values.data[b_idx].cpu().numpy()
+                print "  expected state action values: ", expected_state_action_values.data[b_idx]
+                print "  *********************************"
+        epoch_huber_loss += huber_loss.data[0]
+        nb_batches += 1
 
-    else:
-        '''
-        data loader returns:
-            articles, articles_tensor, n_sents, l_sents, \
-            contexts, contexts_tensor, n_turns, l_turns, \
-            candidates_tensor, n_tokens, \
-            custom_encs, torch.Tensor(rewards), \
-            non_final_mask, \
-            non_final_next_state_tensor, n_non_final_next_turns, l_non_final_next_turns, \
-            non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates, \
-            non_final_next_custom_encs
-        '''
-        for step, (articles, articles_tensors, n_sents, l_sents,
-                contexts, contexts_tensors, n_turns, l_turns,
-                candidates_tensors, n_tokens,
-                custom_encs, rewards,
-                non_final_mask,
-                non_final_next_state_tensor, n_non_final_next_turns, l_non_final_next_turns,
-                non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates,
-                non_final_next_custom_encs) in enumerate(data_loader):
-            # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
-            # articles_tensor : Tensor ~(bs x n_sents, max_len)
-            # n_sents : Tensor ~(bs)
-            # l_sents : Tensor ~(bs x n_sents)
-            # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
-            # contexts_tensor : Tensor ~(bs x n_turns, max_len)
-            # n_turns : Tensor ~(bs)
-            # l_turns : Tensir ~(bs x n_turns)
-            # candidates_tensor : Tensor ~(bs, max_len)
-            # n_tokens : Tensor ~(bs)
-            # custom_encs : Tensor ~(bs, enc)
-            # rewards : Tensor ~(bs,)
+    return epoch_huber_loss, nb_batches
 
-            # Convert array to Tensor
-            non_final_mask = to_tensor(non_final_mask, torch.ByteTensor)
-            # Convert Tensors to Variables
-            # state:
-            articles_tensors_t = to_var(articles_tensors)  # ~(bs x n_sentences, max_len)
-            n_sents_t = to_var(n_sents)  # ~(bs)
-            l_sents_t = to_var(l_sents)  # ~(bs x n_sentences)
-            contexts_tensors_t = to_var(contexts_tensors)  # ~(bs x n_turns, max_len)
-            n_turns_t = to_var(n_turns)  # ~(bs)
-            l_turns_t = to_var(l_turns)  # ~(bs x n_turns)
-            # action:
-            candidates_tensors_t = to_var(candidates_tensors)  # ~(bs, max_len)
-            n_tokens_t = to_var(n_tokens)  # ~(bs)
-            custom_encs_t = to_var(custom_encs)  # ~(bs, enc)
-            # reward:
-            rewards_t = to_var(rewards)  # ~(bs)
+def _one_rnn_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
+    """
+    Performs one epoch over the specified data
+    :param itt: number of past iterations
+    :param dqn: q-network to perform forward pass
+    :param dqn_target: target network
+    :param huber: huber loss function
+    :param data_loader: data iterator
+    :param optimizer: optimizer to perform gradient descent.
+                        if None, do not train.
+    :param test: print some predictions
+    :return: epoch huber loss, number of batch seen
+    """
+    epoch_huber_loss = 0.0
+    nb_batches = 0.0
 
-            # Forward pass: predict current state-action value
-            q_values = dqn(
-                articles_tensors_t, n_sents_t, l_sents_t,
-                contexts_tensors_t, n_turns_t, l_turns_t,
-                candidates_tensors_t, n_tokens_t,
-                custom_encs_t
-            ) # ~(bs,)
+    for step, (articles, articles_tensors, n_sents, l_sents,
+            contexts, contexts_tensors, n_turns, l_turns,
+            candidates_tensors, n_tokens,
+            custom_encs, rewards,
+            non_final_mask,
+            non_final_next_state_tensor, n_non_final_next_turns, l_non_final_next_turns,
+            non_final_next_candidates_tensor, n_non_final_next_candidates, l_non_final_next_candidates,
+            non_final_next_custom_encs) in enumerate(data_loader):
+        # articles : tuple of list of sentences. each sentence is a Tensor. ~(bs, n_sents, n_tokens)
+        # articles_tensor : Tensor ~(bs x n_sents, max_len)
+        # n_sents : Tensor ~(bs)
+        # l_sents : Tensor ~(bs x n_sents)
+        # contexts : tuple of list of turns. each turn is a Tensor. ~(bs, n_turns, n_tokens)
+        # contexts_tensor : Tensor ~(bs x n_turns, max_len)
+        # n_turns : Tensor ~(bs)
+        # l_turns : Tensir ~(bs x n_turns)
+        # candidates_tensor : Tensor ~(bs, max_len)
+        # n_tokens : Tensor ~(bs)
+        # custom_encs : Tensor ~(bs, enc)
+        # rewards : Tensor ~(bs,)
+        # non_final_mask : boolean list ~(bs)
+        # ...
+        # non_final_next_custom_encs : tuple of list of Tensors: ~(bs-, n_actions, enc)
 
-            # print "articles:", articles_tensors_t.size()
-            # print "- n_sentences:", n_sents_t.size()
-            # print "- l_sentences:", l_sents_t.size()
-            # print "contexts:", contexts_tensors_t.size()
-            # print "- n_turns:", n_turns_t.size()
-            # print "- l_turns:", l_turns_t.size()
-            # print "candidate:", candidates_tensors_t.size()
-            # print "- n_tokens:", n_tokens_t.size()
-            # print "custom_encodings:", custom_encs_t.size()
-            # print "--"
-            # print "q_values:", q_values.size()
-            # print "--"
+        # Convert array to Tensor
+        non_final_mask = to_tensor(non_final_mask, torch.ByteTensor)
+        # Convert Tensors to Variables
+        # state:
+        articles_tensors_t = to_var(articles_tensors)  # ~(bs x n_sentences, max_len)
+        n_sents_t = to_var(n_sents)  # ~(bs)
+        l_sents_t = to_var(l_sents)  # ~(bs x n_sentences)
+        contexts_tensors_t = to_var(contexts_tensors)  # ~(bs x n_turns, max_len)
+        n_turns_t = to_var(n_turns)  # ~(bs)
+        l_turns_t = to_var(l_turns)  # ~(bs x n_turns)
+        # action:
+        candidates_tensors_t = to_var(candidates_tensors)  # ~(bs, max_len)
+        n_tokens_t = to_var(n_tokens)  # ~(bs)
+        custom_encs_t = to_var(custom_encs)  # ~(bs, enc)
+        # reward:
+        rewards_t = to_var(rewards)  # ~(bs)
+
+        # Forward pass: predict current state-action value
+        q_values = dqn(
+            articles_tensors_t, n_sents_t, l_sents_t,
+            contexts_tensors_t, n_turns_t, l_turns_t,
+            candidates_tensors_t, n_tokens_t,
+            custom_encs_t
+        ) # ~(bs,)
+
+        # print "articles:", articles_tensors_t.size()
+        # print "- n_sentences:", n_sents_t.size()
+        # print "- l_sentences:", l_sents_t.size()
+        # print "contexts:", contexts_tensors_t.size()
+        # print "- n_turns:", n_turns_t.size()
+        # print "- l_turns:", l_turns_t.size()
+        # print "candidate:", candidates_tensors_t.size()
+        # print "- n_tokens:", n_tokens_t.size()
+        # print "custom_encodings:", custom_encs_t.size()
+        # print "--"
+        # print "q_values:", q_values.size()
+        # print "--"
+
+        # ALL next states are None
+        if not non_final_mask.any():
+            expected_state_action_values = rewards_t
+
+        # At least one state has a next state:
+        else:
 
             # Next state:
             # Filter out article for which next state is None!
@@ -635,47 +713,44 @@ def one_episode(itt, dqn, target_dqn, huber, mse, data_loader, optimizer=None, t
             # Compute the expected Q values
             expected_state_action_values = (next_state_action_values * args.gamma) + rewards_t
 
-            # Compute loss
-            huber_loss = huber(q_values, expected_state_action_values)
-            mse_loss = mse(q_values, expected_state_action_values)
-            if args.verbose:
-                logger.info("step %.3d - huber loss %.6f - mse loss %.6f" % (
-                    step + 1, huber_loss.data[0], mse_loss.data[0]
-                ))
+        # Compute loss
+        huber_loss = huber(q_values, expected_state_action_values)
+        if args.verbose:
+            logger.info("step %.3d - huber loss %.6f" % (
+                step + 1, huber_loss.data[0]
+            ))
 
-            # IF in training mode
-            if optimizer:
-                # Reset gradients
-                optimizer.zero_grad()
-                # Compute loss gradients w.r.t parameters
-                huber_loss.backward()
-                # Update parameters
-                optimizer.step()
+        # IF in training mode
+        if optimizer:
+            # Reset gradients
+            optimizer.zero_grad()
+            # Compute loss gradients w.r.t parameters
+            huber_loss.backward()
+            # Update parameters
+            optimizer.step()
 
-                ## update target dqn
-                if (itt+step) % args.update_frequence == 0:
-                    logger.debug("iteration %d: updating target DQN." % (itt+step))
-                    target_dqn.load_state_dict(dqn.state_dict())
+            ## update target dqn
+            if (itt+step) % args.update_frequence == 0:
+                logger.info("iteration %d: updating target DQN." % (itt+step))
+                target_dqn.load_state_dict(dqn.state_dict())
 
-            # IF in testing mode, print
-            if test:
-                for b_idx in range(len(rewards.data)):
-                    print "article: ", map(lambda sent: sent.numpy(), articles[b_idx])
-                    print "context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
-                    print "candidate: ", candidates_tensors.data[b_idx].numpy()
-                    print "reward: ", rewards.data[b_idx]
-                    print "q(s,a): ", q_values.data[b_idx].cpu().numpy()
-                    print "q(s', a*): ", next_state_action_values.data[b_idx].cpu().numpy()
-                    print "expected state action values: ", expected_state_action_values.data[b_idx].cpu().numpy()
-                    print "*********************************"
-            epoch_huber_loss += huber_loss.data[0]
-            epoch_mse_loss += mse_loss.data[0]
-            nb_batches += 1
+        # IF in testing mode, print the first 40 examples of this batch with proba 0.5
+        if test and np.random.choice([0, 1]) == 1:
+            print "batch %d" % (step + 1)
+            end = min(len(rewards_t.data), 40)
+            for b_idx in range(end):
+                print "  article: ", map(lambda sent: sent.numpy(), articles[b_idx])
+                print "  context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
+                print "  candidate: ", candidates_tensors_t.data[b_idx].cpu().numpy()
+                print "  reward: ", rewards_t.data[b_idx]
+                print "  q(s,a): ", q_values.data[b_idx].cpu().numpy()
+                # print "  q(s', a*): ", next_state_action_values.data[b_idx].cpu().numpy()
+                print "  expected state action values: ", expected_state_action_values.data[b_idx]
+                print "  *********************************"
+        epoch_huber_loss += huber_loss.data[0]
+        nb_batches += 1
 
-    epoch_huber_loss /= nb_batches
-    epoch_mse_loss /= nb_batches
-
-    return epoch_huber_loss, epoch_mse_loss, step
+    return epoch_huber_loss, nb_batches
 
 
 def main():
@@ -767,7 +842,7 @@ def main():
 
     # Define losses
     huber = torch.nn.SmoothL1Loss()  # MSE used in -1 < . < 1 ; Absolute used elsewhere
-    mse = torch.nn.MSELoss()
+    # mse = torch.nn.MSELoss()
 
     #######################
     # Start Training
@@ -791,20 +866,20 @@ def main():
 
         # predict rewards
         if args.predict_rewards:
-            train_huber_loss, train_mse_loss = one_epoch(
-                dqn, huber, mse, train_loader, optimizer=optimizer
+            train_huber_loss = one_epoch(
+                dqn, huber, train_loader, optimizer=optimizer
             )
         # predict q values
         else:
-            train_huber_loss, train_mse_loss, steps = one_episode(
-                iterations_done, dqn, dqn_target, huber, mse, train_loader, optimizer=optimizer
+            train_huber_loss, steps = one_episode(
+                iterations_done, dqn, dqn_target, huber, train_loader, optimizer=optimizer
             )
             iterations_done += steps
 
         # Save train losses
-        train_losses.append((train_huber_loss, train_mse_loss))
-        logger.info("Epoch: %d - huber loss: %g - mse loss: %g" % (
-            epoch+1, train_huber_loss, train_mse_loss
+        train_losses.append(train_huber_loss)
+        logger.info("Epoch: %d - huber loss: %g" % (
+            epoch+1, train_huber_loss
         ))
 
 
@@ -815,17 +890,17 @@ def main():
 
         # predict rewards
         if args.predict_rewards:
-            valid_huber_loss, valid_mse_loss = one_epoch(
-                dqn, huber, mse, valid_loader
+            valid_huber_loss = one_epoch(
+                dqn, huber, valid_loader
             )
         # predict q values
         else:
-            valid_huber_loss, valid_mse_loss, _ = one_episode(
-                0, dqn, None, huber, mse, valid_loader
+            valid_huber_loss, _ = one_episode(
+                0, dqn, dqn_target, huber, valid_loader
             )
 
         # Save validation losses
-        valid_losses.append((valid_huber_loss, valid_mse_loss))
+        valid_losses.append(valid_huber_loss)
         logger.info("Valid huber loss: %g - best huber loss: %g" % (
             valid_huber_loss, best_valid
         ))
@@ -865,10 +940,10 @@ def main():
     if args.debug:
         # predict rewards
         if args.predict_rewards:
-            test_huber_loss, test_mse_loss = one_epoch(dqn, huber, mse, test_loader, test=True)
+            test_huber_loss = one_epoch(dqn, huber, test_loader, test=True)
         # predict q values
         else:
-            test_huber_loss, test_mse_loss, _ = one_episode(0, dqn, None, huber, mse, test_loader, test=True)
+            test_huber_loss, _ = one_episode(0, dqn, dqn_target, huber, test_loader, test=True)
         logger.info("\nTest huber loss: %g" % test_huber_loss)
 
 
