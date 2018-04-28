@@ -102,7 +102,7 @@ def build_data(lemm):
     data = {}  # map from article_string to list of (context_array, candidate_string, reward_int)
     feature_objects, custom_hs = F.initialize_features(ALL_FEATURES)  # list of feature instances
 
-    n_conv = 0
+    n_score = [0, 0]  # number of examples for each vote: 0 or 1
     n_ex = 0
     n_quality = [0, 0, 0, 0, 0]  # number of conversations for each quality score: from 1 to 5
 
@@ -110,9 +110,8 @@ def build_data(lemm):
 
     # bar = pyprind.ProgBar(len(results), monitor=True, stream=sys.stdout)
     # loop through each conversation that have 'review':'accepted'
-    for conv in results:
-        n_conv += 1
-        logger.info("conversation %d / %d ..." % (n_conv, len(results)))
+    for conv_idx, conv in enumerate(results):
+        logger.info("conversation %d / %d ..." % (conv_idx+1, len(results)))
 
         # count conversation quality:
         conv_quality = int(conv['chat_state']['metrics']['quality'])
@@ -246,6 +245,10 @@ def build_data(lemm):
                 })
                 n_ex += 1  # increment example counter
 
+                if choice_idx == option_idx:
+                    n_score[1] += 1
+                else:
+                    n_score[0] += 1
 
             # after all options, append the chosen text to context & increment counter
             chosen_text = turn['options'][choice_idx]['text'].lower().strip()
@@ -261,7 +264,10 @@ def build_data(lemm):
 
     # end of accepted HITs
 
-    return data, n_conv, n_ex, n_quality
+    n_conv = len(results)
+    assert n_score[0] + n_score[1] == n_ex
+
+    return data, n_conv, n_ex, n_score, n_quality
 
 
 def split(json_data, n_ex, valid_prop, test_prop):
@@ -376,9 +382,9 @@ def main():
 
     logger.info("")
     logger.info("Get conversations from database and build data...")
-    json_data, n_conv, n_ex, n_quality = build_data(args.lemmatize)
-    logger.info("Got %d unique articles from %d conversations. Total: %d examples" % (
-            len(json_data), n_conv, n_ex
+    json_data, n_conv, n_ex, n_score, n_quality = build_data(args.lemmatize)
+    logger.info("Got %d unique articles from %d conversations. Total: %d examples (%d +1s & %d -1s)" % (
+            len(json_data), n_conv, n_ex, n_score[1], n_score[0]
     ))
     logger.info(" - 'very bad'  conversations: %d / %d = %f" % (n_quality[0], n_conv, n_quality[0] / float(n_conv)))
     logger.info(" - 'bad'       conversations: %d / %d = %f" % (n_quality[1], n_conv, n_quality[1] / float(n_conv)))
@@ -389,7 +395,7 @@ def main():
     # print some instances to debug.
     logger.info("")
     for idx, article in enumerate(json_data):
-        if idx > 429 and idx < 440:
+        if idx > 437 and idx < 440:
             logger.info(article)
             to_print = map(
                     lambda ele: {

@@ -50,17 +50,16 @@ def build_data():
 
     data = []  # list of training instances
 
-    n_conv = 0
-    n_ex = 0
+    n_score = [0, 0]  # number of examples for each vote: 0 or 1
+    articles = {}  # dictionary from article to number of conversations
     n_quality = [0, 0, 0, 0, 0]  # number of conversations for each quality score: from 1 to 5
 
     results = list(db.dialogs.find({'review': 'accepted'}))
 
     # bar = pyprind.ProgBar(len(results), monitor=True, stream=sys.stdout)
     # loop through each conversation that have 'review':'accepted'
-    for conv in results:
-        n_conv += 1
-        logger.info("conversation %d / %d ..." % (n_conv, len(results)))
+    for conv_idx, conv in enumerate(results):
+        logger.info("conversation %d / %d ..." % (conv_idx+1, len(results)))
 
         # count conversation quality:
         conv_quality = int(conv['chat_state']['metrics']['quality'])
@@ -69,6 +68,10 @@ def build_data():
         # get the conversation article
         article = conv['chat_state']['context']  # conversation article
         article = article.lower().strip()
+        try:
+            articles[article] += 1
+        except KeyError as e:
+            articles[article] = 1
 
         context = [ WELCOME_MSG ]
 
@@ -113,7 +116,12 @@ def build_data():
                     'policy': 'AMT_DATA',
                     'model': option['model_name']
                 })
-                n_ex += 1  # increment example counter
+
+                # count number of upvote / downvote examples
+                if choice_idx == option_idx:
+                    n_score[1] += 1
+                else:
+                    n_score[0] += 1
 
             # after all options, append the chosen text to context & increment counter
             chosen_text = turn['options'][choice_idx]['text'].lower().strip()
@@ -127,15 +135,18 @@ def build_data():
 
     # end of accepted HITs
 
-    return data, n_conv, n_ex, n_quality
+    n_conv = len(results)
+    assert n_score[0] + n_score[1] == len(data)
+
+    return data, n_conv, n_score, articles, n_quality
 
 
 def main():
 
     logger.info("Get conversations from database and build data...")
-    json_data, n_conv, n_ex, n_quality = build_data()
-    logger.info("Got %d unique articles from %d conversations. Total: %d examples" % (
-            len(json_data), n_conv, n_ex
+    json_data, n_conv, n_score, articles, n_quality = build_data()
+    logger.info("Got %d unique articles from %d conversations. Total: %d examples (%d +1s & %d -1s)" % (
+            len(articles), n_conv, len(json_data), n_score[1], n_score[0]
     ))
     logger.info(" - 'very bad'  conversations: %d / %d = %f" % (n_quality[0], n_conv, n_quality[0] / float(n_conv)))
     logger.info(" - 'bad'       conversations: %d / %d = %f" % (n_quality[1], n_conv, n_quality[1] / float(n_conv)))

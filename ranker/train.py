@@ -202,6 +202,17 @@ def get_data(files, target, feature_list=None, val_prop=0.1, test_prop=0.1, cv=T
     test_y = np.array(test_y)
     assert len(test_y) == test_n, "%d != %d" % (len(test_y), test_n)
 
+    # print data stats: #of +1's & #of -1's
+    count_0 = 0
+    count_1 = 0
+    for label in remain_y:
+        if label == 0: count_0 += 1
+        elif label == 1: count_1 += 1
+        else: print "WARNING: unknown label: %d" % label
+    print "train+valid examples: %d (%d +1's & %d -1's)" % (
+        len(remain_y), count_1, count_0
+    )
+
     # reformat train & valid to build k-folds:
     trains = []
     valids = []

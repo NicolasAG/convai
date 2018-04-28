@@ -15,7 +15,7 @@ path = os.path.dirname(os.path.abspath(filename))
 import spacy
 import logging
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s: %(name)s: %(levelname)s: %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s: %(name)s: %(levelname)s: %(message)s")
 
 """
 This file defines different hand-enginered features based
@@ -49,7 +49,7 @@ def initialize_features(feature_list):
         feature_objects.append(feature)
 
     if len(feature_objects) == 0:
-        print "WARNING: no feature recognized in %s" % (feature_list,)
+        logger.warning("no feature recognized in %s" % (feature_list,))
 
     return feature_objects, dim
 
@@ -87,7 +87,7 @@ class Feature(object):
     def __init__(self, dim, article=None, context=None, candidate=None):
         self.dim = dim
         self.feat = None
-        
+
     def set(self, article, context, candidate):
         """
         To be implemented in each sub-class
@@ -166,7 +166,7 @@ class AverageWordEmbedding_LastK(Feature):
         else:
             X = np.zeros((self.dim,), dtype='float32')
             content = ' '.join(context[-self.k:]).lower()
-            logger.debug("last %d turns: %s" % (self.k, content))
+            # logger.debug("last %d turns: %s" % (self.k, content))
             for tok in word_tokenize(content):
                 if tok in w2v:
                     X += w2v[tok]
@@ -194,7 +194,7 @@ class AverageWordEmbedding_kUser(Feature):
             start = min(len(context), 2*self.k+1)
             content = np.array(context)[range(-start, 0, 2)]
             content = ' '.join(content).lower()
-            logger.debug("last %d user turns: %s" % (self.k, content))
+            # logger.debug("last %d user turns: %s" % (self.k, content))
             for tok in word_tokenize(content):
                 if tok in w2v:
                     X += w2v[tok]
@@ -278,7 +278,7 @@ class Similarity_CandidateLastK(Feature):
         else:
             candidate = candidate.lower()
             last_turns = ' '.join(context[-self.k:]).lower()
-            logger.debug("last %d turns: %s" % (self.k, last_turns))
+            # logger.debug("last %d turns: %s" % (self.k, last_turns))
 
             res1 = greedy_score(candidate, last_turns)
             res2 = greedy_score(last_turns, candidate)
@@ -311,7 +311,7 @@ class Similarity_CandidateLastK_noStop(Feature):
             candidate = candidate.lower()
             last_turns = ' '.join(context[-self.k:]).lower()
             last_turns = ' '.join(filter(lambda word: word not in stop, word_tokenize(last_turns)))
-            logger.debug("last %d turns: %s" % (self.k, last_turns))
+            # logger.debug("last %d turns: %s" % (self.k, last_turns))
 
             res1 = greedy_score(candidate, last_turns)
             res2 = greedy_score(last_turns, candidate)
@@ -345,7 +345,7 @@ class Similarity_CandidateKUser(Feature):
             start = min(len(context), 2*self.k+1)
             user_turns = np.array(context)[range(-start, 0, 2)]
             user_turns = ' '.join(user_turns).lower()
-            logger.debug("last %d user turns: %s" % (self.k, user_turns))
+            # logger.debug("last %d user turns: %s" % (self.k, user_turns))
 
             res1 = greedy_score(candidate, user_turns)
             res2 = greedy_score(user_turns, candidate)
@@ -380,7 +380,7 @@ class Similarity_CandidateKUser_noStop(Feature):
             user_turns = np.array(context)[range(-start, 0, 2)]
             user_turns = ' '.join(user_turns).lower()
             user_turns = ' '.join(filter(lambda word: word not in stop, word_tokenize(user_turns)))
-            logger.debug("last %d user turns: %s" % (self.k, user_turns))
+            # logger.debug("last %d user turns: %s" % (self.k, user_turns))
 
             res1 = greedy_score(candidate, user_turns)
             res2 = greedy_score(user_turns, candidate)

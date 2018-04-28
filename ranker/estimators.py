@@ -114,7 +114,7 @@ class Estimator(object):
         # Confidence tensor: only used in the SHORT_TERM mode: probability of up-vote, in LONG_TERM mode same as predictions
         self.confidences = tf.cond(tf.equal(self.mode, self.LONG_TERM),
                                    true_fn  = lambda: logits[:, 0],
-                                   false_fn = lambda: tf.nn.softmax(logits, dim=1)[:, 1],
+                                   false_fn = lambda: tf.nn.softmax(logits, axis=1)[:, 1],
                                    name='confidence_tensor')  # shape (bs,)
 
         # define loss tensor for SHORT TERM estimator:
@@ -123,6 +123,7 @@ class Estimator(object):
             onehot_labels = tf.one_hot(indices=tf.cast(self.y, tf.int32), depth=2)  # from shape (bs,) to (bs, 2)
             # define the cross-entropy loss
             return tf.losses.softmax_cross_entropy(onehot_labels=onehot_labels, logits=logits)
+
         # define loss tensor for LONG TERM estimator:
         def _long_term_loss():
             # labels = tf.expand_dims(self.y, axis=1)  # from shape (bs,) to (bs, 1)
