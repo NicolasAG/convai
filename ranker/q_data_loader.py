@@ -9,16 +9,18 @@ logger = logging.getLogger(__name__)
 class ConversationDataset(data.Dataset):
     """Custom Dataset compatible with torch.utils.data.DataLoader."""
 
-    def __init__(self, json, vocab, mode):
+    def __init__(self, json, vocab, mode, rescale_rewards):
         """
         Set the json file and vocabulary wrapper
         :param json: json data file
         :param vocab: Vocabulary wrapper
         :param mode: one of 'mlp', 'mlp+rnn', 'mlp+rnn+rnn' to indicate which QNetwork to use
+        :param rescale_rewards: replace rewards from 0/1 to 0, 0.2, 0.4, etc...
         """
         self.json_data = json
         self.vocab = vocab
         self.mode = mode
+        self.rescale_rewards = rescale_rewards
         self.ids = []  # map from id to (article, position)
         for article, entries in self.json_data.iteritems():
             for i, _ in enumerate(entries):
@@ -96,7 +98,10 @@ class ConversationDataset(data.Dataset):
         context = entry['state']
         candidate = entry['action']['candidate']
         custom_enc = entry['action']['custom_enc']
-        reward = self._rescale_rewards(entry['reward'], entry['quality'])
+        if self.rescale_rewards:
+            reward = self._rescale_rewards(entry['reward'], entry['quality'])
+        else:
+            reward = entry['reward']
 
         next_state = entry['next_state']
         if entry['next_actions']:
@@ -308,11 +313,11 @@ def collate_fn(data):
             non_final_next_custom_encs
 
 
-def get_loader(json, vocab, q_net_mode, batch_size, shuffle, num_workers):
+def get_loader(json, vocab, q_net_mode, rescale_rewards, batch_size, shuffle, num_workers):
     global Q_NETWORK_MODE
     Q_NETWORK_MODE = q_net_mode
 
-    conv = ConversationDataset(json, vocab, q_net_mode)
+    conv = ConversationDataset(json, vocab, q_net_mode, rescale_rewards)
     data_loader = data.DataLoader(dataset=conv,
                                   batch_size=batch_size,
                                   shuffle=shuffle,

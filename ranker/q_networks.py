@@ -5,7 +5,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 ACTIVATIONS = {
-    'swich': lambda x: x * F.sigmoid(x),
+    'swish': lambda x: x * F.sigmoid(x),
     'relu': F.relu,
     'sigmoid': F.sigmoid
 }
@@ -34,22 +34,24 @@ class QNetwork(torch.nn.Module):
     # Small network:
     # - Get custom encoding of (article, context, candidate)
     # - Feed encodings to a MLP that predicts Q(s,a)
-    def __init__(self, input_size, mlp_activation, mlp_dropout):
+    def __init__(self, input_size, mlp_activation, mlp_dropout, out_size):
         """
         Build the q-network to predict q-values
         :param input_size: hidden size of the (article, context, candidate) encoding
         :param mlp_activation: activation function to use in each mlp layer
         :param mlp_dropout: if non-zero, will add a dropout layer in the mlp
+        :param out_size: 1 if predicting q-values, 2 if classifying rewards
         """
         super(QNetwork, self).__init__()
 
         self.input_size = input_size
         self.mlp_activation = mlp_activation
+        assert out_size in [1, 2]
 
         self.fc_1 = torch.nn.Linear(self.input_size, self.input_size/2)
         self.fc_2 = torch.nn.Linear(self.input_size/2, self.input_size/2)
         self.fc_3 = torch.nn.Linear(self.input_size/2, self.input_size/4)
-        self.fc_4 = torch.nn.Linear(self.input_size/4, 1)
+        self.fc_4 = torch.nn.Linear(self.input_size/4, out_size)
 
         self.dropout = torch.nn.Dropout(p=mlp_dropout)
 
@@ -92,7 +94,7 @@ class DeepQNetwork(torch.nn.Module):
                  utterance_hs, utterance_rnn_bidir, utterance_rnn_dropout,
                  context_hs, context_rnn_bidir, context_rnn_dropout,
                  rnn_gate,
-                 custom_enc_hs, mlp_activation, mlp_dropout):
+                 custom_enc_hs, mlp_activation, mlp_dropout, out_size):
         """
         Build the deep q-network to predict q-values
         :param mode: one of 'rnn+mlp' or 'rnn+rnn+mlp' to decide if we have one
@@ -121,6 +123,7 @@ class DeepQNetwork(torch.nn.Module):
         :param custom_enc_hs: hidden size of custom encoding of (article, dialog, candidate) triples
         :param mlp_activation: activation function to use in each mlp layer
         :param mlp_dropout: if non-zero, will add a dropout layer in the mlp
+        :param out_size: 1 if predicting q-values, 2 if classifying rewards
         """
         super(DeepQNetwork, self).__init__()
 
@@ -131,6 +134,7 @@ class DeepQNetwork(torch.nn.Module):
         self.gate = rnn_gate
 
         self.mlp_activation = mlp_activation
+        assert out_size in [1, 2]
 
         embeddings = torch.from_numpy(embeddings).float()  # convert numpy array to torch float tensor
         self.embed = torch.nn.Embedding(embeddings.size(0), embeddings.size(1))  # embedding layer ~(vocab x token_hs)
@@ -175,11 +179,11 @@ class DeepQNetwork(torch.nn.Module):
 
         # layers to predict value function V(s)
         self.fc_value_1 = torch.nn.Linear(self.state_space/4, self.state_space/8)
-        self.fc_value_2 = torch.nn.Linear(self.state_space/8, 1)
+        self.fc_value_2 = torch.nn.Linear(self.state_space/8, out_size)
         # layers to predict advantage function A(s, a)
         self.fc_adv_1 = torch.nn.Linear(self.advantage_space, self.advantage_space/2)
         self.fc_adv_2 = torch.nn.Linear(self.advantage_space/2, self.advantage_space/4)
-        self.fc_adv_3 = torch.nn.Linear(self.advantage_space/4, 1)
+        self.fc_adv_3 = torch.nn.Linear(self.advantage_space/4, out_size)
 
         self.dropout = torch.nn.Dropout(p=mlp_dropout)
 
@@ -390,5 +394,5 @@ class DeepQNetwork(torch.nn.Module):
         advantage = self.dropout(advantage)   # dropout layer
         advantage = self.fc_adv_3(advantage)  # last layer: no activation
 
-        q_value = value + advantage  # ~(bs, 1)
+        q_value = value + advantage  # ~(bs, out_size)
         return q_value
