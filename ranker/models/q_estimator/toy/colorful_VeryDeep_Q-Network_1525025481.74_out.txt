@@ -1,0 +1,502 @@
+loading word2vec embeddings...
+2018-04-29 14:11:20,400: features: INFO: loading nltk english stop words...
+2018-04-29 14:11:20,410: features: INFO: set([u'all', u'just', u'being', u'over', u'both', u'through', u'yourselves', u'its', u'before', u'o', u'hadn', u'herself', u'll', u'had', u'should', u'to', u'only', u'won', u'under', u'ours', u'has', u'do', u'them', u'his', u'very', u'they', u'not', u'during', u'now', u'him', u'nor', u'd', u'did', u'didn', u'this', u'she', u'each', u'further', u'where', u'few', u'because', u'doing', u'some', u'hasn', u'are', u'our', u'ourselves', u'out', u'what', u'for', u'while', u're', u'does', u'above', u'between', u'mustn', u't', u'be', u'we', u'who', u'were', u'here', u'shouldn', u'hers', u'by', u'on', u'about', u'couldn', u'of', u'against', u's', u'isn', u'or', u'own', u'into', u'yourself', u'down', u'mightn', u'wasn', u'your', u'from', u'her', u'their', u'aren', u'there', u'been', u'whom', u'too', u'wouldn', u'themselves', u'weren', u'was', u'until', u'more', u'himself', u'that', u'but', u'don', u'with', u'than', u'those', u'he', u'me', u'myself', u'ma', u'these', u'up', u'will', u'below', u'ain', u'can', u'theirs', u'my', u'and', u've', u'then', u'is', u'am', u'it', u'doesn', u'an', u'as', u'itself', u'at', u'have', u'in', u'any', u'if', u'again', u'no', u'when', u'same', u'how', u'other', u'which', u'you', u'shan', u'needn', u'haven', u'after', u'most', u'such', u'why', u'a', u'off', u'i', u'm', u'yours', u'so', u'y', u'the', u'having', u'once'])
+2018-04-29 14:11:20,410: features: INFO: 
+2018-04-29 14:11:20,508: extract_amt_for_q_ranker: INFO: using ALL features: ['ArticleLength', 'AverageWordEmbedding_Article', 'AverageWordEmbedding_Candidate', 'AverageWordEmbedding_LastK', 'AverageWordEmbedding_User', 'AverageWordEmbedding_kUser', 'BigramOverlap', 'CandidateLength', 'ConfusionWords', 'DialogActCandidate', 'DialogActLastUser', 'DialogLength', 'EntityOverlap', 'GenericTurns', 'IntensifierWords', 'LastUserLength', 'Negation', 'NonStopWordOverlap', 'ProfanityWords', 'SentimentScoreCandidate', 'SentimentScoreLastUser', 'Similarity_CandidateArticle', 'Similarity_CandidateArticle_noStop', 'Similarity_CandidateKUser', 'Similarity_CandidateKUser_noStop', 'Similarity_CandidateLastK', 'Similarity_CandidateLastK_noStop', 'Similarity_CandidateUser', 'TrigramOverlap', 'WhWords']
+2018-04-29 14:11:20,513: __main__: INFO: 
+2018-04-29 14:11:20,513: __main__: INFO: Namespace(article_bidir=False, article_dropout=0.1, article_hs=500, batch_size=128, context_bidir=False, context_dropout=0.1, context_hs=500, data_f='data/q_ranker_colorful_data.json', debug=True, epochs=100000, fix_embeddings=False, gamma=0.99, gpu=0, learning_rate=0.001, mlp_activation='swish', mlp_dropout=0.1, mode='rnn+rnn+mlp', optimizer='adam', patience=20, predict_rewards=False, rnn_gate='gru', sentence_bidir=False, sentence_dropout=0.1, sentence_hs=300, update_frequence=100, utterance_bidir=False, utterance_dropout=0.1, utterance_hs=300, verbose=False, vocab_f='data/q_ranker_colorful_vocab.pkl')
+2018-04-29 14:11:20,513: __main__: INFO: 
+2018-04-29 14:11:20,514: __main__: INFO: 
+2018-04-29 14:11:20,514: __main__: INFO: Loading data...
+2018-04-29 14:11:21,286: __main__: INFO: got 770 train examples
+2018-04-29 14:11:21,286: __main__: INFO: got 140 valid examples
+2018-04-29 14:11:21,286: __main__: INFO: got 140 test examples
+2018-04-29 14:11:21,286: __main__: INFO: 
+2018-04-29 14:11:21,286: __main__: INFO: Loading vocabulary...
+2018-04-29 14:11:21,287: __main__: INFO: number of unique tokens: 48
+2018-04-29 14:11:21,287: __main__: INFO: 
+2018-04-29 14:11:21,287: __main__: INFO: Get data loaders...
+2018-04-29 14:11:21,287: __main__: INFO: done.
+2018-04-29 14:11:21,287: __main__: INFO: 
+2018-04-29 14:11:21,287: __main__: INFO: Building word embeddings...
+2018-04-29 14:11:21,287: __main__: INFO: Got 38/48 = 0.791667 pretrained embeddings
+2018-04-29 14:11:21,287: __main__: INFO: 
+2018-04-29 14:11:21,287: __main__: INFO: Building Q-Network...
+2018-04-29 14:11:21,739: __main__: INFO: DeepQNetwork(
+  (embed): Embedding(48, 300)
+  (sentence_rnn): GRU(300, 300, batch_first=True, dropout=0.1)
+  (article_rnn): GRU(300, 500, batch_first=True, dropout=0.1)
+  (utterance_rnn): GRU(300, 300, batch_first=True, dropout=0.1)
+  (context_rnn): GRU(300, 500, batch_first=True, dropout=0.1)
+  (fc_1): Linear(in_features=1000, out_features=500, bias=True)
+  (fc_2): Linear(in_features=500, out_features=250, bias=True)
+  (fc_3): Linear(in_features=250, out_features=250, bias=True)
+  (fc_value_1): Linear(in_features=250, out_features=125, bias=True)
+  (fc_value_2): Linear(in_features=125, out_features=1, bias=True)
+  (fc_adv_1): Linear(in_features=2129, out_features=1064, bias=True)
+  (fc_adv_2): Linear(in_features=1064, out_features=532, bias=True)
+  (fc_adv_3): Linear(in_features=532, out_features=1, bias=True)
+  (dropout): Dropout(p=0.1)
+)
+2018-04-29 14:11:21,756: __main__: INFO: 
+2018-04-29 14:11:21,756: __main__: INFO: cuda available! Moving variables to cuda 0...
+2018-04-29 14:11:23,733: __main__: INFO: 
+2018-04-29 14:11:23,733: __main__: INFO: Training model...
+2018-04-29 14:11:23,733: __main__: INFO: ***********************************
+2018-04-29 14:11:24,283: __main__: INFO: iteration 0: updating target DQN.
+2018-04-29 14:11:26,264: __main__: INFO: Epoch: 1 - train loss: 2.02031
+2018-04-29 14:11:26,264: __main__: INFO: computing validation losses...
+2018-04-29 14:11:26,604: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:26,614: __main__: INFO: Valid loss: 0.964851 - best valid loss: 100000
+2018-04-29 14:11:29,072: __main__: INFO: Saved new model.
+2018-04-29 14:11:29,072: __main__: INFO: ***********************************
+2018-04-29 14:11:31,415: __main__: INFO: Epoch: 2 - train loss: 1.11263
+2018-04-29 14:11:31,415: __main__: INFO: computing validation losses...
+2018-04-29 14:11:31,768: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:31,778: __main__: INFO: Valid loss: 0.748258 - best valid loss: 0.964851
+2018-04-29 14:11:34,235: __main__: INFO: Saved new model.
+2018-04-29 14:11:34,235: __main__: INFO: ***********************************
+2018-04-29 14:11:36,547: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:36,561: __main__: INFO: Epoch: 3 - train loss: 0.664742
+2018-04-29 14:11:36,562: __main__: INFO: computing validation losses...
+2018-04-29 14:11:36,904: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:36,913: __main__: INFO: Valid loss: 0.47086 - best valid loss: 0.748258
+2018-04-29 14:11:39,378: __main__: INFO: Saved new model.
+2018-04-29 14:11:39,378: __main__: INFO: ***********************************
+2018-04-29 14:11:41,691: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:41,706: __main__: INFO: Epoch: 4 - train loss: 0.665925
+2018-04-29 14:11:41,706: __main__: INFO: computing validation losses...
+2018-04-29 14:11:42,047: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:42,057: __main__: INFO: Valid loss: 0.481175 - best valid loss: 0.47086
+2018-04-29 14:11:42,057: __main__: INFO: No improvement. patience: 19
+2018-04-29 14:11:42,057: __main__: INFO: ***********************************
+2018-04-29 14:11:44,390: __main__: INFO: Epoch: 5 - train loss: 0.892613
+2018-04-29 14:11:44,390: __main__: INFO: computing validation losses...
+2018-04-29 14:11:44,731: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:44,741: __main__: INFO: Valid loss: 0.324619 - best valid loss: 0.47086
+2018-04-29 14:11:47,187: __main__: INFO: Saved new model.
+2018-04-29 14:11:47,188: __main__: INFO: ***********************************
+2018-04-29 14:11:49,502: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:49,517: __main__: INFO: Epoch: 6 - train loss: 0.538145
+2018-04-29 14:11:49,517: __main__: INFO: computing validation losses...
+2018-04-29 14:11:49,858: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:49,868: __main__: INFO: Valid loss: 0.364298 - best valid loss: 0.324619
+2018-04-29 14:11:49,868: __main__: INFO: No improvement. patience: 19
+2018-04-29 14:11:49,868: __main__: INFO: ***********************************
+2018-04-29 14:11:52,185: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:52,201: __main__: INFO: Epoch: 7 - train loss: 0.538978
+2018-04-29 14:11:52,201: __main__: INFO: computing validation losses...
+2018-04-29 14:11:52,542: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:52,552: __main__: INFO: Valid loss: 0.342324 - best valid loss: 0.324619
+2018-04-29 14:11:52,552: __main__: INFO: No improvement. patience: 18
+2018-04-29 14:11:52,552: __main__: INFO: ***********************************
+2018-04-29 14:11:54,888: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:54,901: __main__: INFO: Epoch: 8 - train loss: 0.526441
+2018-04-29 14:11:54,901: __main__: INFO: computing validation losses...
+2018-04-29 14:11:55,244: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:55,253: __main__: INFO: Valid loss: 0.331492 - best valid loss: 0.324619
+2018-04-29 14:11:55,254: __main__: INFO: No improvement. patience: 17
+2018-04-29 14:11:55,254: __main__: INFO: ***********************************
+2018-04-29 14:11:57,572: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:57,588: __main__: INFO: Epoch: 9 - train loss: 0.534375
+2018-04-29 14:11:57,588: __main__: INFO: computing validation losses...
+2018-04-29 14:11:57,928: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:11:57,938: __main__: INFO: Valid loss: 0.353351 - best valid loss: 0.324619
+2018-04-29 14:11:57,938: __main__: INFO: No improvement. patience: 16
+2018-04-29 14:11:57,939: __main__: INFO: ***********************************
+2018-04-29 14:12:00,250: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:00,264: __main__: INFO: Epoch: 10 - train loss: 0.588764
+2018-04-29 14:12:00,264: __main__: INFO: computing validation losses...
+2018-04-29 14:12:00,606: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:00,616: __main__: INFO: Valid loss: 0.373579 - best valid loss: 0.324619
+2018-04-29 14:12:00,616: __main__: INFO: No improvement. patience: 15
+2018-04-29 14:12:00,616: __main__: INFO: ***********************************
+2018-04-29 14:12:02,941: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:02,955: __main__: INFO: Epoch: 11 - train loss: 0.566535
+2018-04-29 14:12:02,956: __main__: INFO: computing validation losses...
+2018-04-29 14:12:03,296: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:03,306: __main__: INFO: Valid loss: 0.426735 - best valid loss: 0.324619
+2018-04-29 14:12:03,306: __main__: INFO: No improvement. patience: 14
+2018-04-29 14:12:03,306: __main__: INFO: ***********************************
+2018-04-29 14:12:05,658: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:05,672: __main__: INFO: Epoch: 12 - train loss: 0.586682
+2018-04-29 14:12:05,672: __main__: INFO: computing validation losses...
+2018-04-29 14:12:06,013: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:06,023: __main__: INFO: Valid loss: 0.367076 - best valid loss: 0.324619
+2018-04-29 14:12:06,023: __main__: INFO: No improvement. patience: 13
+2018-04-29 14:12:06,023: __main__: INFO: ***********************************
+2018-04-29 14:12:08,343: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:08,358: __main__: INFO: Epoch: 13 - train loss: 0.52213
+2018-04-29 14:12:08,358: __main__: INFO: computing validation losses...
+2018-04-29 14:12:08,708: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:08,718: __main__: INFO: Valid loss: 0.318415 - best valid loss: 0.324619
+2018-04-29 14:12:11,148: __main__: INFO: Saved new model.
+2018-04-29 14:12:11,148: __main__: INFO: ***********************************
+2018-04-29 14:12:13,512: __main__: INFO: Epoch: 14 - train loss: 0.900433
+2018-04-29 14:12:13,512: __main__: INFO: computing validation losses...
+2018-04-29 14:12:13,851: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:13,861: __main__: INFO: Valid loss: 0.438566 - best valid loss: 0.318415
+2018-04-29 14:12:13,861: __main__: INFO: No improvement. patience: 19
+2018-04-29 14:12:13,861: __main__: INFO: ***********************************
+2018-04-29 14:12:14,945: __main__: INFO: iteration 100: updating target DQN.
+2018-04-29 14:12:16,192: __main__: INFO: Epoch: 15 - train loss: 0.327757
+2018-04-29 14:12:16,192: __main__: INFO: computing validation losses...
+2018-04-29 14:12:16,535: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:16,544: __main__: INFO: Valid loss: 0.333098 - best valid loss: 0.318415
+2018-04-29 14:12:16,545: __main__: INFO: No improvement. patience: 18
+2018-04-29 14:12:16,545: __main__: INFO: ***********************************
+2018-04-29 14:12:18,863: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:18,877: __main__: INFO: Epoch: 16 - train loss: 0.0963635
+2018-04-29 14:12:18,878: __main__: INFO: computing validation losses...
+2018-04-29 14:12:19,221: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:19,231: __main__: INFO: Valid loss: 0.102937 - best valid loss: 0.318415
+2018-04-29 14:12:21,673: __main__: INFO: Saved new model.
+2018-04-29 14:12:21,674: __main__: INFO: ***********************************
+2018-04-29 14:12:24,056: __main__: INFO: Epoch: 17 - train loss: 0.0548591
+2018-04-29 14:12:24,056: __main__: INFO: computing validation losses...
+2018-04-29 14:12:24,399: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:24,409: __main__: INFO: Valid loss: 0.0398662 - best valid loss: 0.102937
+2018-04-29 14:12:26,861: __main__: INFO: Saved new model.
+2018-04-29 14:12:26,861: __main__: INFO: ***********************************
+2018-04-29 14:12:29,204: __main__: INFO: Epoch: 18 - train loss: 0.0315684
+2018-04-29 14:12:29,204: __main__: INFO: computing validation losses...
+2018-04-29 14:12:29,542: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:29,552: __main__: INFO: Valid loss: 0.0165134 - best valid loss: 0.0398662
+2018-04-29 14:12:32,014: __main__: INFO: Saved new model.
+2018-04-29 14:12:32,014: __main__: INFO: ***********************************
+2018-04-29 14:12:34,326: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:34,341: __main__: INFO: Epoch: 19 - train loss: 0.0218853
+2018-04-29 14:12:34,341: __main__: INFO: computing validation losses...
+2018-04-29 14:12:34,682: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:34,692: __main__: INFO: Valid loss: 0.0226854 - best valid loss: 0.0165134
+2018-04-29 14:12:34,692: __main__: INFO: No improvement. patience: 19
+2018-04-29 14:12:34,692: __main__: INFO: ***********************************
+2018-04-29 14:12:37,002: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:37,018: __main__: INFO: Epoch: 20 - train loss: 0.0159965
+2018-04-29 14:12:37,018: __main__: INFO: computing validation losses...
+2018-04-29 14:12:37,360: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:37,370: __main__: INFO: Valid loss: 0.0134042 - best valid loss: 0.0165134
+2018-04-29 14:12:39,830: __main__: INFO: Saved new model.
+2018-04-29 14:12:39,831: __main__: INFO: ***********************************
+2018-04-29 14:12:42,150: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:42,166: __main__: INFO: Epoch: 21 - train loss: 0.0146219
+2018-04-29 14:12:42,166: __main__: INFO: computing validation losses...
+2018-04-29 14:12:42,505: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:42,515: __main__: INFO: Valid loss: 0.0112348 - best valid loss: 0.0134042
+2018-04-29 14:12:44,979: __main__: INFO: Saved new model.
+2018-04-29 14:12:44,979: __main__: INFO: ***********************************
+2018-04-29 14:12:47,314: __main__: INFO: Epoch: 22 - train loss: 0.0192349
+2018-04-29 14:12:47,314: __main__: INFO: computing validation losses...
+2018-04-29 14:12:47,656: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:47,665: __main__: INFO: Valid loss: 0.0141899 - best valid loss: 0.0112348
+2018-04-29 14:12:47,666: __main__: INFO: No improvement. patience: 19
+2018-04-29 14:12:47,666: __main__: INFO: ***********************************
+2018-04-29 14:12:49,990: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:50,003: __main__: INFO: Epoch: 23 - train loss: 0.0151734
+2018-04-29 14:12:50,003: __main__: INFO: computing validation losses...
+2018-04-29 14:12:50,345: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:50,355: __main__: INFO: Valid loss: 0.00689079 - best valid loss: 0.0112348
+2018-04-29 14:12:52,820: __main__: INFO: Saved new model.
+2018-04-29 14:12:52,820: __main__: INFO: ***********************************
+2018-04-29 14:12:55,135: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:55,150: __main__: INFO: Epoch: 24 - train loss: 0.0183871
+2018-04-29 14:12:55,150: __main__: INFO: computing validation losses...
+2018-04-29 14:12:55,493: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:55,503: __main__: INFO: Valid loss: 0.00821448 - best valid loss: 0.00689079
+2018-04-29 14:12:55,503: __main__: INFO: No improvement. patience: 19
+2018-04-29 14:12:55,503: __main__: INFO: ***********************************
+2018-04-29 14:12:58,456: __main__: INFO: Epoch: 25 - train loss: 0.0170183
+2018-04-29 14:12:58,456: __main__: INFO: computing validation losses...
+2018-04-29 14:12:58,796: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:12:58,806: __main__: INFO: Valid loss: 0.00866561 - best valid loss: 0.00689079
+2018-04-29 14:12:58,806: __main__: INFO: No improvement. patience: 18
+2018-04-29 14:12:58,806: __main__: INFO: ***********************************
+2018-04-29 14:13:01,121: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:01,136: __main__: INFO: Epoch: 26 - train loss: 0.0121892
+2018-04-29 14:13:01,136: __main__: INFO: computing validation losses...
+2018-04-29 14:13:01,477: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:01,487: __main__: INFO: Valid loss: 0.00791067 - best valid loss: 0.00689079
+2018-04-29 14:13:01,487: __main__: INFO: No improvement. patience: 17
+2018-04-29 14:13:01,487: __main__: INFO: ***********************************
+2018-04-29 14:13:03,807: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:03,822: __main__: INFO: Epoch: 27 - train loss: 0.0123746
+2018-04-29 14:13:03,822: __main__: INFO: computing validation losses...
+2018-04-29 14:13:04,163: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:04,172: __main__: INFO: Valid loss: 0.00884184 - best valid loss: 0.00689079
+2018-04-29 14:13:04,173: __main__: INFO: No improvement. patience: 16
+2018-04-29 14:13:04,173: __main__: INFO: ***********************************
+2018-04-29 14:13:06,490: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:06,506: __main__: INFO: Epoch: 28 - train loss: 0.0126777
+2018-04-29 14:13:06,506: __main__: INFO: computing validation losses...
+2018-04-29 14:13:06,845: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:06,855: __main__: INFO: Valid loss: 0.00952343 - best valid loss: 0.00689079
+2018-04-29 14:13:06,855: __main__: INFO: No improvement. patience: 15
+2018-04-29 14:13:06,855: __main__: INFO: ***********************************
+2018-04-29 14:13:08,708: __main__: INFO: iteration 200: updating target DQN.
+2018-04-29 14:13:09,187: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:09,201: __main__: INFO: Epoch: 29 - train loss: 0.0129212
+2018-04-29 14:13:09,202: __main__: INFO: computing validation losses...
+2018-04-29 14:13:09,542: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:09,552: __main__: INFO: Valid loss: 0.0118838 - best valid loss: 0.00689079
+2018-04-29 14:13:09,552: __main__: INFO: No improvement. patience: 14
+2018-04-29 14:13:09,552: __main__: INFO: ***********************************
+2018-04-29 14:13:11,892: __main__: INFO: Epoch: 30 - train loss: 0.0153082
+2018-04-29 14:13:11,892: __main__: INFO: computing validation losses...
+2018-04-29 14:13:12,236: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:12,246: __main__: INFO: Valid loss: 0.0161645 - best valid loss: 0.00689079
+2018-04-29 14:13:12,246: __main__: INFO: No improvement. patience: 13
+2018-04-29 14:13:12,246: __main__: INFO: ***********************************
+2018-04-29 14:13:14,570: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:14,585: __main__: INFO: Epoch: 31 - train loss: 0.0147096
+2018-04-29 14:13:14,586: __main__: INFO: computing validation losses...
+2018-04-29 14:13:14,925: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:14,935: __main__: INFO: Valid loss: 0.00923684 - best valid loss: 0.00689079
+2018-04-29 14:13:14,935: __main__: INFO: No improvement. patience: 12
+2018-04-29 14:13:14,935: __main__: INFO: ***********************************
+2018-04-29 14:13:17,250: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:17,265: __main__: INFO: Epoch: 32 - train loss: 0.0153653
+2018-04-29 14:13:17,266: __main__: INFO: computing validation losses...
+2018-04-29 14:13:17,606: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:17,616: __main__: INFO: Valid loss: 0.00729191 - best valid loss: 0.00689079
+2018-04-29 14:13:17,616: __main__: INFO: No improvement. patience: 11
+2018-04-29 14:13:17,616: __main__: INFO: ***********************************
+2018-04-29 14:13:19,929: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:19,944: __main__: INFO: Epoch: 33 - train loss: 0.0140547
+2018-04-29 14:13:19,945: __main__: INFO: computing validation losses...
+2018-04-29 14:13:20,287: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:20,297: __main__: INFO: Valid loss: 0.00762938 - best valid loss: 0.00689079
+2018-04-29 14:13:20,297: __main__: INFO: No improvement. patience: 10
+2018-04-29 14:13:20,297: __main__: INFO: ***********************************
+2018-04-29 14:13:22,638: __main__: INFO: Epoch: 34 - train loss: 0.0134679
+2018-04-29 14:13:22,638: __main__: INFO: computing validation losses...
+2018-04-29 14:13:22,981: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:22,991: __main__: INFO: Valid loss: 0.00859872 - best valid loss: 0.00689079
+2018-04-29 14:13:22,991: __main__: INFO: No improvement. patience: 9
+2018-04-29 14:13:22,991: __main__: INFO: ***********************************
+2018-04-29 14:13:25,324: __main__: INFO: Epoch: 35 - train loss: 0.0138389
+2018-04-29 14:13:25,324: __main__: INFO: computing validation losses...
+2018-04-29 14:13:25,665: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:25,675: __main__: INFO: Valid loss: 0.00796277 - best valid loss: 0.00689079
+2018-04-29 14:13:25,676: __main__: INFO: No improvement. patience: 8
+2018-04-29 14:13:25,676: __main__: INFO: ***********************************
+2018-04-29 14:13:27,991: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:28,006: __main__: INFO: Epoch: 36 - train loss: 0.0134397
+2018-04-29 14:13:28,006: __main__: INFO: computing validation losses...
+2018-04-29 14:13:28,349: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:28,358: __main__: INFO: Valid loss: 0.0102642 - best valid loss: 0.00689079
+2018-04-29 14:13:28,359: __main__: INFO: No improvement. patience: 7
+2018-04-29 14:13:28,359: __main__: INFO: ***********************************
+2018-04-29 14:13:30,690: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:30,709: __main__: INFO: Epoch: 37 - train loss: 0.0150417
+2018-04-29 14:13:30,709: __main__: INFO: computing validation losses...
+2018-04-29 14:13:31,052: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:31,062: __main__: INFO: Valid loss: 0.00824213 - best valid loss: 0.00689079
+2018-04-29 14:13:31,063: __main__: INFO: No improvement. patience: 6
+2018-04-29 14:13:31,063: __main__: INFO: ***********************************
+2018-04-29 14:13:33,394: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:33,408: __main__: INFO: Epoch: 38 - train loss: 0.0123624
+2018-04-29 14:13:33,408: __main__: INFO: computing validation losses...
+2018-04-29 14:13:33,750: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:33,760: __main__: INFO: Valid loss: 0.00654052 - best valid loss: 0.00689079
+2018-04-29 14:13:36,224: __main__: INFO: Saved new model.
+2018-04-29 14:13:36,224: __main__: INFO: ***********************************
+2018-04-29 14:13:38,569: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:38,584: __main__: INFO: Epoch: 39 - train loss: 0.0131169
+2018-04-29 14:13:38,585: __main__: INFO: computing validation losses...
+2018-04-29 14:13:38,925: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:38,935: __main__: INFO: Valid loss: 0.00973578 - best valid loss: 0.00654052
+2018-04-29 14:13:38,935: __main__: INFO: No improvement. patience: 19
+2018-04-29 14:13:38,935: __main__: INFO: ***********************************
+2018-04-29 14:13:41,265: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:41,280: __main__: INFO: Epoch: 40 - train loss: 0.0118701
+2018-04-29 14:13:41,280: __main__: INFO: computing validation losses...
+2018-04-29 14:13:41,627: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:41,637: __main__: INFO: Valid loss: 0.00810606 - best valid loss: 0.00654052
+2018-04-29 14:13:41,637: __main__: INFO: No improvement. patience: 18
+2018-04-29 14:13:41,637: __main__: INFO: ***********************************
+2018-04-29 14:13:43,966: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:43,981: __main__: INFO: Epoch: 41 - train loss: 0.0116502
+2018-04-29 14:13:43,981: __main__: INFO: computing validation losses...
+2018-04-29 14:13:44,325: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:44,336: __main__: INFO: Valid loss: 0.00670103 - best valid loss: 0.00654052
+2018-04-29 14:13:44,336: __main__: INFO: No improvement. patience: 17
+2018-04-29 14:13:44,336: __main__: INFO: ***********************************
+2018-04-29 14:13:46,715: __main__: INFO: Epoch: 42 - train loss: 0.050311
+2018-04-29 14:13:46,715: __main__: INFO: computing validation losses...
+2018-04-29 14:13:47,059: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:47,069: __main__: INFO: Valid loss: 0.0173344 - best valid loss: 0.00654052
+2018-04-29 14:13:47,069: __main__: INFO: No improvement. patience: 16
+2018-04-29 14:13:47,069: __main__: INFO: ***********************************
+2018-04-29 14:13:49,430: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:49,443: __main__: INFO: iteration 300: updating target DQN.
+2018-04-29 14:13:49,445: __main__: INFO: Epoch: 43 - train loss: 0.0224547
+2018-04-29 14:13:49,445: __main__: INFO: computing validation losses...
+2018-04-29 14:13:49,789: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:49,799: __main__: INFO: Valid loss: 0.0177305 - best valid loss: 0.00654052
+2018-04-29 14:13:49,800: __main__: INFO: No improvement. patience: 15
+2018-04-29 14:13:49,800: __main__: INFO: ***********************************
+2018-04-29 14:13:52,147: __main__: INFO: Epoch: 44 - train loss: 0.0195082
+2018-04-29 14:13:52,147: __main__: INFO: computing validation losses...
+2018-04-29 14:13:52,541: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:52,551: __main__: INFO: Valid loss: 0.019992 - best valid loss: 0.00654052
+2018-04-29 14:13:52,551: __main__: INFO: No improvement. patience: 14
+2018-04-29 14:13:52,551: __main__: INFO: ***********************************
+2018-04-29 14:13:54,880: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:54,895: __main__: INFO: Epoch: 45 - train loss: 0.0160055
+2018-04-29 14:13:54,895: __main__: INFO: computing validation losses...
+2018-04-29 14:13:55,240: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:55,250: __main__: INFO: Valid loss: 0.00726087 - best valid loss: 0.00654052
+2018-04-29 14:13:55,250: __main__: INFO: No improvement. patience: 13
+2018-04-29 14:13:55,250: __main__: INFO: ***********************************
+2018-04-29 14:13:57,620: __main__: INFO: Epoch: 46 - train loss: 0.0142612
+2018-04-29 14:13:57,620: __main__: INFO: computing validation losses...
+2018-04-29 14:13:57,965: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:13:57,975: __main__: INFO: Valid loss: 0.00471569 - best valid loss: 0.00654052
+2018-04-29 14:14:00,438: __main__: INFO: Saved new model.
+2018-04-29 14:14:00,438: __main__: INFO: ***********************************
+2018-04-29 14:14:02,770: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:02,786: __main__: INFO: Epoch: 47 - train loss: 0.0138126
+2018-04-29 14:14:02,786: __main__: INFO: computing validation losses...
+2018-04-29 14:14:03,129: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:03,139: __main__: INFO: Valid loss: 0.00387131 - best valid loss: 0.00471569
+2018-04-29 14:14:05,575: __main__: INFO: Saved new model.
+2018-04-29 14:14:05,576: __main__: INFO: ***********************************
+2018-04-29 14:14:07,965: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:07,980: __main__: INFO: Epoch: 48 - train loss: 0.0122731
+2018-04-29 14:14:07,980: __main__: INFO: computing validation losses...
+2018-04-29 14:14:08,338: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:08,348: __main__: INFO: Valid loss: 0.0045298 - best valid loss: 0.00387131
+2018-04-29 14:14:08,348: __main__: INFO: No improvement. patience: 19
+2018-04-29 14:14:08,348: __main__: INFO: ***********************************
+2018-04-29 14:14:10,705: __main__: INFO: Epoch: 49 - train loss: 0.0193291
+2018-04-29 14:14:10,705: __main__: INFO: computing validation losses...
+2018-04-29 14:14:11,049: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:11,059: __main__: INFO: Valid loss: 0.0064158 - best valid loss: 0.00387131
+2018-04-29 14:14:11,060: __main__: INFO: No improvement. patience: 18
+2018-04-29 14:14:11,060: __main__: INFO: ***********************************
+2018-04-29 14:14:14,015: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:14,030: __main__: INFO: Epoch: 50 - train loss: 0.01593
+2018-04-29 14:14:14,030: __main__: INFO: computing validation losses...
+2018-04-29 14:14:14,372: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:14,383: __main__: INFO: Valid loss: 0.00512499 - best valid loss: 0.00387131
+2018-04-29 14:14:14,383: __main__: INFO: No improvement. patience: 17
+2018-04-29 14:14:14,383: __main__: INFO: ***********************************
+2018-04-29 14:14:16,708: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:16,723: __main__: INFO: Epoch: 51 - train loss: 0.0123264
+2018-04-29 14:14:16,723: __main__: INFO: computing validation losses...
+2018-04-29 14:14:17,066: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:17,076: __main__: INFO: Valid loss: 0.00722153 - best valid loss: 0.00387131
+2018-04-29 14:14:17,076: __main__: INFO: No improvement. patience: 16
+2018-04-29 14:14:17,076: __main__: INFO: ***********************************
+2018-04-29 14:14:19,410: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:19,425: __main__: INFO: Epoch: 52 - train loss: 0.012005
+2018-04-29 14:14:19,426: __main__: INFO: computing validation losses...
+2018-04-29 14:14:19,768: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:19,778: __main__: INFO: Valid loss: 0.00790712 - best valid loss: 0.00387131
+2018-04-29 14:14:19,778: __main__: INFO: No improvement. patience: 15
+2018-04-29 14:14:19,778: __main__: INFO: ***********************************
+2018-04-29 14:14:22,157: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:22,173: __main__: INFO: Epoch: 53 - train loss: 0.0129562
+2018-04-29 14:14:22,173: __main__: INFO: computing validation losses...
+2018-04-29 14:14:22,516: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:22,526: __main__: INFO: Valid loss: 0.0068059 - best valid loss: 0.00387131
+2018-04-29 14:14:22,526: __main__: INFO: No improvement. patience: 14
+2018-04-29 14:14:22,526: __main__: INFO: ***********************************
+2018-04-29 14:14:24,872: __main__: INFO: Epoch: 54 - train loss: 0.010914
+2018-04-29 14:14:24,872: __main__: INFO: computing validation losses...
+2018-04-29 14:14:25,213: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:25,224: __main__: INFO: Valid loss: 0.00580926 - best valid loss: 0.00387131
+2018-04-29 14:14:25,224: __main__: INFO: No improvement. patience: 13
+2018-04-29 14:14:25,224: __main__: INFO: ***********************************
+2018-04-29 14:14:27,556: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:27,571: __main__: INFO: Epoch: 55 - train loss: 0.00966278
+2018-04-29 14:14:27,571: __main__: INFO: computing validation losses...
+2018-04-29 14:14:27,915: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:27,925: __main__: INFO: Valid loss: 0.00697703 - best valid loss: 0.00387131
+2018-04-29 14:14:27,925: __main__: INFO: No improvement. patience: 12
+2018-04-29 14:14:27,925: __main__: INFO: ***********************************
+2018-04-29 14:14:30,246: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:30,261: __main__: INFO: Epoch: 56 - train loss: 0.0118037
+2018-04-29 14:14:30,261: __main__: INFO: computing validation losses...
+2018-04-29 14:14:30,603: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:30,613: __main__: INFO: Valid loss: 0.00443696 - best valid loss: 0.00387131
+2018-04-29 14:14:30,613: __main__: INFO: No improvement. patience: 11
+2018-04-29 14:14:30,613: __main__: INFO: ***********************************
+2018-04-29 14:14:32,998: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:33,012: __main__: INFO: Epoch: 57 - train loss: 0.0118807
+2018-04-29 14:14:33,012: __main__: INFO: computing validation losses...
+2018-04-29 14:14:33,360: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:33,370: __main__: INFO: Valid loss: 0.00685358 - best valid loss: 0.00387131
+2018-04-29 14:14:33,371: __main__: INFO: No improvement. patience: 10
+2018-04-29 14:14:33,371: __main__: INFO: ***********************************
+2018-04-29 14:14:34,081: __main__: INFO: iteration 400: updating target DQN.
+2018-04-29 14:14:35,695: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:35,709: __main__: INFO: Epoch: 58 - train loss: 0.0132589
+2018-04-29 14:14:35,709: __main__: INFO: computing validation losses...
+2018-04-29 14:14:36,051: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:36,061: __main__: INFO: Valid loss: 0.00717143 - best valid loss: 0.00387131
+2018-04-29 14:14:36,061: __main__: INFO: No improvement. patience: 9
+2018-04-29 14:14:36,061: __main__: INFO: ***********************************
+2018-04-29 14:14:38,398: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:38,413: __main__: INFO: Epoch: 59 - train loss: 0.0141956
+2018-04-29 14:14:38,413: __main__: INFO: computing validation losses...
+2018-04-29 14:14:38,756: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:38,766: __main__: INFO: Valid loss: 0.00799812 - best valid loss: 0.00387131
+2018-04-29 14:14:38,766: __main__: INFO: No improvement. patience: 8
+2018-04-29 14:14:38,766: __main__: INFO: ***********************************
+2018-04-29 14:14:41,117: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:41,132: __main__: INFO: Epoch: 60 - train loss: 0.0139157
+2018-04-29 14:14:41,132: __main__: INFO: computing validation losses...
+2018-04-29 14:14:41,474: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:41,484: __main__: INFO: Valid loss: 0.00738566 - best valid loss: 0.00387131
+2018-04-29 14:14:41,484: __main__: INFO: No improvement. patience: 7
+2018-04-29 14:14:41,484: __main__: INFO: ***********************************
+2018-04-29 14:14:43,807: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:43,822: __main__: INFO: Epoch: 61 - train loss: 0.0155537
+2018-04-29 14:14:43,822: __main__: INFO: computing validation losses...
+2018-04-29 14:14:44,172: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:44,182: __main__: INFO: Valid loss: 0.00578006 - best valid loss: 0.00387131
+2018-04-29 14:14:44,182: __main__: INFO: No improvement. patience: 6
+2018-04-29 14:14:44,182: __main__: INFO: ***********************************
+2018-04-29 14:14:46,572: __main__: INFO: Epoch: 62 - train loss: 0.0188356
+2018-04-29 14:14:46,572: __main__: INFO: computing validation losses...
+2018-04-29 14:14:46,915: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:46,925: __main__: INFO: Valid loss: 0.011344 - best valid loss: 0.00387131
+2018-04-29 14:14:46,925: __main__: INFO: No improvement. patience: 5
+2018-04-29 14:14:46,925: __main__: INFO: ***********************************
+2018-04-29 14:14:49,256: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:49,270: __main__: INFO: Epoch: 63 - train loss: 0.0158513
+2018-04-29 14:14:49,270: __main__: INFO: computing validation losses...
+2018-04-29 14:14:49,614: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:49,624: __main__: INFO: Valid loss: 0.0100249 - best valid loss: 0.00387131
+2018-04-29 14:14:49,624: __main__: INFO: No improvement. patience: 4
+2018-04-29 14:14:49,624: __main__: INFO: ***********************************
+2018-04-29 14:14:51,971: __main__: INFO: Epoch: 64 - train loss: 0.0157074
+2018-04-29 14:14:51,971: __main__: INFO: computing validation losses...
+2018-04-29 14:14:52,312: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:52,322: __main__: INFO: Valid loss: 0.0112518 - best valid loss: 0.00387131
+2018-04-29 14:14:52,323: __main__: INFO: No improvement. patience: 3
+2018-04-29 14:14:52,323: __main__: INFO: ***********************************
+2018-04-29 14:14:54,671: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:54,687: __main__: INFO: Epoch: 65 - train loss: 0.0157884
+2018-04-29 14:14:54,687: __main__: INFO: computing validation losses...
+2018-04-29 14:14:55,030: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:55,040: __main__: INFO: Valid loss: 0.0112844 - best valid loss: 0.00387131
+2018-04-29 14:14:55,040: __main__: INFO: No improvement. patience: 2
+2018-04-29 14:14:55,040: __main__: INFO: ***********************************
+2018-04-29 14:14:57,402: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:57,417: __main__: INFO: Epoch: 66 - train loss: 0.0150428
+2018-04-29 14:14:57,417: __main__: INFO: computing validation losses...
+2018-04-29 14:14:57,760: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:14:57,770: __main__: INFO: Valid loss: 0.00686935 - best valid loss: 0.00387131
+2018-04-29 14:14:57,770: __main__: INFO: No improvement. patience: 1
+2018-04-29 14:14:57,770: __main__: INFO: ***********************************
+2018-04-29 14:15:00,115: __main__: INFO: Epoch: 67 - train loss: 0.0167302
+2018-04-29 14:15:00,115: __main__: INFO: computing validation losses...
+2018-04-29 14:15:00,459: q_data_loader: WARNING: none of the examples in this batch have a next state!
+2018-04-29 14:15:00,470: __main__: INFO: Valid loss: 0.00900632 - best valid loss: 0.00387131
+2018-04-29 14:15:00,470: __main__: INFO: No improvement. patience: 0
+2018-04-29 14:15:00,470: __main__: INFO: Finished training. Time elapsed: 216.737 seconds
+2018-04-29 14:15:00,470: __main__: INFO: Saving timings...
+2018-04-29 14:15:00,473: __main__: INFO: done.
+This run of color-test rnn+rnn+mlp-R ran for 0:04:12 and logs are available locally at: /home/ml/nangel3/.hyperdash/logs/color-test-rnn-rnn-mlp-r/color-test-rnn-rnn-mlp-r_2018-04-29t14-10-49-957332.log

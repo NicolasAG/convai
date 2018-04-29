@@ -72,32 +72,32 @@ def main(args):
         model_path_s, model_id_s, model_name_s, \
         batch_size_s, dropout_rate_s, pretrained_s = load_previous_model(args.short_term_model)
 
-    data_l, \
-        hidden_dims_l, hidden_dims_extra_l, activation_l, \
-        optimizer_l, learning_rate_l, \
-        model_path_l, model_id_l, model_name_l, \
-        batch_size_l, dropout_rate_l, pretrained_l = load_previous_model(args.long_term_model)
+    # data_l, \
+    #     hidden_dims_l, hidden_dims_extra_l, activation_l, \
+    #     optimizer_l, learning_rate_l, \
+    #     model_path_l, model_id_l, model_name_l, \
+    #     batch_size_l, dropout_rate_l, pretrained_l = load_previous_model(args.long_term_model)
 
 
     n_folds = len(data_s[0])
-    assert n_folds == len(data_l[0])
+    # assert n_folds == len(data_l[0])
 
     print "Building the networks..."
     graph_s, estim_s = build_graph(data_s, hidden_dims_s, hidden_dims_extra_s, activation_s, optimizer_s, learning_rate_s, model_path_s, model_id_s, model_name_s)
-    graph_l, estim_l = build_graph(data_l, hidden_dims_l, hidden_dims_extra_l, activation_l, optimizer_l, learning_rate_l, model_path_l, model_id_l, model_name_l)
+    # graph_l, estim_l = build_graph(data_l, hidden_dims_l, hidden_dims_extra_l, activation_l, optimizer_l, learning_rate_l, model_path_l, model_id_l, model_name_l)
 
     sess_s = tf.Session(graph=graph_s)
-    sess_l = tf.Session(graph=graph_l)
+    # sess_l = tf.Session(graph=graph_l)
 
     with sess_s.as_default():
         with graph_s.as_default():
             print "Reset short term network parameters..."
             estim_s.load(sess_s, model_path_s, model_id_s, model_name_s)
 
-    with sess_l.as_default():
-        with graph_l.as_default():
-            print "Reset long term network parameters..."
-            estim_l.load(sess_l, model_path_l, model_id_l, model_name_l)
+    # with sess_l.as_default():
+    #     with graph_l.as_default():
+    #         print "Reset long term network parameters..."
+    #         estim_l.load(sess_l, model_path_l, model_id_l, model_name_l)
 
     with sess_s.as_default():
         with graph_s.as_default():
@@ -105,11 +105,11 @@ def main(args):
             test_acc = estim_s.test(SHORT_TERM_MODE)
             print "test accuracy: %g" % test_acc
 
-    with sess_l.as_default():
-        with graph_l.as_default():
-            print "Testing the long term network..."
-            test_acc = estim_l.test(LONG_TERM_MODE)
-            print "test accuracy OTHER: %g" % test_acc
+    # with sess_l.as_default():
+    #     with graph_l.as_default():
+    #         print "Testing the long term network..."
+    #         test_acc = estim_l.test(LONG_TERM_MODE)
+    #         print "test accuracy OTHER: %g" % test_acc
 
     '''Code below is to train again one of the model'''
     # print "\nContinue training the network..."
@@ -142,30 +142,44 @@ def main(args):
             print "Get train, valid, test prediction..."
             trains, valids, (x_test, y_test), feature_list = data_s
             train_acc, valid_acc = [], []
+            train_conf, valid_conf = [], []
             for fold in range(len(trains)):
+                ## train accuracy
                 preds, confs = estim_s.predict(SHORT_TERM_MODE, trains[fold][0])
                 same = float(np.sum(preds == trains[fold][1]))
-                # TODO: compute true/false positives/negatives
                 acc  = same/len(preds)
                 train_acc.append(acc)
                 print "[fold %d] train acc: %g/%d=%g" % (fold+1, same, len(preds), acc)
+                conf_mtrx = tf.confusion_matrix(trains[fold][1], preds)
+                train_conf.append(conf_mtrx.eval())
+                print "[fold %d] train conf.mtrx:\n%s" % (fold + 1, conf_mtrx.eval())
 
+                ## valid accuracy
                 preds, confs = estim_s.predict(SHORT_TERM_MODE, valids[fold][0])
                 same = float(np.sum(preds == valids[fold][1]))
-                # TODO: compute true/false positives/negatives
                 acc  = same/len(preds)
                 valid_acc.append(acc)
                 print "[fold %d] valid acc: %g/%d=%g" % (fold+1, same, len(preds), acc)
+                conf_mtrx = tf.confusion_matrix(valids[fold][1], preds)
+                valid_conf.append(conf_mtrx.eval())
+                print "[fold %d] valid conf.mtrx:\n%s" % (fold + 1, conf_mtrx.eval())
 
             print "avg. train acc. %g" % np.mean(train_acc)
+            print "avg. train conf.mtrx.\n%s" % np.mean(train_conf, axis=0)
+
             print "avg. valid acc. %g" % np.mean(valid_acc)
+            print "avg. valid conf.mtrx.\n%s" % np.mean(valid_conf, axis=0)
+
+            ## test accuracy
             preds, confs = estim_s.predict(SHORT_TERM_MODE, x_test)
             same = float(np.sum(preds == y_test))
-            # TODO: compute true/false positives/negatives
             acc = same/len(preds)
             print "test acc: %g/%d=%g" % (same, len(preds), acc)
+            conf_mtrx = tf.confusion_matrix(y_test, preds)
+            print "[fold %d] test conf.mtrx:\n%s" % (fold + 1, conf_mtrx.eval())
 
-
+    # code below is the same but for the long-term estimator
+    '''
     with sess_l.as_default():
         with graph_l.as_default():
             print "Get train, valid, test prediction..."
@@ -193,6 +207,7 @@ def main(args):
             # TODO: plot x:labels y:predictions ~ confusion matrix/plot
             acc = same/len(preds)
             print "test acc: %g/%d=%g" % (same, len(preds), acc)
+    '''
 
     print "done."
 
@@ -200,7 +215,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("short_term_model", type=str, help="Short term estimator prefix to load")
-    parser.add_argument("long_term_model", type=str, help="Long term estimator prefix to load")
+    # parser.add_argument("long_term_model", type=str, help="Long term estimator prefix to load")
     parser.add_argument("-g",  "--gpu", type=int, default=0, help="GPU number to use")
     args = parser.parse_args()
     print "\n%s\n" % args

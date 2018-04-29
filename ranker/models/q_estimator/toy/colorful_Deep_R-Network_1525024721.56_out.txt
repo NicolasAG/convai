@@ -1,0 +1,189 @@
+loading word2vec embeddings...
+2018-04-29 13:58:40,278: features: INFO: loading nltk english stop words...
+2018-04-29 13:58:40,289: features: INFO: set([u'all', u'just', u'being', u'over', u'both', u'through', u'yourselves', u'its', u'before', u'o', u'hadn', u'herself', u'll', u'had', u'should', u'to', u'only', u'won', u'under', u'ours', u'has', u'do', u'them', u'his', u'very', u'they', u'not', u'during', u'now', u'him', u'nor', u'd', u'did', u'didn', u'this', u'she', u'each', u'further', u'where', u'few', u'because', u'doing', u'some', u'hasn', u'are', u'our', u'ourselves', u'out', u'what', u'for', u'while', u're', u'does', u'above', u'between', u'mustn', u't', u'be', u'we', u'who', u'were', u'here', u'shouldn', u'hers', u'by', u'on', u'about', u'couldn', u'of', u'against', u's', u'isn', u'or', u'own', u'into', u'yourself', u'down', u'mightn', u'wasn', u'your', u'from', u'her', u'their', u'aren', u'there', u'been', u'whom', u'too', u'wouldn', u'themselves', u'weren', u'was', u'until', u'more', u'himself', u'that', u'but', u'don', u'with', u'than', u'those', u'he', u'me', u'myself', u'ma', u'these', u'up', u'will', u'below', u'ain', u'can', u'theirs', u'my', u'and', u've', u'then', u'is', u'am', u'it', u'doesn', u'an', u'as', u'itself', u'at', u'have', u'in', u'any', u'if', u'again', u'no', u'when', u'same', u'how', u'other', u'which', u'you', u'shan', u'needn', u'haven', u'after', u'most', u'such', u'why', u'a', u'off', u'i', u'm', u'yours', u'so', u'y', u'the', u'having', u'once'])
+2018-04-29 13:58:40,289: features: INFO: 
+2018-04-29 13:58:40,372: extract_amt_for_q_ranker: INFO: using ALL features: ['ArticleLength', 'AverageWordEmbedding_Article', 'AverageWordEmbedding_Candidate', 'AverageWordEmbedding_LastK', 'AverageWordEmbedding_User', 'AverageWordEmbedding_kUser', 'BigramOverlap', 'CandidateLength', 'ConfusionWords', 'DialogActCandidate', 'DialogActLastUser', 'DialogLength', 'EntityOverlap', 'GenericTurns', 'IntensifierWords', 'LastUserLength', 'Negation', 'NonStopWordOverlap', 'ProfanityWords', 'SentimentScoreCandidate', 'SentimentScoreLastUser', 'Similarity_CandidateArticle', 'Similarity_CandidateArticle_noStop', 'Similarity_CandidateKUser', 'Similarity_CandidateKUser_noStop', 'Similarity_CandidateLastK', 'Similarity_CandidateLastK_noStop', 'Similarity_CandidateUser', 'TrigramOverlap', 'WhWords']
+2018-04-29 13:58:40,374: __main__: INFO: 
+2018-04-29 13:58:40,375: __main__: INFO: Namespace(article_bidir=False, article_dropout=0.1, article_hs=500, batch_size=128, context_bidir=False, context_dropout=0.1, context_hs=500, data_f='data/q_ranker_colorful_data.json', debug=True, epochs=100000, fix_embeddings=False, gamma=0.99, gpu=0, learning_rate=0.001, mlp_activation='swish', mlp_dropout=0.1, mode='rnn+mlp', optimizer='adam', patience=20, predict_rewards=True, rnn_gate='gru', sentence_bidir=False, sentence_dropout=0.1, sentence_hs=300, update_frequence=100, utterance_bidir=False, utterance_dropout=0.1, utterance_hs=300, verbose=False, vocab_f='data/q_ranker_colorful_vocab.pkl')
+2018-04-29 13:58:40,375: __main__: INFO: 
+2018-04-29 13:58:40,375: __main__: INFO: 
+2018-04-29 13:58:40,375: __main__: INFO: Loading data...
+2018-04-29 13:58:41,128: __main__: INFO: got 770 train examples
+2018-04-29 13:58:41,128: __main__: INFO: got 140 valid examples
+2018-04-29 13:58:41,128: __main__: INFO: got 140 test examples
+2018-04-29 13:58:41,128: __main__: INFO: 
+2018-04-29 13:58:41,129: __main__: INFO: Loading vocabulary...
+2018-04-29 13:58:41,129: __main__: INFO: number of unique tokens: 48
+2018-04-29 13:58:41,129: __main__: INFO: 
+2018-04-29 13:58:41,129: __main__: INFO: Get data loaders...
+2018-04-29 13:58:41,130: __main__: INFO: done.
+2018-04-29 13:58:41,130: __main__: INFO: 
+2018-04-29 13:58:41,130: __main__: INFO: Building word embeddings...
+2018-04-29 13:58:41,130: __main__: INFO: Got 38/48 = 0.791667 pretrained embeddings
+2018-04-29 13:58:41,130: __main__: INFO: 
+2018-04-29 13:58:41,130: __main__: INFO: Building Q-Network...
+2018-04-29 13:58:41,564: __main__: INFO: DeepQNetwork(
+  (embed): Embedding(48, 300)
+  (sentence_rnn): GRU(300, 300, batch_first=True, dropout=0.1)
+  (article_rnn): GRU(300, 500, batch_first=True, dropout=0.1)
+  (utterance_rnn): GRU(300, 300, batch_first=True, dropout=0.1)
+  (context_rnn): GRU(300, 500, batch_first=True, dropout=0.1)
+  (fc_1): Linear(in_features=1000, out_features=500, bias=True)
+  (fc_2): Linear(in_features=500, out_features=250, bias=True)
+  (fc_3): Linear(in_features=250, out_features=250, bias=True)
+  (fc_value_1): Linear(in_features=250, out_features=125, bias=True)
+  (fc_value_2): Linear(in_features=125, out_features=2, bias=True)
+  (fc_adv_1): Linear(in_features=2129, out_features=1064, bias=True)
+  (fc_adv_2): Linear(in_features=1064, out_features=532, bias=True)
+  (fc_adv_3): Linear(in_features=532, out_features=2, bias=True)
+  (dropout): Dropout(p=0.1)
+)
+2018-04-29 13:58:41,581: __main__: INFO: 
+2018-04-29 13:58:41,581: __main__: INFO: cuda available! Moving variables to cuda 0...
+2018-04-29 13:58:43,479: __main__: INFO: 
+2018-04-29 13:58:43,479: __main__: INFO: Training model...
+2018-04-29 13:58:43,480: __main__: INFO: ***********************************
+2018-04-29 13:58:45,356: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:58:45,370: __main__: INFO: Epoch: 1 - train loss: 1.37946 - train acc: 0.754464
+2018-04-29 13:58:45,371: __main__: INFO: computing validation losses...
+2018-04-29 13:58:45,593: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:58:45,603: __main__: INFO: Valid loss: 0.743295 - Valid acc: 0.884115 - best valid accuracy: 0
+2018-04-29 13:58:47,460: __main__: INFO: Saved new model.
+2018-04-29 13:58:47,461: __main__: INFO: ***********************************
+2018-04-29 13:58:49,135: __main__: INFO: Epoch: 2 - train loss: 0.733579 - train acc: 0.795759
+2018-04-29 13:58:49,135: __main__: INFO: computing validation losses...
+2018-04-29 13:58:49,357: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:58:49,367: __main__: INFO: Valid loss: 0.39986 - Valid acc: 0.864583 - best valid accuracy: 0.884115
+2018-04-29 13:58:49,367: __main__: INFO: No improvement. patience: 19
+2018-04-29 13:58:49,367: __main__: INFO: ***********************************
+2018-04-29 13:58:51,019: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:58:51,034: __main__: INFO: Epoch: 3 - train loss: 0.424211 - train acc: 0.860491
+2018-04-29 13:58:51,034: __main__: INFO: computing validation losses...
+2018-04-29 13:58:51,258: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:58:51,268: __main__: INFO: Valid loss: 0.385535 - Valid acc: 0.876302 - best valid accuracy: 0.884115
+2018-04-29 13:58:51,268: __main__: INFO: No improvement. patience: 18
+2018-04-29 13:58:51,268: __main__: INFO: ***********************************
+2018-04-29 13:58:52,937: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:58:52,950: __main__: INFO: Epoch: 4 - train loss: 0.334351 - train acc: 0.871652
+2018-04-29 13:58:52,950: __main__: INFO: computing validation losses...
+2018-04-29 13:58:53,174: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:58:53,185: __main__: INFO: Valid loss: 0.390581 - Valid acc: 0.884115 - best valid accuracy: 0.884115
+2018-04-29 13:58:53,185: __main__: INFO: No improvement. patience: 17
+2018-04-29 13:58:53,185: __main__: INFO: ***********************************
+2018-04-29 13:58:54,836: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:58:54,851: __main__: INFO: Epoch: 5 - train loss: 0.311606 - train acc: 0.879464
+2018-04-29 13:58:54,851: __main__: INFO: computing validation losses...
+2018-04-29 13:58:55,079: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:58:55,090: __main__: INFO: Valid loss: 0.423868 - Valid acc: 0.880208 - best valid accuracy: 0.884115
+2018-04-29 13:58:55,090: __main__: INFO: No improvement. patience: 16
+2018-04-29 13:58:55,090: __main__: INFO: ***********************************
+2018-04-29 13:58:56,755: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:58:56,769: __main__: INFO: Epoch: 6 - train loss: 0.314101 - train acc: 0.876116
+2018-04-29 13:58:56,769: __main__: INFO: computing validation losses...
+2018-04-29 13:58:56,992: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:58:57,002: __main__: INFO: Valid loss: 0.473178 - Valid acc: 0.884115 - best valid accuracy: 0.884115
+2018-04-29 13:58:57,002: __main__: INFO: No improvement. patience: 15
+2018-04-29 13:58:57,002: __main__: INFO: ***********************************
+2018-04-29 13:58:58,658: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:58:58,673: __main__: INFO: Epoch: 7 - train loss: 0.346131 - train acc: 0.88058
+2018-04-29 13:58:58,673: __main__: INFO: computing validation losses...
+2018-04-29 13:58:58,896: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:58:58,907: __main__: INFO: Valid loss: 0.459595 - Valid acc: 0.880208 - best valid accuracy: 0.884115
+2018-04-29 13:58:58,907: __main__: INFO: No improvement. patience: 14
+2018-04-29 13:58:58,907: __main__: INFO: ***********************************
+2018-04-29 13:59:00,585: __main__: INFO: Epoch: 8 - train loss: 0.454088 - train acc: 0.810268
+2018-04-29 13:59:00,586: __main__: INFO: computing validation losses...
+2018-04-29 13:59:00,807: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:00,817: __main__: INFO: Valid loss: 0.44834 - Valid acc: 0.856771 - best valid accuracy: 0.884115
+2018-04-29 13:59:00,817: __main__: INFO: No improvement. patience: 13
+2018-04-29 13:59:00,817: __main__: INFO: ***********************************
+2018-04-29 13:59:02,473: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:02,487: __main__: INFO: Epoch: 9 - train loss: 0.437117 - train acc: 0.835938
+2018-04-29 13:59:02,487: __main__: INFO: computing validation losses...
+2018-04-29 13:59:02,709: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:02,720: __main__: INFO: Valid loss: 0.599493 - Valid acc: 0.880208 - best valid accuracy: 0.884115
+2018-04-29 13:59:02,720: __main__: INFO: No improvement. patience: 12
+2018-04-29 13:59:02,720: __main__: INFO: ***********************************
+2018-04-29 13:59:04,377: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:04,392: __main__: INFO: Epoch: 10 - train loss: 0.367329 - train acc: 0.871652
+2018-04-29 13:59:04,392: __main__: INFO: computing validation losses...
+2018-04-29 13:59:04,614: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:04,624: __main__: INFO: Valid loss: 0.523216 - Valid acc: 0.884115 - best valid accuracy: 0.884115
+2018-04-29 13:59:04,625: __main__: INFO: No improvement. patience: 11
+2018-04-29 13:59:04,625: __main__: INFO: ***********************************
+2018-04-29 13:59:06,280: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:06,293: __main__: INFO: Epoch: 11 - train loss: 0.319337 - train acc: 0.88058
+2018-04-29 13:59:06,294: __main__: INFO: computing validation losses...
+2018-04-29 13:59:06,515: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:06,526: __main__: INFO: Valid loss: 0.404461 - Valid acc: 0.884115 - best valid accuracy: 0.884115
+2018-04-29 13:59:06,526: __main__: INFO: No improvement. patience: 10
+2018-04-29 13:59:06,526: __main__: INFO: ***********************************
+2018-04-29 13:59:08,186: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:08,201: __main__: INFO: Epoch: 12 - train loss: 0.295041 - train acc: 0.881696
+2018-04-29 13:59:08,201: __main__: INFO: computing validation losses...
+2018-04-29 13:59:08,422: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:08,433: __main__: INFO: Valid loss: 0.522555 - Valid acc: 0.884115 - best valid accuracy: 0.884115
+2018-04-29 13:59:08,433: __main__: INFO: No improvement. patience: 9
+2018-04-29 13:59:08,433: __main__: INFO: ***********************************
+2018-04-29 13:59:10,108: __main__: INFO: Epoch: 13 - train loss: 0.320066 - train acc: 0.802455
+2018-04-29 13:59:10,108: __main__: INFO: computing validation losses...
+2018-04-29 13:59:10,331: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:10,342: __main__: INFO: Valid loss: 0.460817 - Valid acc: 0.789062 - best valid accuracy: 0.884115
+2018-04-29 13:59:10,342: __main__: INFO: No improvement. patience: 8
+2018-04-29 13:59:10,342: __main__: INFO: ***********************************
+2018-04-29 13:59:12,000: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:12,014: __main__: INFO: Epoch: 14 - train loss: 0.318509 - train acc: 0.850446
+2018-04-29 13:59:12,014: __main__: INFO: computing validation losses...
+2018-04-29 13:59:12,237: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:12,247: __main__: INFO: Valid loss: 0.698216 - Valid acc: 0.884115 - best valid accuracy: 0.884115
+2018-04-29 13:59:12,248: __main__: INFO: No improvement. patience: 7
+2018-04-29 13:59:12,248: __main__: INFO: ***********************************
+2018-04-29 13:59:13,903: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:13,917: __main__: INFO: Epoch: 15 - train loss: 0.384856 - train acc: 0.811384
+2018-04-29 13:59:13,917: __main__: INFO: computing validation losses...
+2018-04-29 13:59:14,140: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:14,151: __main__: INFO: Valid loss: 0.501712 - Valid acc: 0.884115 - best valid accuracy: 0.884115
+2018-04-29 13:59:14,151: __main__: INFO: No improvement. patience: 6
+2018-04-29 13:59:14,151: __main__: INFO: ***********************************
+2018-04-29 13:59:15,823: __main__: INFO: Epoch: 16 - train loss: 0.335501 - train acc: 0.8125
+2018-04-29 13:59:15,823: __main__: INFO: computing validation losses...
+2018-04-29 13:59:16,049: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:16,059: __main__: INFO: Valid loss: 0.520463 - Valid acc: 0.792969 - best valid accuracy: 0.884115
+2018-04-29 13:59:16,060: __main__: INFO: No improvement. patience: 5
+2018-04-29 13:59:16,060: __main__: INFO: ***********************************
+2018-04-29 13:59:17,717: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:17,732: __main__: INFO: Epoch: 17 - train loss: 0.311421 - train acc: 0.862723
+2018-04-29 13:59:17,732: __main__: INFO: computing validation losses...
+2018-04-29 13:59:17,954: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:17,965: __main__: INFO: Valid loss: 0.668737 - Valid acc: 0.884115 - best valid accuracy: 0.884115
+2018-04-29 13:59:17,965: __main__: INFO: No improvement. patience: 4
+2018-04-29 13:59:17,965: __main__: INFO: ***********************************
+2018-04-29 13:59:19,645: __main__: INFO: Epoch: 18 - train loss: 0.261322 - train acc: 0.882812
+2018-04-29 13:59:19,645: __main__: INFO: computing validation losses...
+2018-04-29 13:59:19,877: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:19,888: __main__: INFO: Valid loss: 0.678695 - Valid acc: 0.830729 - best valid accuracy: 0.884115
+2018-04-29 13:59:19,888: __main__: INFO: No improvement. patience: 3
+2018-04-29 13:59:19,888: __main__: INFO: ***********************************
+2018-04-29 13:59:21,543: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:21,557: __main__: INFO: Epoch: 19 - train loss: 0.256813 - train acc: 0.90067
+2018-04-29 13:59:21,557: __main__: INFO: computing validation losses...
+2018-04-29 13:59:21,779: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:21,790: __main__: INFO: Valid loss: 0.715339 - Valid acc: 0.803385 - best valid accuracy: 0.884115
+2018-04-29 13:59:21,790: __main__: INFO: No improvement. patience: 2
+2018-04-29 13:59:21,790: __main__: INFO: ***********************************
+2018-04-29 13:59:23,446: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:23,459: __main__: INFO: Epoch: 20 - train loss: 0.222835 - train acc: 0.893973
+2018-04-29 13:59:23,459: __main__: INFO: computing validation losses...
+2018-04-29 13:59:23,683: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:23,693: __main__: INFO: Valid loss: 0.662503 - Valid acc: 0.876302 - best valid accuracy: 0.884115
+2018-04-29 13:59:23,694: __main__: INFO: No improvement. patience: 1
+2018-04-29 13:59:23,694: __main__: INFO: ***********************************
+2018-04-29 13:59:25,364: __main__: INFO: Epoch: 21 - train loss: 0.272689 - train acc: 0.898438
+2018-04-29 13:59:25,364: __main__: INFO: computing validation losses...
+2018-04-29 13:59:25,587: q_data_loader: INFO: WARING: none of the examples in this batch have a next state!
+2018-04-29 13:59:25,597: __main__: INFO: Valid loss: 0.689404 - Valid acc: 0.846354 - best valid accuracy: 0.884115
+2018-04-29 13:59:25,597: __main__: INFO: No improvement. patience: 0
+2018-04-29 13:59:25,597: __main__: INFO: Finished training. Time elapsed: 42.1179 seconds
+2018-04-29 13:59:25,597: __main__: INFO: Saving timings...
+2018-04-29 13:59:25,601: __main__: INFO: done.
+This run of color-test rnn+mlp-R ran for 0:01:18 and logs are available locally at: /home/ml/nangel3/.hyperdash/logs/color-test-rnn-mlp-r/color-test-rnn-mlp-r_2018-04-29t13-58-09-386496.log
