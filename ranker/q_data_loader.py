@@ -265,7 +265,7 @@ def collate_fn(data):
         # None of the examples have a next state!!
         if len(l_non_final_next_candidates) == 0:
             assert len(l_non_final_next_turns) == 0
-            logger.info("WARING: none of the examples in this batch have a next state!")
+            logger.warning("none of the examples in this batch have a next state!")
             return articles, articles_tensor, torch.LongTensor(n_sents), torch.LongTensor(l_sents), \
                    contexts, contexts_tensor, torch.LongTensor(n_turns), torch.LongTensor(l_turns), \
                    candidates_tensor, torch.LongTensor(n_tokens), \

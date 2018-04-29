@@ -181,10 +181,6 @@ def _one_mlp_epoch(dqn, loss, data_loader, optimizer, test):
     epoch_accuracy = {'acc': 0., 'TP': 0., 'TN': 0., 'FP': 0., 'FN': 0.}
     nb_batches = 0.0
 
-    # variable used in test mode (test=True)
-    current_article = None
-    current_context = None
-
     '''
     data loader returns:
         articles, contexts, candidates,
@@ -276,10 +272,6 @@ def _one_rnn_epoch(dqn, loss, data_loader, optimizer, test):
     epoch_loss = 0.0
     epoch_accuracy = {'acc': 0., 'TP': 0., 'TN': 0., 'FP': 0., 'FN': 0.}
     nb_batches = 0.0
-
-    # variable used in test mode (test=True)
-    current_article = None
-    current_context = None
 
     '''
     data loader returns:
@@ -820,21 +812,23 @@ def main():
         train_loader, valid_loader, test_loader, \
         vocab, embeddings, custom_hs = get_data("./data/q_ranker_colorful_data.json",
                                                 "./data/q_ranker_colorful_vocab.pkl")
+        max_epochs = 100
     # Load regular dataset
     else:
         train_loader, valid_loader, test_loader,\
             vocab, embeddings, custom_hs = get_data(args.data_f, args.vocab_f)
+        max_epochs = args.epochs
 
     #######################
     # Build DQN
     #######################
     logger.info("")
     logger.info("Building Q-Network...")
-    model_name = "colorful_" if args.debug else ""
+    model_name = "toy/colorful_" if args.debug else ""
     # MLP network
     if args.mode == 'mlp':
         # model name
-        model_name += "RNetwork" if args.predict_rewards else "QNetwork"
+        model_name += "Small_R-Network" if args.predict_rewards else "Small_Q-Network"
         # output dimension
         if args.predict_rewards:
             out = 2
@@ -847,10 +841,10 @@ def main():
     else:
         # model name
         if args.mode == 'rnn+mlp':
-            model_name += "DeepRNetwork" if args.predict_rewards else "DeepQNetwork"
+            model_name += "Deep_R-Network" if args.predict_rewards else "Deep_Q-Network"
             check_param_ambiguity()
         elif args.mode == 'rnn+rnn+mlp':
-            model_name += "VeryDeepRNetwork" if args.predict_rewards else "VeryDeepQNetwork"
+            model_name += "VeryDeep_R-Network" if args.predict_rewards else "VeryDeep_Q-Network"
         else:
             raise NotImplementedError("ERROR: Unknown mode: %s" % args.mode)
         # output dimension
@@ -932,7 +926,7 @@ def main():
     logger.info("Training model...")
 
     iterations_done = 0
-    for epoch in range(args.epochs):
+    for epoch in range(max_epochs):
         ###
         # Perform one epoch and return average losses:
         ###
@@ -1045,6 +1039,7 @@ def main():
              'valid_accurs': valid_accurs},
             f
         )
+    logger.info("done.")
 
     #######################
     # Testing
@@ -1090,7 +1085,7 @@ if __name__ == '__main__':
                         help="keep word_embeddings fixed during training")
     parser.add_argument("-p", "--patience", type=int, default=20,
                         help="Number of training steps to wait before stopping when validation accuracy doesn't increase")
-    parser.add_argument("--epochs", type=int, default=100,
+    parser.add_argument("--epochs", type=int, default=100000,
                         help="Maximum number of training passes to do on the full train set")
     parser.add_argument("-bs", "--batch_size", type=int, default=128,
                         help="batch size during training")
