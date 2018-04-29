@@ -4,7 +4,7 @@
 # Train estimator for immediate reward #
 ########################################
 hyperdash run -n "train TF mlp supervised ranker" python train.py \
-                ./data/supervised_ranker_amt_data_1521503826.9.json \
+                ./data/supervised_ranker_amt_data_1524858322.44.json \
                 ./data/supervised_ranker_db_voted_data_1520108818.78.json \
                 ./data/supervised_ranker_round1_voted_data_1520108828.2.json \
     short_term \
