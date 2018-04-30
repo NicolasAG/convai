@@ -15,30 +15,27 @@ import time
 import sys
 import os
 
-# logging.basicConfig(
-#     level=logging.DEBUG,
-#     format="%(asctime)s %(name)s.%(funcName)s l%(lineno)s [%(levelname)s]: %(message)s"
-# )
-
 logger = logging.getLogger(__name__)
 
 
-def get_data(data_f, vocab_f):
+def get_data(old_args):
     """
     Load data to train Q Network.
-    :param data_f: path to the json data
-    :param vocab_f: path to the pkl Vocabulary
-    :return: vocabulary, training examples, validation examples,
-                testing examples, embeddings
+    :return: vocabulary, testing examples, embeddings
     """
+    # Load toy domain dataset
+    if old_args.debug:
+        data_f = "./data/q_ranker_colorful_data.json"
+        vocab_f = "./data/q_ranker_colorful_vocab.pkl"
+    # Load regular dataset
+    else:
+        data_f = old_args.data_f
+        vocab_f = old_args.vocab_f
+
     logger.info("")
     logger.info("Loading data...")
     with open(data_f, 'rb') as f:
         raw_data = json.load(f)
-    train_data = raw_data['train'][0]
-    train_size = raw_data['train'][1]
-    valid_data = raw_data['valid'][0]
-    valid_size = raw_data['valid'][1]
     test_data = raw_data['test'][0]
     test_size = raw_data['test'][1]
 
@@ -54,21 +51,14 @@ def get_data(data_f, vocab_f):
 
     logger.info("")
     logger.info("Get data loaders...")
-    train_loader = get_loader(
-        json=train_data, vocab=vocab, q_net_mode=args.mode, rescale_rewards=not args.predict_rewards,
-        batch_size=args.batch_size, shuffle=True, num_workers=0
-    )
-    valid_loader = get_loader(
-        json=valid_data, vocab=vocab, q_net_mode=args.mode, rescale_rewards=not args.predict_rewards,
-        batch_size=args.batch_size, shuffle=False, num_workers=0
-    )
     test_loader = get_loader(
-        json=test_data, vocab=vocab, q_net_mode=args.mode, rescale_rewards=not args.predict_rewards,
-        batch_size=args.batch_size, shuffle=False, num_workers=0
+        json=test_data, vocab=vocab, q_net_mode=old_args.mode, rescale_rewards=not old_args.predict_rewards,
+        batch_size=old_args.batch_size, shuffle=False, num_workers=0
     )
     logger.info("done.")
 
     logger.info("")
+    # TODO: LOAD WORD EMBEDDINGS!!!!
     logger.info("Building word embeddings...")
     embeddings = np.random.uniform(-0.1, 0.1, size=(len(vocab), w2v.vector_size))
     pretrained = 0
@@ -84,78 +74,21 @@ def get_data(data_f, vocab_f):
     first_article = train_data.keys()[0]
     custom_hs = len(train_data[first_article][0]['action']['custom_enc'])
 
-    return train_loader, valid_loader, test_loader, vocab, embeddings, custom_hs
+    return test_loader, vocab, embeddings, custom_hs
 
 
-def sample_parameters(t):
-    """
-    randomly choose a set of parameters t times
-    """
-
-    activations = ['swish', 'relu', 'sigmoid']
-    optimizers = ['sgd', 'adam', 'rmsprop', 'adagrad', 'adadelta']
-    learning_rates = [0.01, 0.001, 0.0001]
-    dropout_rates = [0.1, 0.3, 0.5, 0.7, 0.9]
-    batch_sizes = [32, 64, 128, 256, 512, 1024]
-
-    activs, optims, lrs, drs, bss = [], [], [], [], []
-    # sample parameters
-    for _ in range(t):
-        activs.append(np.random.choice(activations))
-        optims.append(np.random.choice(optimizers))
-        lrs.append(np.random.choice(learning_rates))
-        drs.append(np.random.choice(dropout_rates))
-        bss.append(np.random.choice(batch_sizes))
-
-    return activs, optims, lrs, drs, bss
-
-
-def check_param_ambiguity():
-    if args.sentence_hs != args.utterance_hs:
-        logger.info("WARNING: ambiguity between sentence (%d) and utterance (%d) hs. Using %d" % (
-                args.sentence_hs, args.utterance_hs, args.sentence_hs
-        ))
-    if args.sentence_bidir != args.utterance_bidir:
-        logger.info("WARNING: ambiguity between sentence (%s) and utterance (%s) bidir. Using %s" % (
-                args.sentence_bidir, args.utterance_bidir, args.sentence_bidir
-        ))
-    if args.sentence_dropout != args.utterance_dropout:
-        logger.info("WARNING: ambiguity between sentence (%s) and utterance (%s) dropout. Using %s" % (
-                args.sentence_dropout, args.utterance_dropout, args.sentence_dropout
-        ))
-
-    if args.article_hs != args.context_hs:
-        logger.info("WARNING: ambiguity between article (%d) and context (%d) hs. Using %d" % (
-                args.article_hs, args.context_hs, args.article_hs
-        ))
-    if args.article_bidir != args.context_bidir:
-        logger.info("WARNING: ambiguity between article (%s) and context (%s) bidir. Using %s" % (
-                args.article_bidir, args.context_bidir, args.article_bidir
-        ))
-    if args.article_dropout != args.context_dropout:
-        logger.info("WARNING: ambiguity between article (%s) and context (%s) dropout. Using %s" % (
-                args.article_dropout, args.context_dropout, args.article_dropout
-        ))
-
-def one_epoch(dqn, loss, data_loader, optimizer=None, test=False):
+def one_epoch(dqn, loss, data_loader):
     """
     Performs one epoch over the specified data
     :param dqn: q-network to perform forward pass
     :param loss: cross entropy loss function
     :param data_loader: data iterator
-    :param optimizer: optimizer to perform gradient descent.
-                        if None, do not train.
-    :param test: print some predictions
     :return: average loss & accuracy dictionary: acc, TP, TN, FP, FN
     """
     if args.mode == 'mlp':
-        epoch_loss, epoch_accuracy, nb_batches = _one_mlp_epoch(
-            dqn, loss, data_loader, optimizer, test
-        )
+        epoch_loss, epoch_accuracy, nb_batches = _one_mlp_epoch(dqn, loss, data_loader)
     else:
-        epoch_loss, epoch_accuracy, nb_batches = _one_rnn_epoch(
-            dqn, loss, data_loader, optimizer, test
-        )
+        epoch_loss, epoch_accuracy, nb_batches = _one_rnn_epoch(dqn, loss, data_loader)
 
     epoch_loss /= nb_batches
     epoch_accuracy['acc'] /= nb_batches
@@ -166,15 +99,12 @@ def one_epoch(dqn, loss, data_loader, optimizer=None, test=False):
 
     return epoch_loss, epoch_accuracy
 
-def _one_mlp_epoch(dqn, loss, data_loader, optimizer, test):
+def _one_mlp_epoch(dqn, loss, data_loader):
     """
     Performs one epoch over the specified data
     :param dqn: q-network to perform forward pass
     :param loss: cross entropy loss function
     :param data_loader: data iterator
-    :param optimizer: optimizer to perform gradient descent.
-                        if None, do not train.
-    :param test: print some predictions
     :return: epoch loss & accuracy
     """
     epoch_loss = 0.0
@@ -233,17 +163,8 @@ def _one_mlp_epoch(dqn, loss, data_loader, optimizer, test):
                 step + 1, tmp_loss.data[0], tmp_acc
             ))
 
-        # IF in training mode
-        if optimizer:
-            # Reset gradients
-            optimizer.zero_grad()
-            # Compute loss gradients w.r.t parameters
-            tmp_loss.backward()
-            # Update parameters
-            optimizer.step()
-
-        # IF in testing mode, print the first 40 examples of this batch with proba 0.5
-        if test and np.random.choice([0,1]) == 1:
+        # print the first 40 examples of this batch with proba 0.5
+        if np.random.choice([0,1]) == 1:
             print "batch %d" % (step+1)
             end = min(len(rewards.data), 40)
             for b_idx in range(end):
@@ -258,15 +179,12 @@ def _one_mlp_epoch(dqn, loss, data_loader, optimizer, test):
 
     return epoch_loss, epoch_accuracy, nb_batches
 
-def _one_rnn_epoch(dqn, loss, data_loader, optimizer, test):
+def _one_rnn_epoch(dqn, loss, data_loader):
     """
     Performs one epoch over the specified data
     :param dqn: q-network to perform forward pass
     :param loss: cross entropy loss function
     :param data_loader: data iterator
-    :param optimizer: optimizer to perform gradient descent.
-                        if None, do not train.
-    :param test: print some predictions
     :return: epoch loss & accuracy
     """
     epoch_loss = 0.0
@@ -354,17 +272,8 @@ def _one_rnn_epoch(dqn, loss, data_loader, optimizer, test):
                 step + 1, tmp_loss.data[0], tmp_acc
             ))
 
-        # IF in training mode
-        if optimizer:
-            # Reset gradients
-            optimizer.zero_grad()
-            # Compute loss gradients w.r.t parameters
-            tmp_loss.backward()
-            # Update parameters
-            optimizer.step()
-
-        # IF in testing mode, print the first 40 examples of this batch with proba 0.5
-        if test and np.random.choice([0, 1]) == 1:
+        # print the first 40 examples of this batch with proba 0.5
+        if np.random.choice([0, 1]) == 1:
             print "batch %d" % (step + 1)
             end = min(len(rewards.data), 40)
             for b_idx in range(end):
@@ -380,43 +289,29 @@ def _one_rnn_epoch(dqn, loss, data_loader, optimizer, test):
     return epoch_loss, epoch_accuracy, nb_batches
 
 
-def one_episode(itt, dqn, target_dqn, huber, data_loader, optimizer=None, test=False):
+def one_episode(dqn, huber, data_loader):
     """
     Performs one episode over the specified data
-    :param itt: number of past iterations
     :param dqn: q-network to perform forward pass
-    :param dqn_target: target network
     :param huber: huber loss function
     :param data_loader: data iterator
-    :param optimizer: optimizer to perform gradient descent.
-                        if None, do not train.
-    :param test: print some predictions
     :return: average huber loss, number of batch seen
     """
     if args.mode == 'mlp':
-        epoch_huber_loss, nb_batches = _one_mlp_episode(
-            itt, dqn, target_dqn, huber, data_loader, optimizer, test
-        )
+        epoch_huber_loss, nb_batches = _one_mlp_episode(dqn, huber, data_loader)
     else:
-        epoch_huber_loss, nb_batches = _one_rnn_episode(
-            itt, dqn, target_dqn, huber, data_loader, optimizer, test
-        )
+        epoch_huber_loss, nb_batches = _one_rnn_episode(dqn, huber, data_loader)
 
     epoch_huber_loss /= nb_batches
 
     return epoch_huber_loss, nb_batches
 
-def _one_mlp_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
+def _one_mlp_episode(dqn, huber, data_loader):
     """
     Performs one epoch over the specified data
-    :param itt: number of past iterations
     :param dqn: q-network to perform forward pass
-    :param dqn_target: target network
     :param huber: huber loss function
     :param data_loader: data iterator
-    :param optimizer: optimizer to perform gradient descent.
-                        if None, do not train.
-    :param test: print some predictions
     :return: epoch huber loss, number of batch seen
     """
     epoch_huber_loss = 0.0
@@ -479,25 +374,8 @@ def _one_mlp_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
                 step + 1, huber_loss.data[0]
             ))
 
-        # IF in training mode
-        if optimizer:
-            # Reset gradients
-            optimizer.zero_grad()
-            # Compute loss gradients w.r.t parameters
-            huber_loss.backward()
-            # Clip gradients
-            for param in dqn.parameters():
-                param.grad.data.clamp_(-1, 1)
-            # Update parameters
-            optimizer.step()
-
-            ## update target dqn
-            if (itt + step) % args.update_frequence == 0:
-                logger.info("iteration %d: updating target DQN." % (itt + step))
-                target_dqn.load_state_dict(dqn.state_dict())
-
-        # IF in testing mode, print the first 40 examples of this batch with proba 0.5
-        if test and np.random.choice([0, 1]) == 1:
+        # print the first 40 examples of this batch with proba 0.5
+        if np.random.choice([0, 1]) == 1:
             print "batch %d" % (step + 1)
             end = min(len(rewards.data), 40)
             for b_idx in range(end):
@@ -514,17 +392,12 @@ def _one_mlp_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
 
     return epoch_huber_loss, nb_batches
 
-def _one_rnn_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
+def _one_rnn_episode(dqn, huber, data_loader):
     """
     Performs one epoch over the specified data
-    :param itt: number of past iterations
     :param dqn: q-network to perform forward pass
-    :param dqn_target: target network
     :param huber: huber loss function
     :param data_loader: data iterator
-    :param optimizer: optimizer to perform gradient descent.
-                        if None, do not train.
-    :param test: print some predictions
     :return: epoch huber loss, number of batch seen
     """
     epoch_huber_loss = 0.0
@@ -769,22 +642,8 @@ def _one_rnn_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
                 step + 1, huber_loss.data[0]
             ))
 
-        # IF in training mode
-        if optimizer:
-            # Reset gradients
-            optimizer.zero_grad()
-            # Compute loss gradients w.r.t parameters
-            huber_loss.backward()
-            # Update parameters
-            optimizer.step()
-
-            ## update target dqn
-            if (itt+step) % args.update_frequence == 0:
-                logger.info("iteration %d: updating target DQN." % (itt+step))
-                target_dqn.load_state_dict(dqn.state_dict())
-
-        # IF in testing mode, print the first 40 examples of this batch with proba 0.5
-        if test and np.random.choice([0, 1]) == 1:
+        # print the first 40 examples of this batch with proba 0.5
+        if np.random.choice([0, 1]) == 1:
             print "batch %d" % (step + 1)
             end = min(len(rewards_t.data), 40)
             for b_idx in range(end):
@@ -807,102 +666,52 @@ def main():
     # Load Data
     #######################
 
-    # Load toy domain dataset
-    if args.debug:
-        train_loader, valid_loader, test_loader, \
-        vocab, embeddings, custom_hs = get_data("./data/q_ranker_colorful_data.json",
-                                                "./data/q_ranker_colorful_vocab.pkl")
-        max_epochs = 100
-    # Load regular dataset
-    else:
-        train_loader, valid_loader, test_loader,\
-            vocab, embeddings, custom_hs = get_data(args.data_f, args.vocab_f)
-        max_epochs = args.epochs
+    with open('%s_args.pkl' % args.model_prefix, 'rb') as f:
+        old_args = pkl.load(f)
+
+    test_loader, vocab, embeddings, custom_hs = get_data(old_args)
 
     #######################
     # Build DQN
     #######################
     logger.info("")
     logger.info("Building Q-Network...")
-    model_name = "toy/colorful_" if args.debug else ""
     # MLP network
-    if args.mode == 'mlp':
-        # model name
-        model_name += "Small_R-Network" if args.predict_rewards else "Small_Q-Network"
+    if old_args.mode == 'mlp':
         # output dimension
-        if args.predict_rewards:
+        if old_args.predict_rewards:
             out = 2
         else:
             out = 1
         # dqn
-        dqn = QNetwork(custom_hs, args.mlp_activation, args.mlp_dropout, out)
-        dqn_target = QNetwork(custom_hs, args.mlp_activation, args.mlp_dropout, out)
+        dqn = QNetwork(custom_hs, old_args.mlp_activation, old_args.mlp_dropout, out)
+        dqn_target = QNetwork(custom_hs, old_args.mlp_activation, old_args.mlp_dropout, out)
     # RNNs + MLP network
     else:
-        # model name
-        if args.mode == 'rnn+mlp':
-            model_name += "Deep_R-Network" if args.predict_rewards else "Deep_Q-Network"
-            check_param_ambiguity()
-        elif args.mode == 'rnn+rnn+mlp':
-            model_name += "VeryDeep_R-Network" if args.predict_rewards else "VeryDeep_Q-Network"
-        else:
-            raise NotImplementedError("ERROR: Unknown mode: %s" % args.mode)
         # output dimension
-        if args.predict_rewards:
+        if old_args.predict_rewards:
             out = 2
         else:
             out = 1
         # dqn
         dqn = DeepQNetwork(
-            args.mode, embeddings, args.fix_embeddings,
-            args.sentence_hs, args.sentence_bidir, args.sentence_dropout,
-            args.article_hs, args.article_bidir, args.article_dropout,
-            args.utterance_hs, args.utterance_bidir, args.utterance_dropout,
-            args.context_hs, args.context_bidir, args.context_dropout,
-            args.rnn_gate,
-            custom_hs, args.mlp_activation, args.mlp_dropout, out
+            old_args.mode, embeddings, old_args.fix_embeddings,
+            old_args.sentence_hs, old_args.sentence_bidir, old_args.sentence_dropout,
+            old_args.article_hs, old_args.article_bidir, old_args.article_dropout,
+            old_args.utterance_hs, old_args.utterance_bidir, old_args.utterance_dropout,
+            old_args.context_hs, old_args.context_bidir, old_args.context_dropout,
+            old_args.rnn_gate,
+            custom_hs, old_args.mlp_activation, old_args.mlp_dropout, out
         )
-        dqn_target = DeepQNetwork(
-            args.mode, embeddings, args.fix_embeddings,
-            args.sentence_hs, args.sentence_bidir, args.sentence_dropout,
-            args.article_hs, args.article_bidir, args.article_dropout,
-            args.utterance_hs, args.utterance_bidir, args.utterance_dropout,
-            args.context_hs, args.context_bidir, args.context_dropout,
-            args.rnn_gate,
-            custom_hs, args.mlp_activation, args.mlp_dropout, out
-        )
+        dqn.load_state_dict(torch.load("%s_dqn.pt" % args.model_prefix))
 
     logger.info(dqn)
-
-    model_id = time.time()
-
-    # save parameters
-    with open("./models/q_estimator/%s_%s_args.pkl" % (model_name, model_id), 'wb') as f:
-        pkl.dump(args, f)
 
     # moving networks to GPU
     if torch.cuda.is_available():
         logger.info("")
         logger.info("cuda available! Moving variables to cuda %d..." % args.gpu)
         dqn.cuda()
-        dqn_target.cuda()
-
-    # get list of parameters to train
-    params = filter(lambda p: p.requires_grad, dqn.parameters())
-    # create optimizer ('adam', 'sgd', 'rmsprop', 'adagrad', 'adadelta')
-    if args.optimizer == 'adam':
-        optimizer = torch.optim.Adam(params=params, lr=args.learning_rate)
-    elif args.optimizer == 'sgd':
-        optimizer = torch.optim.SGD(params=params, lr=args.learning_rate)
-    elif args.optimizer == 'rmsprop':
-        optimizer = torch.optim.RMSprop(params=params, lr=args.learning_rate)
-    elif args.optimizer == 'adagrad':
-        optimizer = torch.optim.Adagrad(params=params, lr=args.learning_rate)
-    elif args.optimizer == 'adadelta':
-        optimizer = torch.optim.Adadelta(params=params, lr=args.learning_rate)
-    else:
-        logger.info("ERROR: unknown optimizer: %s" % args.optimizer)
-        return
 
     # Define losses
     huber = torch.nn.SmoothL1Loss()  # MSE used in -1 < . < 1 ; Absolute used elsewhere
@@ -910,148 +719,41 @@ def main():
     ce = torch.nn.CrossEntropyLoss()  # used for classification of immediate reward
 
     #######################
-    # Start Training
+    # Start Testing
     #######################
     start_time = time.time()
-    best_valid = 100000.
-    best_valid_acc = 0.
-    patience = args.patience
-
-    train_losses = []  # list of losses for each epoch
-    train_accurs = []  # list of accuracy obj for each epoch
-    valid_losses = []  # list of losses for each epoch
-    valid_accurs = []  # list of accuracy obj for each epoch
-
     logger.info("")
-    logger.info("Training model...")
+    logger.info("Testing model...")
 
-    iterations_done = 0
-    for epoch in range(max_epochs):
-        ###
-        # Perform one epoch and return average losses:
-        ###
-        logger.info("***********************************")
+    # predict rewards: use cross-entropy loss
+    if old_args.predict_rewards:
+        loss, accuracy = one_epoch(dqn, ce, test_loader)
+        logger.info("Test loss: %g - test accuracy:\n%s" % (loss, json.dumps(accuracy, indent=2)))
 
-        # predict rewards: use cross-entropy loss
-        if args.predict_rewards:
-            train_loss, train_acc = one_epoch(
-                dqn, ce, train_loader, optimizer=optimizer
-            )
+    # predict q values: use huber loss (or MSE)
+    else:
+        loss, _ = one_episode(dqn, huber, test_loader)
+        logger.info("Test loss: %g" % loss)
 
-            # Save train accuracies
-            train_accurs.append(train_acc)
 
-            logger.info("Epoch: %d - train loss: %g - train acc: %g" % (
-                epoch + 1, train_loss, train_acc['acc']
-            ))
-
-        # predict q values: use huber loss (or MSE)
-        else:
-            train_loss, steps = one_episode(
-                iterations_done, dqn, dqn_target, huber, train_loader, optimizer=optimizer
-            )
-            iterations_done += steps
-
-            logger.info("Epoch: %d - train loss: %g" % (
-                epoch + 1, train_loss
-            ))
-
-        # Save train losses (always)
-        train_losses.append(train_loss)
-
-        ###
-        # Compute validation losses
-        ###
-        logger.info("computing validation losses...")
-        improved = False
-
-        # predict rewards: use cross-entropy loss
-        if args.predict_rewards:
-            valid_loss, valid_acc = one_epoch(
-                dqn, ce, valid_loader
-            )
-
-            # save validation accuracies
-            valid_accurs.append(valid_acc)
-
-            logger.info("Valid loss: %g - Valid acc: %g - best valid accuracy: %g" % (
-                valid_loss, valid_acc['acc'], best_valid_acc
-            ))
-
-            # Early stopping on valid accuracy
-            if valid_acc['acc'] > best_valid_acc:
-                # Reset best validation accuracy
-                best_valid_acc = valid_acc['acc']
-                improved = True
-
-        # predict q values: use huber loss (or MSE)
-        else:
-            valid_loss, _ = one_episode(
-                0, dqn, dqn_target, huber, valid_loader
-            )
-
-            logger.info("Valid loss: %g - best valid loss: %g" % (
-                valid_loss, best_valid
-            ))
-
-            # Early stopping on valid loss
-            if valid_loss < best_valid:
-                # Reset best validation loss
-                best_valid = valid_loss
-                improved = True
-
-        # Save validation losses (always)
-        valid_losses.append(valid_loss)
-
-        ###
-        # Early stopping
-        ###
-        if improved:
-            # Save network
-            torch.save(
-                dqn.state_dict(),
-                "./models/q_estimator/%s_%s_dqn.pt" % (model_name, model_id)
-            )
-            # Reset patience
-            patience = args.patience
-            logger.info("Saved new model.")
-        else:
-            patience -= 1
-            logger.info("No improvement. patience: %d" % patience)
-
-        if patience <= 0:
-            break
-
-    logger.info("Finished training. Time elapsed: %g seconds" % (
+    logger.info("Finished testing. Time elapsed: %g seconds" % (
         time.time() - start_time
     ))
+
+    logger.info("Plotting timings...")
+    with open("%s_timings.json" % args.model_prefix, 'rb') as f:
+        timings = json.load(f)
 
     # TODO: plot train & validation losses
     # valid = red  -- or - -
     # train = blue -- or - -
 
-    logger.info("Saving timings...")
-    with open("./models/q_estimator/%s_%s_timings.json" % (model_name, model_id), 'wb') as f:
-        json.dump(
-            {'train_losses': train_losses,
-             'train_accurs': train_accurs,
-             'valid_losses': valid_losses,
-             'valid_accurs': valid_accurs},
-            f
-        )
+    # timings['train_losses']
+    # timings['train_accurs']
+    # timings['valid_losses']
+    # timings['valid_accurs']
     logger.info("done.")
 
-    #######################
-    # Testing
-    #######################
-    # if args.debug:
-    #     # predict rewards
-    #     if args.predict_rewards:
-    #         test_loss, test_acc = one_epoch(dqn, ce, test_loader, test=True)
-    #     # predict q values
-    #     else:
-    #         test_loss, _ = one_episode(0, dqn, dqn_target, huber, test_loader, test=True)
-    #     logger.info("\nTest huber loss: %g" % test_loss)
 
 
 def str2bool(v):
@@ -1065,69 +767,10 @@ def str2bool(v):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("data_f", type=str, help="Path to json data file")
-    parser.add_argument("vocab_f", type=str, help="Path to pkl vocabbulary file")
-    parser.add_argument("mode", choices=['mlp', 'rnn+mlp', 'rnn+rnn+mlp'],
-                        default='mlp', help="type of neural network to train")
-    parser.add_argument("--predict_rewards", type=str2bool, default='no',
-                        help="Decide if we predict rewards of q-values")
+    parser.add_argument("model_prefix", type=str, help="Path to model prefix to test")
     parser.add_argument("-g",  "--gpu", type=int, default=0, help="GPU number to use")
     parser.add_argument("-v", "--verbose", type=str2bool, default='no', help="Be verbose")
-    parser.add_argument("-d", "--debug", type=str2bool, default='no', help="use toy domain & print on test set")
-    # training parameters:
-    parser.add_argument("--optimizer", choices=['adam', 'sgd', 'rmsprop', 'adagrad', 'adadelta'],
-                        default='adam', help="Optimizer to use")
-    parser.add_argument("-lr", "--learning_rate", type=float, default=0.001,
-                        help="Learning rate for the optimizer")
-    parser.add_argument("--gamma", type=float, default=0.99,
-                        help="discount factor")
-    parser.add_argument("--fix_embeddings", type=str2bool, default='no',
-                        help="keep word_embeddings fixed during training")
-    parser.add_argument("-p", "--patience", type=int, default=20,
-                        help="Number of training steps to wait before stopping when validation accuracy doesn't increase")
-    parser.add_argument("--epochs", type=int, default=100000,
-                        help="Maximum number of training passes to do on the full train set")
-    parser.add_argument("-bs", "--batch_size", type=int, default=128,
-                        help="batch size during training")
-    parser.add_argument("--update_frequence", type=int, default=100,
-                        help="number of iterations to do before updating target dqn")
 
-    # network architecture:
-    parser.add_argument("--rnn_gate", choices=['rnn', 'gru', 'lstm'],
-                        default="gru", help="RNN gate type.")
-    ## sentence rnn
-    parser.add_argument("--sentence_hs", type=int, default=300,
-                        help="encodding size of each sentence")
-    parser.add_argument("--sentence_bidir", type=str2bool, default='no',
-                        help="sentence rnn is bidirectional")
-    parser.add_argument("--sentence_dropout", type=float, default=0.1,
-                        help="dropout probability in sentence rnn")
-    ## article rnn
-    parser.add_argument("--article_hs", type=int, default=500,
-                        help="encodding size of each article")
-    parser.add_argument("--article_bidir", type=str2bool, default='no',
-                        help="article rnn is bidirectional")
-    parser.add_argument("--article_dropout", type=float, default=0.1,
-                        help="dropout probability in article rnn")
-    ## utterance rnn
-    parser.add_argument("--utterance_hs", type=int, default=300,
-                        help="encodding size of each utterance")
-    parser.add_argument("--utterance_bidir", type=str2bool, default='no',
-                        help="utterance rnn is bidirectional")
-    parser.add_argument("--utterance_dropout", type=float, default=0.1,
-                        help="dropout probability in utterance rnn")
-    ## context rnn
-    parser.add_argument("--context_hs", type=int, default=500,
-                        help="encodding size of each context")
-    parser.add_argument("--context_bidir", type=str2bool, default='no',
-                        help="context rnn is bidirectional")
-    parser.add_argument("--context_dropout", type=float, default=0.1,
-                        help="dropout probability in context rnn")
-    ## mlp
-    parser.add_argument("--mlp_activation", choices=['sigmoid', 'relu', 'swish'],
-                        type=str, default='swish', help="Activation function")
-    parser.add_argument("--mlp_dropout", type=float, default=0.1,
-                        help="dropout probability in mlp")
     args = parser.parse_args()
     logger.info("")
     logger.info("%s" % args)
