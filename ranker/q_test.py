@@ -87,6 +87,29 @@ def get_data(data_f, vocab_f):
     return train_loader, valid_loader, test_loader, vocab, embeddings, custom_hs
 
 
+def sample_parameters(t):
+    """
+    randomly choose a set of parameters t times
+    """
+
+    activations = ['swish', 'relu', 'sigmoid']
+    optimizers = ['sgd', 'adam', 'rmsprop', 'adagrad', 'adadelta']
+    learning_rates = [0.01, 0.001, 0.0001]
+    dropout_rates = [0.1, 0.3, 0.5, 0.7, 0.9]
+    batch_sizes = [32, 64, 128, 256, 512, 1024]
+
+    activs, optims, lrs, drs, bss = [], [], [], [], []
+    # sample parameters
+    for _ in range(t):
+        activs.append(np.random.choice(activations))
+        optims.append(np.random.choice(optimizers))
+        lrs.append(np.random.choice(learning_rates))
+        drs.append(np.random.choice(dropout_rates))
+        bss.append(np.random.choice(batch_sizes))
+
+    return activs, optims, lrs, drs, bss
+
+
 def check_param_ambiguity():
     if args.sentence_hs != args.utterance_hs:
         logger.info("WARNING: ambiguity between sentence (%d) and utterance (%d) hs. Using %d" % (
@@ -989,7 +1012,6 @@ def main():
                 dqn.state_dict(),
                 "./models/q_estimator/%s_%s_dqn.pt" % (model_name, model_id)
             )
-            # TODO: save embeddings!!
             # Reset patience
             patience = args.patience
             logger.info("Saved new model.")
@@ -1022,14 +1044,14 @@ def main():
     #######################
     # Testing
     #######################
-    if args.debug:
-        # predict rewards
-        if args.predict_rewards:
-            test_loss, test_acc = one_epoch(dqn, ce, test_loader, test=True)
-        # predict q values
-        else:
-            test_loss, _ = one_episode(0, dqn, dqn_target, huber, test_loader, test=True)
-        logger.info("\nTest huber loss: %g" % test_loss)
+    # if args.debug:
+    #     # predict rewards
+    #     if args.predict_rewards:
+    #         test_loss, test_acc = one_epoch(dqn, ce, test_loader, test=True)
+    #     # predict q values
+    #     else:
+    #         test_loss, _ = one_episode(0, dqn, dqn_target, huber, test_loader, test=True)
+    #     logger.info("\nTest huber loss: %g" % test_loss)
 
 
 def str2bool(v):

@@ -20,8 +20,6 @@ hyperdash run -n "train PT mlp R ranker" python q_train.py \
     --mlp_dropout 0.1
 
 ### 2) MLP to predict Q-values ###
-# TOCHECK: --> try after increasing update frequency
-# TOFIX: --> probably overfits!!! done in less than 1 epoch! :o
 hyperdash run -n "train PT mlp Q ranker" python q_train.py \
                 ./data/q_ranker_amt_data_1524939554.0.json \
                 ./data/q_ranker_amt_vocab_1524939554.0.pkl \
@@ -34,7 +32,7 @@ hyperdash run -n "train PT mlp Q ranker" python q_train.py \
     --gamma 0.99 \
     --patience 20 \
     --batch_size 128 \
-    --update_frequence 10000 \
+    --update_frequence 2000 \
     --mlp_activation swish \
     --mlp_dropout 0.1
 
@@ -51,16 +49,16 @@ hyperdash run -n "train PT rnn R ranker" python q_train.py \
     --learning_rate 0.001 \
     --patience 20 \
     --batch_size 128 \
+    --fix_embeddings yes \
     --rnn_gate gru \
-    --sentence_hs 300 \
+    --sentence_hs 100 \
     --article_hs 300 \
-    --utterance_hs 300 \
+    --utterance_hs 100 \
     --context_hs 300 \
     --mlp_activation swish \
     --mlp_dropout 0.1
 
 ### 4) RNN to predict Q-values ###
-# TOFIX: --> Probably overfits!!! :( :(
 hyperdash run -n "train PT rnn Q ranker" python q_train.py \
                 ./data/q_ranker_amt_data_1524939554.0.json \
                 ./data/q_ranker_amt_vocab_1524939554.0.pkl \
@@ -74,10 +72,11 @@ hyperdash run -n "train PT rnn Q ranker" python q_train.py \
     --patience 20 \
     --batch_size 128 \
     --update_frequence 10000 \
+    --fix_embeddings yes \
     --rnn_gate gru \
-    --sentence_hs 300 \
+    --sentence_hs 100 \
     --article_hs 300 \
-    --utterance_hs 300 \
+    --utterance_hs 100 \
     --context_hs 300 \
     --mlp_activation swish \
     --mlp_dropout 0.1
