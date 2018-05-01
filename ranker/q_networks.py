@@ -3,11 +3,13 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
+import math
+
 
 ACTIVATIONS = {
-    'swish': lambda x: x * F.sigmoid(x),
     'relu': F.relu,
-    'sigmoid': F.sigmoid
+    'sigmoid': F.sigmoid,
+    'prelu': F.prelu,
 }
 
 
@@ -46,6 +48,8 @@ class QNetwork(torch.nn.Module):
 
         self.input_size = input_size
         self.mlp_activation = mlp_activation
+        if self.mlp_activation == 'prelu':
+            self.prelu_param = torch.nn.Parameter(0.2)
         assert out_size in [1, 2]
 
         self.fc_1 = torch.nn.Linear(self.input_size, self.input_size/2)
@@ -63,20 +67,26 @@ class QNetwork(torch.nn.Module):
         described in "Understanding the difficulty of training deep feedforward neural networks"
         - Glorot, X. & Bengio, Y. (2010), using a normal distribution.
         Also known as Glorot initialisation.
+        - or -
+        according to the method described in "Delving deep into rectifiers: Surpassing human-level
+        performance on ImageNet classification" - He, K. et al. (2015), using a
+        normal distribution.
         """
         # fully connected parameters
         for fc in [self.fc_1, self.fc_2, self.fc_3, self.fc_4]:
-            if self.mlp_activation in ['relu', 'swish']:
-                tmp_activation = 'relu'  # consider swish as a ReLU
-                mu = 0.1
-            else:
-                tmp_activation = self.mlp_activation
-                mu = 0.0
-            gain = torch.nn.init.calculate_gain(tmp_activation)
+            if self.mlp_activation in ['relu', 'prelu']:
+                # Kaiming initialisation
+                fan = torch.nn.init._calculate_correct_fan(fc.weight.data, 'fan_in')
+                gain = torch.nn.init.calculate_gain('leaky_relu' if self.mlp_activation == 'prelu' else 'relu', 0.2)
+                std = gain / math.sqrt(fan)
+                fc.weight.data.normal_(0.01, std)
 
-            fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(fc.weight.data)
-            std = gain * math.sqrt(2.0 / (fan_in + fan_out))
-            fc.weight.data.normal_(mu, std)
+            else:
+                # Glorot initialisation
+                fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(fc.weight.data)
+                gain = torch.nn.init.calculate_gain(self.mlp_activation)
+                std = gain * math.sqrt(2.0 / (fan_in + fan_out))
+                fc.weight.data.normal_(0.0, std)
 
             fc.bias.data.fill_(0.0)
 
@@ -88,9 +98,15 @@ class QNetwork(torch.nn.Module):
         :param x: list of custom encodings to predict Q-values of (article, dialog, candidate) triples
                   torch.Variable with Tensor ~ (batch, input_size)
         """
-        out = ACTIVATIONS[self.mlp_activation](self.fc_1(x))
-        out = ACTIVATIONS[self.mlp_activation](self.fc_2(out))
-        out = ACTIVATIONS[self.mlp_activation](self.fc_3(out))
+        if self.mlp_activation == 'prelu':
+            out = F.prelu(self.fc_1(x), self.prelu_param)
+            out = F.prelu(self.fc_2(out), self.prelu_param)
+            out = F.prelu(self.fc_3(out), self.prelu_param)
+        else:
+            out = ACTIVATIONS[self.mlp_activation](self.fc_1(x))
+            out = ACTIVATIONS[self.mlp_activation](self.fc_2(out))
+            out = ACTIVATIONS[self.mlp_activation](self.fc_3(out))
+
         out = self.dropout(out)  # dropout layer
         out = self.fc_4(out)  # last layer: no activation
         return out
@@ -148,6 +164,9 @@ class DeepQNetwork(torch.nn.Module):
         self.gate = rnn_gate
 
         self.mlp_activation = mlp_activation
+        if self.mlp_activation == 'prelu':
+            self.prelu_param = torch.nn.Parameter(0.2)
+
         assert out_size in [1, 2]
 
         embeddings = torch.from_numpy(embeddings).float()  # convert numpy array to torch float tensor
@@ -227,23 +246,25 @@ class DeepQNetwork(torch.nn.Module):
                    self.fc_value_1, self.fc_value_2,
                    self.fc_adv_1, self.fc_adv_2, self.fc_adv_3]:
 
-            if self.mlp_activation in ['relu', 'swish']:
-                tmp_activation = 'relu'  # consider swish as a ReLU
-                mu = 0.1
-            else:
-                tmp_activation = self.mlp_activation
-                mu = 0.0
-            gain = torch.nn.init.calculate_gain(tmp_activation)
+            if self.mlp_activation in ['relu', 'prelu']:
+                # Kaiming initialisation
+                fan = torch.nn.init._calculate_correct_fan(fc.weight.data, 'fan_in')
+                gain = torch.nn.init.calculate_gain('leaky_relu' if self.mlp_activation == 'prelu' else 'relu', 0.2)
+                std = gain / math.sqrt(fan)
+                fc.weight.data.normal_(0.01, std)
 
-            fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(fc.weight)
-            std = gain * math.sqrt(2.0 / (fan_in + fan_out))
-            fc.weight.data.normal_(mu, std)
+            else:
+                # Glorot initialisation
+                fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(fc.weight.data)
+                gain = torch.nn.init.calculate_gain(self.mlp_activation)
+                std = gain * math.sqrt(2.0 / (fan_in + fan_out))
+                fc.weight.data.normal_(0.0, std)
 
             fc.bias.data.fill_(0.0)
 
     def _init_rnn_params(self, rnn):
         """
-        Initialise weights of given RNN
+        Initialise weights of given RNN with Glorot initialisation
         :param rnn: the rnn to initialise
         """
         for name, param in rnn.named_parameters():
@@ -251,15 +272,17 @@ class DeepQNetwork(torch.nn.Module):
                 gain = torch.nn.init.calculate_gain('tanh')  # RNN activation is tanh by default
                 fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(param.data)
                 std = gain * math.sqrt(2.0 / (fan_in + fan_out))
-                param.data.normal_(0.0, std)
+                fc.weight.data.normal_(0.0, std)
+
             elif name.startswith('bias'):
                 param.data.fill_(0.0)
+
             else:
                 print "default initialization for parameter %s" % name
 
     def _init_gru_params(self, rnn):
         """
-        Initialise weights of given GRU
+        Initialise weights of given GRU with Glorot initialisation
         :param rnn: the gru to initialise
         """
         for name, param in rnn.named_parameters():
@@ -268,21 +291,23 @@ class DeepQNetwork(torch.nn.Module):
             weight_hh_l[k] - (W_hr|W_hz|W_hn), of shape (3*hidden_size x hidden_size)
             r & z are sigmoid (gain=1)
             n is tanh (gain=5/3)
-            let's take average gain : (1+1+5/3) / 3
+            let's take average gain : (1+1+5/3) / 3 = 1.22222
             '''
             if name.startswith('weight'):
                 gain = (1. + 1. + 5./3.) / 3.
                 fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(param.data)
                 std = gain * math.sqrt(2.0 / (fan_in + fan_out))
                 param.data.normal_(0.0, std)
+
             elif name.startswith('bias'):
                 param.data.fill_(0.0)
+
             else:
                 print "default initialization for parameter %s" % name
 
     def _init_lstm_params(self, rnn):
         """
-        Initialise weights of given LSTM
+        Initialise weights of given RNN with Glorot initialisation
         :param rnn: the LSTM to initialise
         """
         for name, param in rnn.named_parameters():
@@ -291,15 +316,17 @@ class DeepQNetwork(torch.nn.Module):
             weight_hh_l[k] - (W_hi|W_hf|W_hg|W_ho), of shape (4*hidden_size x hidden_size)
             i & f & o are sigmoid (gain=1)
             g is tanh (gain=5/3)
-            let's take average gain : (1+1+1+5/3) / 4
+            let's take average gain : (1+1+1+5/3) / 4 = 1.1666667
             '''
             if name.startswith('weight'):
                 gain = (1. + 1. + 1. + 5./3.) / 4.
                 fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(param.data)
                 std = gain * math.sqrt(2.0 / (fan_in + fan_out))
                 param.data.normal_(0.0, std)
+
             elif name.startswith('bias'):
                 param.data.fill_(0.0)
+
             else:
                 print "default initialization for parameter %s" % name
 
@@ -466,23 +493,44 @@ class DeepQNetwork(torch.nn.Module):
         ###
         # Q-VALUES
         ###
-        # Encode state-encoding : (article, context)
-        state_enc = torch.cat((article_enc, context_enc), 1)  # ~ (bs, hs)
-        state_enc = ACTIVATIONS[self.mlp_activation](self.fc_1(state_enc))
-        state_enc = ACTIVATIONS[self.mlp_activation](self.fc_2(state_enc))
-        state_enc = ACTIVATIONS[self.mlp_activation](self.fc_3(state_enc))
+        if self.mlp_activation == 'prelu':
+            # Encode state-encoding : (article, context)
+            state_enc = torch.cat((article_enc, context_enc), 1)  # ~ (bs, hs)
+            state_enc = F.prelu(self.fc_1(state_enc), self.prelu_param)
+            state_enc = F.prelu(self.fc_2(state_enc), self.prelu_param)
+            state_enc = F.prelu(self.fc_3(state_enc), self.prelu_param)
 
-        # Dueling Q-network: value prediction
-        value = ACTIVATIONS[self.mlp_activation](self.fc_value_1(state_enc))
+            # Dueling Q-network: value prediction
+            value = F.prelu(self.fc_value_1(state_enc), self.prelu_param)
+
+            # Dueling Q-network: advantage prediction
+            # input to advantage prediction : (state, candidate, custom_enc)
+            advantage = torch.cat((state_enc, candidate_enc, custom_enc), 1)  # ~(bs, hs)
+            advantage = F.prelu(self.fc_adv_1(advantage), self.prelu_param)
+            advantage = F.prelu(self.fc_adv_2(advantage), self.prelu_param)
+
+        else:
+            # Encode state-encoding : (article, context)
+            state_enc = torch.cat((article_enc, context_enc), 1)  # ~ (bs, hs)
+            state_enc = ACTIVATIONS[self.mlp_activation](self.fc_1(state_enc))
+            state_enc = ACTIVATIONS[self.mlp_activation](self.fc_2(state_enc))
+            state_enc = ACTIVATIONS[self.mlp_activation](self.fc_3(state_enc))
+
+            # Dueling Q-network: value prediction
+            value = ACTIVATIONS[self.mlp_activation](self.fc_value_1(state_enc))
+            value = self.dropout(value)  # dropout layer
+            value = self.fc_value_2(value)  # last layer: no activation
+
+            # Dueling Q-network: advantage prediction
+            # input to advantage prediction : (state, candidate, custom_enc)
+            advantage = torch.cat((state_enc, candidate_enc, custom_enc), 1)  # ~(bs, hs)
+            advantage = ACTIVATIONS[self.mlp_activation](self.fc_adv_1(advantage))
+            advantage = ACTIVATIONS[self.mlp_activation](self.fc_adv_2(advantage))
+
         value = self.dropout(value)  # dropout layer
         value = self.fc_value_2(value)  # last layer: no activation
 
-        # Dueling Q-network: advantage prediction
-        # input to advantage prediction : (state, candidate, custom_enc)
-        advantage = torch.cat((state_enc, candidate_enc, custom_enc), 1)  # ~(bs, hs)
-        advantage = ACTIVATIONS[self.mlp_activation](self.fc_adv_1(advantage))
-        advantage = ACTIVATIONS[self.mlp_activation](self.fc_adv_2(advantage))
-        advantage = self.dropout(advantage)   # dropout layer
+        advantage = self.dropout(advantage)  # dropout layer
         advantage = self.fc_adv_3(advantage)  # last layer: no activation
 
         q_value = value + advantage  # ~(bs, out_size)

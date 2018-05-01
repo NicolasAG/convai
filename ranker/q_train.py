@@ -870,9 +870,9 @@ def main():
     if args.optimizer == 'adam':
         optimizer = torch.optim.Adam(params=params, lr=args.learning_rate)
     elif args.optimizer == 'sgd':
-        optimizer = torch.optim.SGD(params=params, lr=args.learning_rate)
+        optimizer = torch.optim.SGD(params=params, lr=args.learning_rate, momentum=0.9)
     elif args.optimizer == 'rmsprop':
-        optimizer = torch.optim.RMSprop(params=params, lr=args.learning_rate)
+        optimizer = torch.optim.RMSprop(params=params, lr=args.learning_rate, momentum=0.9)
     elif args.optimizer == 'adagrad':
         optimizer = torch.optim.Adagrad(params=params, lr=args.learning_rate)
     elif args.optimizer == 'adadelta':
@@ -1114,8 +1114,8 @@ if __name__ == '__main__':
     parser.add_argument("--context_dropout", type=float, default=0.1,
                         help="dropout probability in context rnn")
     ## mlp
-    parser.add_argument("--mlp_activation", choices=['sigmoid', 'relu', 'swish'],
-                        type=str, default='swish', help="Activation function")
+    parser.add_argument("--mlp_activation", choices=['sigmoid', 'relu', 'prelu'],
+                        type=str, default='prelu', help="Activation function")
     parser.add_argument("--mlp_dropout", type=float, default=0.1,
                         help="dropout probability in mlp")
     args = parser.parse_args()
