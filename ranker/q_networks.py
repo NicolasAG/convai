@@ -59,11 +59,25 @@ class QNetwork(torch.nn.Module):
 
     def init_weights(self):
         """
-        initialize all weights for all MLPs
+        initialize all weights for all MLPs according to the method
+        described in "Understanding the difficulty of training deep feedforward neural networks"
+        - Glorot, X. & Bengio, Y. (2010), using a normal distribution.
+        Also known as Glorot initialisation.
         """
         # fully connected parameters
         for fc in [self.fc_1, self.fc_2, self.fc_3, self.fc_4]:
-            fc.weight.data.uniform_(-0.1, 0.1)
+            if self.mlp_activation in ['relu', 'swish']:
+                tmp_activation = 'relu'  # consider swish as a ReLU
+                mu = 0.1
+            else:
+                tmp_activation = self.mlp_activation
+                mu = 0.0
+            gain = torch.nn.init.calculate_gain(tmp_activation)
+
+            fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(fc.weight.data)
+            std = gain * math.sqrt(2.0 / (fan_in + fan_out))
+            fc.weight.data.normal_(mu, std)
+
             fc.bias.data.fill_(0.0)
 
     def forward(self, x):
@@ -191,26 +205,103 @@ class DeepQNetwork(torch.nn.Module):
 
     def init_weights(self):
         """
-        initialize all weights for all RNNs and all MLPs
+        initialize all weights for all RNNs and all MLPs according to the method
+        described in "Understanding the difficulty of training deep feedforward neural networks"
+        - Glorot, X. & Bengio, Y. (2010), using a normal distribution.
+        Also known as Glorot initialisation.
         """
         # rnn parameters
         for rnn in [self.sentence_rnn, self.article_rnn,
                     self.utterance_rnn, self.context_rnn]:
-            # weights ~ N(0, 1) && bias = 0
-            for name, param in rnn.named_parameters():
-                if name.startswith('weight'):
-                    param.data.normal_(0.0, 0.1)
-                elif name.startswith('bias'):
-                    param.data.fill_(0.0)
-                else:
-                    print "default initialization for parameter %s" % name
+            if self.gate == 'rnn':
+                self._init_rnn_params(rnn)
+            elif self.gate == 'gru':
+                self._init_gru_params(rnn)
+            elif self.gate == 'lstm':
+                self._init_lstm_params(rnn)
+            else:
+                print "ERROR: unknown recurrent network gate: %s" % self.gate
 
         # fully connected parameters
         for fc in [self.fc_1, self.fc_2, self.fc_3,
                    self.fc_value_1, self.fc_value_2,
                    self.fc_adv_1, self.fc_adv_2, self.fc_adv_3]:
-            fc.weight.data.uniform_(-0.1, 0.1)
+
+            if self.mlp_activation in ['relu', 'swish']:
+                tmp_activation = 'relu'  # consider swish as a ReLU
+                mu = 0.1
+            else:
+                tmp_activation = self.mlp_activation
+                mu = 0.0
+            gain = torch.nn.init.calculate_gain(tmp_activation)
+
+            fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(fc.weight)
+            std = gain * math.sqrt(2.0 / (fan_in + fan_out))
+            fc.weight.data.normal_(mu, std)
+
             fc.bias.data.fill_(0.0)
+
+    def _init_rnn_params(self, rnn):
+        """
+        Initialise weights of given RNN
+        :param rnn: the rnn to initialise
+        """
+        for name, param in rnn.named_parameters():
+            if name.startswith('weight'):
+                gain = torch.nn.init.calculate_gain('tanh')  # RNN activation is tanh by default
+                fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(param.data)
+                std = gain * math.sqrt(2.0 / (fan_in + fan_out))
+                param.data.normal_(0.0, std)
+            elif name.startswith('bias'):
+                param.data.fill_(0.0)
+            else:
+                print "default initialization for parameter %s" % name
+
+    def _init_gru_params(self, rnn):
+        """
+        Initialise weights of given GRU
+        :param rnn: the gru to initialise
+        """
+        for name, param in rnn.named_parameters():
+            '''
+            weight_ih_l[k] - (W_ir|W_iz|W_in), of shape (3*hidden_size x input_size)
+            weight_hh_l[k] - (W_hr|W_hz|W_hn), of shape (3*hidden_size x hidden_size)
+            r & z are sigmoid (gain=1)
+            n is tanh (gain=5/3)
+            let's take average gain : (1+1+5/3) / 3
+            '''
+            if name.startswith('weight'):
+                gain = (1. + 1. + 5./3.) / 3.
+                fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(param.data)
+                std = gain * math.sqrt(2.0 / (fan_in + fan_out))
+                param.data.normal_(0.0, std)
+            elif name.startswith('bias'):
+                param.data.fill_(0.0)
+            else:
+                print "default initialization for parameter %s" % name
+
+    def _init_lstm_params(self, rnn):
+        """
+        Initialise weights of given LSTM
+        :param rnn: the LSTM to initialise
+        """
+        for name, param in rnn.named_parameters():
+            '''
+            weight_ih_l[k] - (W_ii|W_if|W_ig|W_io), of shape (4*hidden_size x input_size)
+            weight_hh_l[k] - (W_hi|W_hf|W_hg|W_ho), of shape (4*hidden_size x hidden_size)
+            i & f & o are sigmoid (gain=1)
+            g is tanh (gain=5/3)
+            let's take average gain : (1+1+1+5/3) / 4
+            '''
+            if name.startswith('weight'):
+                gain = (1. + 1. + 1. + 5./3.) / 4.
+                fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(param.data)
+                std = gain * math.sqrt(2.0 / (fan_in + fan_out))
+                param.data.normal_(0.0, std)
+            elif name.startswith('bias'):
+                param.data.fill_(0.0)
+            else:
+                print "default initialization for parameter %s" % name
 
     def _sort_by_length(self, sequence, lengths):
         """
