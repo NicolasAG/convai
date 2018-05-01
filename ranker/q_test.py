@@ -51,7 +51,7 @@ def get_data(old_args):
 
     logger.info("")
     logger.info("Get data loaders...")
-    test_loader = get_loader(
+    test_loader, _ = get_loader(
         json=test_data, vocab=vocab, q_net_mode=old_args.mode, rescale_rewards=not old_args.predict_rewards,
         batch_size=old_args.batch_size, shuffle=False, num_workers=0
     )
@@ -703,7 +703,18 @@ def main():
             old_args.rnn_gate,
             custom_hs, old_args.mlp_activation, old_args.mlp_dropout, out
         )
-        dqn.load_state_dict(torch.load("%s_dqn.pt" % args.model_prefix))
+        dqn_target = DeepQNetwork(
+            old_args.mode, embeddings, old_args.fix_embeddings,
+            old_args.sentence_hs, old_args.sentence_bidir, old_args.sentence_dropout,
+            old_args.article_hs, old_args.article_bidir, old_args.article_dropout,
+            old_args.utterance_hs, old_args.utterance_bidir, old_args.utterance_dropout,
+            old_args.context_hs, old_args.context_bidir, old_args.context_dropout,
+            old_args.rnn_gate,
+            custom_hs, old_args.mlp_activation, old_args.mlp_dropout, out
+        )
+
+    dqn.load_state_dict(torch.load("%s_dqn.pt" % args.model_prefix))
+    dqn_target.load_state_dict(torch.load("%s_dqn.pt" % args.model_prefix))
 
     logger.info(dqn)
 
@@ -724,6 +735,10 @@ def main():
     start_time = time.time()
     logger.info("")
     logger.info("Testing model...")
+
+    # put in inference mode (Dropout OFF)
+    dqn.eval()
+    dqn_target.eval()
 
     # predict rewards: use cross-entropy loss
     if old_args.predict_rewards:

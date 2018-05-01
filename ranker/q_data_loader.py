@@ -21,10 +21,12 @@ class ConversationDataset(data.Dataset):
         self.vocab = vocab
         self.mode = mode
         self.rescale_rewards = rescale_rewards
+        self.class_counter = [0, 0]  # count number of examples in each class
         self.ids = []  # map from id to (article, position)
         for article, entries in self.json_data.iteritems():
-            for i, _ in enumerate(entries):
+            for i, entry in enumerate(entries):
                 self.ids.append((article, i))
+                self.class_counter[entry['reward']] += 1
 
     def string_to_idx(self, phrase, start_tag, end_tag):
         """
@@ -323,4 +325,4 @@ def get_loader(json, vocab, q_net_mode, rescale_rewards, batch_size, shuffle, nu
                                   shuffle=shuffle,
                                   num_workers=num_workers,
                                   collate_fn=collate_fn)
-    return data_loader
+    return data_loader, conv.class_counter

@@ -54,15 +54,15 @@ def get_data(data_f, vocab_f):
 
     logger.info("")
     logger.info("Get data loaders...")
-    train_loader = get_loader(
+    train_loader, train_class_counter = get_loader(
         json=train_data, vocab=vocab, q_net_mode=args.mode, rescale_rewards=not args.predict_rewards,
         batch_size=args.batch_size, shuffle=True, num_workers=0
     )
-    valid_loader = get_loader(
+    valid_loader, _ = get_loader(
         json=valid_data, vocab=vocab, q_net_mode=args.mode, rescale_rewards=not args.predict_rewards,
         batch_size=args.batch_size, shuffle=False, num_workers=0
     )
-    test_loader = get_loader(
+    test_loader, _ = get_loader(
         json=test_data, vocab=vocab, q_net_mode=args.mode, rescale_rewards=not args.predict_rewards,
         batch_size=args.batch_size, shuffle=False, num_workers=0
     )
@@ -84,7 +84,7 @@ def get_data(data_f, vocab_f):
     first_article = train_data.keys()[0]
     custom_hs = len(train_data[first_article][0]['action']['custom_enc'])
 
-    return train_loader, valid_loader, test_loader, vocab, embeddings, custom_hs
+    return train_loader, train_class_counter, valid_loader, test_loader, vocab, embeddings, custom_hs
 
 
 def check_param_ambiguity():
@@ -786,14 +786,14 @@ def main():
 
     # Load toy domain dataset
     if args.debug:
-        train_loader, valid_loader, test_loader, \
+        train_loader, train_class_cnt, valid_loader, test_loader,\
         vocab, embeddings, custom_hs = get_data("./data/q_ranker_colorful_data.json",
                                                 "./data/q_ranker_colorful_vocab.pkl")
         max_epochs = 100
     # Load regular dataset
     else:
-        train_loader, valid_loader, test_loader,\
-            vocab, embeddings, custom_hs = get_data(args.data_f, args.vocab_f)
+        train_loader, train_class_cnt, valid_loader, test_loader,\
+        vocab, embeddings, custom_hs = get_data(args.data_f, args.vocab_f)
         max_epochs = args.epochs
 
     #######################
@@ -881,10 +881,15 @@ def main():
         logger.info("ERROR: unknown optimizer: %s" % args.optimizer)
         return
 
-    # Define losses
+    ### Define losses
     huber = torch.nn.SmoothL1Loss()  # MSE used in -1 < . < 1 ; Absolute used elsewhere
     mse = torch.nn.MSELoss()
-    ce = torch.nn.CrossEntropyLoss()  # used for classification of immediate reward
+
+    # weight classification loss because of data unbalance
+    train_class_weights = map(lambda cnt: float(cnt)/max(train_class_cnt), train_class_cnt)
+    logger.info("train count: %s" % (train_class_cnt,))
+    logger.info("train weight: %s" % (train_class_weights,))
+    ce = torch.nn.CrossEntropyLoss(weight=to_var(torch.FloatTensor(train_class_weights)))  # used for classification of immediate reward
 
     #######################
     # Start Training
@@ -908,6 +913,10 @@ def main():
         # Perform one epoch and return average losses:
         ###
         logger.info("***********************************")
+
+        # put in training mode (Dropout ON)
+        dqn.train()
+        dqn_target.train()
 
         # predict rewards: use cross-entropy loss
         if args.predict_rewards:
@@ -941,6 +950,10 @@ def main():
         ###
         logger.info("computing validation losses...")
         improved = False
+
+        # put in inference mode (Dropout OFF)
+        dqn.eval()
+        dqn_target.eval()
 
         # predict rewards: use cross-entropy loss
         if args.predict_rewards:
@@ -989,7 +1002,6 @@ def main():
                 dqn.state_dict(),
                 "./models/q_estimator/%s_%s_dqn.pt" % (model_name, model_id)
             )
-            # TODO: save embeddings!!
             # Reset patience
             patience = args.patience
             logger.info("Saved new model.")
