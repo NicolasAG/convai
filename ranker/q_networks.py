@@ -49,7 +49,7 @@ class QNetwork(torch.nn.Module):
         self.input_size = input_size
         self.mlp_activation = mlp_activation
         if self.mlp_activation == 'prelu':
-            self.prelu_param = torch.nn.Parameter(0.2)
+            self.prelu_param = torch.nn.Parameter(torch.FloatTensor([0.2]))
         assert out_size in [1, 2]
 
         self.fc_1 = torch.nn.Linear(self.input_size, self.input_size/2)
@@ -71,11 +71,12 @@ class QNetwork(torch.nn.Module):
         according to the method described in "Delving deep into rectifiers: Surpassing human-level
         performance on ImageNet classification" - He, K. et al. (2015), using a
         normal distribution.
+        Also known as He initialisation.
         """
         # fully connected parameters
         for fc in [self.fc_1, self.fc_2, self.fc_3, self.fc_4]:
             if self.mlp_activation in ['relu', 'prelu']:
-                # Kaiming initialisation
+                # He initialisation
                 fan = torch.nn.init._calculate_correct_fan(fc.weight.data, 'fan_in')
                 gain = torch.nn.init.calculate_gain('leaky_relu' if self.mlp_activation == 'prelu' else 'relu', 0.2)
                 std = gain / math.sqrt(fan)
@@ -165,7 +166,7 @@ class DeepQNetwork(torch.nn.Module):
 
         self.mlp_activation = mlp_activation
         if self.mlp_activation == 'prelu':
-            self.prelu_param = torch.nn.Parameter(0.2)
+            self.prelu_param = torch.nn.Parameter(torch.FloatTensor([0.2]))
 
         assert out_size in [1, 2]
 
@@ -228,6 +229,11 @@ class DeepQNetwork(torch.nn.Module):
         described in "Understanding the difficulty of training deep feedforward neural networks"
         - Glorot, X. & Bengio, Y. (2010), using a normal distribution.
         Also known as Glorot initialisation.
+        - or -
+        according to the method described in "Delving deep into rectifiers: Surpassing human-level
+        performance on ImageNet classification" - He, K. et al. (2015), using a
+        normal distribution.
+        Also known as He initialisation.
         """
         # rnn parameters
         for rnn in [self.sentence_rnn, self.article_rnn,
@@ -247,7 +253,7 @@ class DeepQNetwork(torch.nn.Module):
                    self.fc_adv_1, self.fc_adv_2, self.fc_adv_3]:
 
             if self.mlp_activation in ['relu', 'prelu']:
-                # Kaiming initialisation
+                # He initialisation
                 fan = torch.nn.init._calculate_correct_fan(fc.weight.data, 'fan_in')
                 gain = torch.nn.init.calculate_gain('leaky_relu' if self.mlp_activation == 'prelu' else 'relu', 0.2)
                 std = gain / math.sqrt(fan)
