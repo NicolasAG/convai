@@ -801,11 +801,11 @@ def main():
     #######################
     logger.info("")
     logger.info("Building Q-Network...")
-    model_name = "toy/colorful_" if args.debug else ""
+    if ars.debub: model_name = "toy/colorful_" else ""
     # MLP network
     if args.mode == 'mlp':
         # model name
-        model_name += "Small_R-Network" if args.predict_rewards else "Small_Q-Network"
+        model_name += "SmallR/Small_R-Network" if args.predict_rewards else "SmallQ/Small_Q-Network"
         # output dimension
         if args.predict_rewards:
             out = 2
@@ -818,10 +818,10 @@ def main():
     else:
         # model name
         if args.mode == 'rnn+mlp':
-            model_name += "Deep_R-Network" if args.predict_rewards else "Deep_Q-Network"
+            model_name += "DeepR/Deep_R-Network" if args.predict_rewards else "DeepQ/Deep_Q-Network"
             check_param_ambiguity()
         elif args.mode == 'rnn+rnn+mlp':
-            model_name += "VeryDeep_R-Network" if args.predict_rewards else "VeryDeep_Q-Network"
+            model_name += "VeryDeepR/VeryDeep_R-Network" if args.predict_rewards else "VeryDeepQ/VeryDeep_Q-Network"
         else:
             raise NotImplementedError("ERROR: Unknown mode: %s" % args.mode)
         # output dimension
