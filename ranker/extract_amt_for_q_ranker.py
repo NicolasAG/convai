@@ -270,7 +270,7 @@ def build_data(lemm):
     return data, n_conv, n_ex, n_score, n_quality
 
 
-def split(json_data, n_ex, valid_prop, test_prop):
+def split(json_data, n_ex, valid_prop, test_prop, oversample=False):
     """
     :param json_data: mapping from article to list of dictionary
         where each dictionary is made of 'context', 'candidate', 'reward',
@@ -278,6 +278,7 @@ def split(json_data, n_ex, valid_prop, test_prop):
     :param n_ex: total number of examples across articles
     :param valid_prop: proportion of data to make the validation set
     :param test_prop: proportion of data to make the test set
+    :param oversample: duplicate positive examples as many time as negative examples in the training set
     :return: train, valid, test tuples where each tuple is made of:
         (json_data, n_examples)
     """
@@ -288,7 +289,7 @@ def split(json_data, n_ex, valid_prop, test_prop):
     train_data = {}
     valid_data = {}
     test_data = {}
-    n_train = 0
+    n_train, n_pos, n_neg = 0, 0, 0
     n_valid = 0
     n_test = 0
 
@@ -311,10 +312,25 @@ def split(json_data, n_ex, valid_prop, test_prop):
         else:
             if article not in train_data:
                 train_data[article] = []
-            train_data[article].extend(examples)
-            n_train += len(examples)
+            if oversample:
+                # go through each examples individually and add as many positive ones as negative ones
+                for ex in examples:
+                    train_data[article].append(ex)  # add each example at least once
+                    if ex['reward'] == 1:
+                        n_pos += 1  # count++
+                        n_train += 1
+                        while n_pos < n_neg:  # copy the positive example as many times as necessary
+                            train_data[article].append(ex)
+                            n_pos += 1
+                            n_train += 1
+                    else:
+                        n_neg += 1
+                        n_train += 1
+            else:
+                train_data[article].extend(examples)
+                n_train += len(examples)
 
-    return (train_data, n_train), (valid_data, n_valid), (test_data, n_test)
+    return (train_data, n_train, n_pos, n_neg), (valid_data, n_valid), (test_data, n_test)
 
 
 def build_vocab(data, threshold):
@@ -376,6 +392,8 @@ def main():
                         help="proportion of data to make testing set")
     parser.add_argument('-vt', '--vocab_threshold', type=int, default=1,
                         help="minimum number of times a word must occur to be in vocabulary")
+    parser.add_argument('-os', '--oversample', action='store_true',
+                        help="duplicate positive examples to have balanced training set")
     args = parser.parse_args()
     logger.info("")
     logger.info(args)
@@ -414,10 +432,10 @@ def main():
 
     # split data into train, valid, test sets
     logger.info("")
-    logger.info("Split into train, valid, test sets")
-    train, valid, test = split(json_data, n_ex, args.valid_proportion, args.test_proportion)
-    logger.info("[train] %d unique articles. Total: %d examples" % (
-            len(train[0]), train[1]
+    logger.info("Split into train, valid, test sets...")
+    train, valid, test = split(json_data, n_ex, args.valid_proportion, args.test_proportion, args.oversample)
+    logger.info("[train] %d unique articles. Total: %d examples (%d positive -vs- %d negative)" % (
+            len(train[0]), train[1], train[2], train[3]
     ))
     logger.info("[valid] %d unique articles. Total: %d examples" % (
             len(valid[0]), valid[1]
@@ -429,7 +447,11 @@ def main():
     logger.info("")
     logger.info("Saving to json file...")
     unique_id = str(time.time())
-    file_path = "./data/q_ranker_amt_data_%s.json" % unique_id
+
+    if args.oversample:
+        file_path = "./data/q_ranker_amt_data++_%s.json" % unique_id
+    else:
+        file_path = "./data/q_ranker_amt_data_%s.json" % unique_id
     with open(file_path, 'wb') as f:
         json.dump(
                 {
