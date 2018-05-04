@@ -4,6 +4,7 @@ from q_networks import to_var, to_tensor, QNetwork, DeepQNetwork
 from q_data_loader import get_loader
 from extract_amt_for_q_ranker import Vocabulary
 from embedding_metrics import w2v
+from q_experiments import *
 
 import numpy as np
 import cPickle as pkl
@@ -666,8 +667,20 @@ def main():
     # Load Data
     #######################
 
-    with open('%s_args.pkl' % args.model_prefix, 'rb') as f:
-        old_args = pkl.load(f)
+    if os.path.exists('%s_args.pkl' % args.model_prefix):
+        with open('%s_args.pkl' % args.model_prefix, 'rb') as f:
+            old_args = pkl.load(f)
+            old_params = to_dict(old_args)
+    else:
+        with open('%s_args.json' % args.model_prefix, 'rb') as f:
+            old_params = json.load(f)
+
+    # TODO: replace with old_params dictionary
+    # TODO: plot loss curves
+    # TODO: print best score
+    # TODO: report test accuracy of r-ranker
+    # TODO: compute q-ranker accuracy & report it on test set
+    # TODO: score test candidates
 
     test_loader, vocab, embeddings, custom_hs = get_data(old_args)
 
@@ -793,7 +806,6 @@ if __name__ == '__main__':
 
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % args.gpu
-    # os.environ["TF_CPP_MIN_LOG_LEVEL"] = '3'
 
     main()
 

@@ -1,12 +1,14 @@
 import torch
 from torch.autograd import Variable
+
 from q_networks import to_var, to_tensor, QNetwork, DeepQNetwork
 from q_data_loader import get_loader
 from extract_amt_for_q_ranker import Vocabulary
 from embedding_metrics import w2v
+from q_experiments import *
 
-import numpy as np
 import cPickle as pkl
+import numpy as np
 import argparse
 import logging
 import copy
@@ -55,16 +57,16 @@ def get_data(data_f, vocab_f):
     logger.info("")
     logger.info("Get data loaders...")
     train_loader, train_class_counter = get_loader(
-        json=train_data, vocab=vocab, q_net_mode=args.mode, rescale_rewards=not args.predict_rewards,
-        batch_size=args.batch_size, shuffle=True, num_workers=0
+        json=train_data, vocab=vocab, q_net_mode=params['mode'], rescale_rewards=not params['predict_rewards'],
+        batch_size=params['batch_size'], shuffle=True, num_workers=0
     )
     valid_loader, _ = get_loader(
-        json=valid_data, vocab=vocab, q_net_mode=args.mode, rescale_rewards=not args.predict_rewards,
-        batch_size=args.batch_size, shuffle=False, num_workers=0
+        json=valid_data, vocab=vocab, q_net_mode=params['mode'], rescale_rewards=not params['predict_rewards'],
+        batch_size=params['batch_size'], shuffle=False, num_workers=0
     )
     test_loader, _ = get_loader(
-        json=test_data, vocab=vocab, q_net_mode=args.mode, rescale_rewards=not args.predict_rewards,
-        batch_size=args.batch_size, shuffle=False, num_workers=0
+        json=test_data, vocab=vocab, q_net_mode=params['mode'], rescale_rewards=not params['predict_rewards'],
+        batch_size=params['batch_size'], shuffle=False, num_workers=0
     )
     logger.info("done.")
 
@@ -88,30 +90,30 @@ def get_data(data_f, vocab_f):
 
 
 def check_param_ambiguity():
-    if args.sentence_hs != args.utterance_hs:
+    if params['sentence_hs'] != params['utterance_hs']:
         logger.info("WARNING: ambiguity between sentence (%d) and utterance (%d) hs. Using %d" % (
-                args.sentence_hs, args.utterance_hs, args.sentence_hs
+            params['sentence_hs'], params['utterance_hs'], params['sentence_hs']
         ))
-    if args.sentence_bidir != args.utterance_bidir:
+    if params['sentence_bidir'] != params['utterance_bidir']:
         logger.info("WARNING: ambiguity between sentence (%s) and utterance (%s) bidir. Using %s" % (
-                args.sentence_bidir, args.utterance_bidir, args.sentence_bidir
+                params['sentence_bidir'], params['utterance_bidir'], params['sentence_bidir']
         ))
-    if args.sentence_dropout != args.utterance_dropout:
+    if params['sentence_dropout'] != params['utterance_dropout']:
         logger.info("WARNING: ambiguity between sentence (%s) and utterance (%s) dropout. Using %s" % (
-                args.sentence_dropout, args.utterance_dropout, args.sentence_dropout
+                params['sentence_dropout'], params['utterance_dropout'], params['sentence_dropout']
         ))
 
-    if args.article_hs != args.context_hs:
+    if params['article_hs'] != params['context_hs']:
         logger.info("WARNING: ambiguity between article (%d) and context (%d) hs. Using %d" % (
-                args.article_hs, args.context_hs, args.article_hs
+                params['article_hs'], params['context_hs'], params['article_hs']
         ))
-    if args.article_bidir != args.context_bidir:
+    if params['article_bidir'] != params['context_bidir']:
         logger.info("WARNING: ambiguity between article (%s) and context (%s) bidir. Using %s" % (
-                args.article_bidir, args.context_bidir, args.article_bidir
+                params['article_bidir'], params['context_bidir'], params['article_bidir']
         ))
-    if args.article_dropout != args.context_dropout:
+    if params['article_dropout'] != params['context_dropout']:
         logger.info("WARNING: ambiguity between article (%s) and context (%s) dropout. Using %s" % (
-                args.article_dropout, args.context_dropout, args.article_dropout
+                params['article_dropout'], params['context_dropout'], params['article_dropout']
         ))
 
 def one_epoch(dqn, loss, data_loader, optimizer=None, test=False):
@@ -125,7 +127,7 @@ def one_epoch(dqn, loss, data_loader, optimizer=None, test=False):
     :param test: print some predictions
     :return: average loss & accuracy dictionary: acc, TP, TN, FP, FN
     """
-    if args.mode == 'mlp':
+    if params['mode'] == 'mlp':
         epoch_loss, epoch_accuracy, nb_batches = _one_mlp_epoch(
             dqn, loss, data_loader, optimizer, test
         )
@@ -205,7 +207,7 @@ def _one_mlp_epoch(dqn, loss, data_loader, optimizer, test):
             epoch_accuracy['FN'] += (tmp_fn / (tmp_fn + tmp_tp))  # false negative rate
             epoch_accuracy['TP'] += (tmp_tp / (tmp_fn + tmp_tp))  # true positive rate = sensitivity
 
-        if args.verbose:
+        if params['verbose']:
             logger.info("step %.3d - loss %.6f - acc %g" % (
                 step + 1, tmp_loss.data[0], tmp_acc
             ))
@@ -219,16 +221,16 @@ def _one_mlp_epoch(dqn, loss, data_loader, optimizer, test):
             # Update parameters
             optimizer.step()
 
-        # IF in testing mode, print the first 40 examples of this batch with proba 0.5
+        # IF in testing mode, print the first 10 examples of this batch with proba 0.5
         if test and np.random.choice([0,1]) == 1:
             print "batch %d" % (step+1)
-            end = min(len(rewards.data), 40)
-            for b_idx in range(end):
-                print "  article: ", map(lambda sent: sent.numpy(), articles[b_idx])
-                print "  context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
-                print "  candidate: ", candidates[b_idx].numpy()
-                print "  reward: ", rewards.data[b_idx]
-                print "  prediction: ", predictions.data[b_idx].cpu().numpy()
+            end = min(len(rewards.data), 10)
+            for idx in range(end):
+                print "  article: ", map(lambda sent: sent.numpy(), articles[idx])
+                print "  context: ", map(lambda turn: turn.numpy(), contexts[idx])
+                print "  candidate: ", candidates[idx].numpy()
+                print "  reward: ", rewards.data[idx]
+                print "  prediction: ", predictions.data[idx].cpu().numpy()
                 print "  *********************************"
         epoch_loss += tmp_loss.data[0]
         nb_batches += 1
@@ -326,7 +328,7 @@ def _one_rnn_epoch(dqn, loss, data_loader, optimizer, test):
             epoch_accuracy['FN'] += (tmp_fn / (tmp_fn + tmp_tp))  # false negative rate
             epoch_accuracy['TP'] += (tmp_tp / (tmp_fn + tmp_tp))  # true positive rate = sensitivity
 
-        if args.verbose:
+        if params['verbose']:
             logger.info("step %.3d - loss %.6f - accuracy %g" % (
                 step + 1, tmp_loss.data[0], tmp_acc
             ))
@@ -340,16 +342,16 @@ def _one_rnn_epoch(dqn, loss, data_loader, optimizer, test):
             # Update parameters
             optimizer.step()
 
-        # IF in testing mode, print the first 40 examples of this batch with proba 0.5
+        # IF in testing mode, print the first 10 examples of this batch with proba 0.5
         if test and np.random.choice([0, 1]) == 1:
             print "batch %d" % (step + 1)
-            end = min(len(rewards.data), 40)
-            for b_idx in range(end):
-                print "  article: ", map(lambda sent: sent.numpy(), articles[b_idx])
-                print "  context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
-                print "  candidate: ", candidates_tensors.data[b_idx].cpu().numpy()
-                print "  reward: ", rewards.data[b_idx]
-                print "  prediction: ", predictions.data[b_idx].cpu().numpy()
+            end = min(len(rewards.data), 10)
+            for idx in range(end):
+                print "  article: ", map(lambda sent: sent.numpy(), articles[idx])
+                print "  context: ", map(lambda turn: turn.numpy(), contexts[idx])
+                print "  candidate: ", candidates_tensors.data[idx].cpu().numpy()
+                print "  reward: ", rewards.data[idx]
+                print "  prediction: ", predictions.data[idx].cpu().numpy()
                 print "  *********************************"
         epoch_loss += tmp_loss.data[0]
         nb_batches += 1
@@ -370,7 +372,7 @@ def one_episode(itt, dqn, target_dqn, huber, data_loader, optimizer=None, test=F
     :param test: print some predictions
     :return: average huber loss, number of batch seen
     """
-    if args.mode == 'mlp':
+    if params['mode'] == 'mlp':
         epoch_huber_loss, nb_batches = _one_mlp_episode(
             itt, dqn, target_dqn, huber, data_loader, optimizer, test
         )
@@ -451,7 +453,7 @@ def _one_mlp_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
 
         # Compute loss
         huber_loss = huber(q_values, expected_state_action_values)
-        if args.verbose:
+        if params['verbose']:
             logger.info("step %.3d - huber loss %.6f" % (
                 step + 1, huber_loss.data[0]
             ))
@@ -469,22 +471,22 @@ def _one_mlp_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
             optimizer.step()
 
             ## update target dqn
-            if (itt + step) % args.update_frequence == 0:
+            if (itt + step) % params['update_frequence'] == 0:
                 logger.info("iteration %d: updating target DQN." % (itt + step))
                 target_dqn.load_state_dict(dqn.state_dict())
 
-        # IF in testing mode, print the first 40 examples of this batch with proba 0.5
+        # IF in testing mode, print the first 10 examples of this batch with proba 0.5
         if test and np.random.choice([0, 1]) == 1:
             print "batch %d" % (step + 1)
-            end = min(len(rewards.data), 40)
-            for b_idx in range(end):
-                print "  article: ", map(lambda sent: sent.numpy(), articles[b_idx])
-                print "  context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
-                print "  candidate: ", candidates[b_idx].numpy()
-                print "  reward: ", rewards.data[b_idx]
-                print "  q(s,a): ", q_values.data[b_idx].cpu().numpy()
-                # print "  q(s', a*): ", next_state_action_values.data[b_idx].cpu().numpy()
-                print "  expected state action values: ", expected_state_action_values.data[b_idx]
+            end = min(len(rewards.data), 10)
+            for idx in range(end):
+                print "  article: ", map(lambda sent: sent.numpy(), articles[idx])
+                print "  context: ", map(lambda turn: turn.numpy(), contexts[idx])
+                print "  candidate: ", candidates[idx].numpy()
+                print "  reward: ", rewards.data[idx]
+                print "  q(s,a): ", q_values.data[idx].cpu().numpy()
+                # print "  q(s', a*): ", next_state_action_values.data[idx].cpu().numpy()
+                print "  expected state action values: ", expected_state_action_values.data[idx]
                 print "  *********************************"
         epoch_huber_loss += huber_loss.data[0]
         nb_batches += 1
@@ -737,11 +739,11 @@ def _one_rnn_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
             # requires_grad=False
             next_state_action_values.volatile = False
             # Compute the expected Q values
-            expected_state_action_values = (next_state_action_values * args.gamma) + rewards_t
+            expected_state_action_values = (next_state_action_values * params['gamma']) + rewards_t
 
         # Compute loss
         huber_loss = huber(q_values, expected_state_action_values)
-        if args.verbose:
+        if params['verbose']:
             logger.info("step %.3d - huber loss %.6f" % (
                 step + 1, huber_loss.data[0]
             ))
@@ -756,22 +758,22 @@ def _one_rnn_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
             optimizer.step()
 
             ## update target dqn
-            if (itt+step) % args.update_frequence == 0:
+            if (itt+step) % params['update_frequence'] == 0:
                 logger.info("iteration %d: updating target DQN." % (itt+step))
                 target_dqn.load_state_dict(dqn.state_dict())
 
-        # IF in testing mode, print the first 40 examples of this batch with proba 0.5
+        # IF in testing mode, print the first 10 examples of this batch with proba 0.5
         if test and np.random.choice([0, 1]) == 1:
             print "batch %d" % (step + 1)
-            end = min(len(rewards_t.data), 40)
-            for b_idx in range(end):
-                print "  article: ", map(lambda sent: sent.numpy(), articles[b_idx])
-                print "  context: ", map(lambda turn: turn.numpy(), contexts[b_idx])
-                print "  candidate: ", candidates_tensors_t.data[b_idx].cpu().numpy()
-                print "  reward: ", rewards_t.data[b_idx]
-                print "  q(s,a): ", q_values.data[b_idx].cpu().numpy()
-                # print "  q(s', a*): ", next_state_action_values.data[b_idx].cpu().numpy()
-                print "  expected state action values: ", expected_state_action_values.data[b_idx]
+            end = min(len(rewards_t.data), 10)
+            for idx in range(end):
+                print "  article: ", map(lambda sent: sent.numpy(), articles[idx])
+                print "  context: ", map(lambda turn: turn.numpy(), contexts[idx])
+                print "  candidate: ", candidates_tensors_t.data[idx].cpu().numpy()
+                print "  reward: ", rewards_t.data[idx]
+                print "  q(s,a): ", q_values.data[idx].cpu().numpy()
+                # print "  q(s', a*): ", next_state_action_values.data[idx].cpu().numpy()
+                print "  expected state action values: ", expected_state_action_values.data[idx]
                 print "  *********************************"
         epoch_huber_loss += huber_loss.data[0]
         nb_batches += 1
@@ -785,7 +787,7 @@ def main():
     #######################
 
     # Load toy domain dataset
-    if args.debug:
+    if params['debug']:
         train_loader, train_class_cnt, valid_loader, test_loader,\
         vocab, embeddings, custom_hs = get_data("./data/q_ranker_colorful_data.json",
                                                 "./data/q_ranker_colorful_vocab.pkl")
@@ -793,60 +795,72 @@ def main():
     # Load regular dataset
     else:
         train_loader, train_class_cnt, valid_loader, test_loader,\
-        vocab, embeddings, custom_hs = get_data(args.data_f, args.vocab_f)
-        max_epochs = args.epochs
+        vocab, embeddings, custom_hs = get_data(params['data_f'], params['vocab_f'])
+        max_epochs = params['epochs']
 
     #######################
     # Build DQN
     #######################
     logger.info("")
     logger.info("Building Q-Network...")
-    if ars.debub: model_name = "toy/colorful_" else ""
+
+    ### Define model prefix name when saving ###
+    if params['model_name']:
+        model_name = params['model_name']
+    else:
+        if params['debug']:
+            model_name = "toy/colorful_"
+        else:
+            model_name = ""
+        # MLP network
+        if params['mode'] == 'mlp':
+            model_name += "SmallR/Small_R-Network" if params['predict_rewards'] else "SmallQ/Small_Q-Network"
+        # RNNs + MLP network
+        else:
+            if params['mode'] == 'rnn+mlp':
+                model_name += "DeepR/Deep_R-Network" if params['predict_rewards'] else "DeepQ/Deep_Q-Network"
+                check_param_ambiguity()
+            elif params['mode'] == 'rnn+rnn+mlp':
+                model_name += "VeryDeepR/VeryDeep_R-Network" if params['predict_rewards'] else "VeryDeepQ/VeryDeep_Q-Network"
+            else:
+                raise NotImplementedError("ERROR: Unknown mode: %s" % params['mode'])
+
+    ### Define Neural Networks ###
     # MLP network
-    if args.mode == 'mlp':
-        # model name
-        model_name += "SmallR/Small_R-Network" if args.predict_rewards else "SmallQ/Small_Q-Network"
+    if params['mode'] == 'mlp':
         # output dimension
-        if args.predict_rewards:
+        if params['predict_rewards']:
             out = 2
         else:
             out = 1
         # dqn
-        dqn = QNetwork(custom_hs, args.mlp_activation, args.mlp_dropout, out)
-        dqn_target = QNetwork(custom_hs, args.mlp_activation, args.mlp_dropout, out)
+        dqn = QNetwork(custom_hs, params['mlp_activation'], params['mlp_dropout'], out)
+        dqn_target = QNetwork(custom_hs, params['mlp_activation'], params['mlp_dropout'], out)
     # RNNs + MLP network
     else:
-        # model name
-        if args.mode == 'rnn+mlp':
-            model_name += "DeepR/Deep_R-Network" if args.predict_rewards else "DeepQ/Deep_Q-Network"
-            check_param_ambiguity()
-        elif args.mode == 'rnn+rnn+mlp':
-            model_name += "VeryDeepR/VeryDeep_R-Network" if args.predict_rewards else "VeryDeepQ/VeryDeep_Q-Network"
-        else:
-            raise NotImplementedError("ERROR: Unknown mode: %s" % args.mode)
         # output dimension
-        if args.predict_rewards:
+        if params['predict_rewards']:
             out = 2
         else:
             out = 1
         # dqn
         dqn = DeepQNetwork(
-            args.mode, embeddings, args.fix_embeddings,
-            args.sentence_hs, args.sentence_bidir, args.sentence_dropout,
-            args.article_hs, args.article_bidir, args.article_dropout,
-            args.utterance_hs, args.utterance_bidir, args.utterance_dropout,
-            args.context_hs, args.context_bidir, args.context_dropout,
-            args.rnn_gate,
-            custom_hs, args.mlp_activation, args.mlp_dropout, out
+            params['mode'], embeddings, params['fix_embeddings'],
+            params['sentence_hs'], params['sentence_bidir'], params['sentence_dropout'],
+            params['article_hs'], params['article_bidir'], params['article_dropout'],
+            params['utterance_hs'], params['utterance_bidir'], params['utterance_dropout'],
+            params['context_hs'], params['context_bidir'], params['context_dropout'],
+            params['rnn_gate'],
+            custom_hs, params['mlp_activation'], params['mlp_dropout'], out
         )
         dqn_target = DeepQNetwork(
-            args.mode, embeddings, args.fix_embeddings,
-            args.sentence_hs, args.sentence_bidir, args.sentence_dropout,
-            args.article_hs, args.article_bidir, args.article_dropout,
-            args.utterance_hs, args.utterance_bidir, args.utterance_dropout,
-            args.context_hs, args.context_bidir, args.context_dropout,
-            args.rnn_gate,
-            custom_hs, args.mlp_activation, args.mlp_dropout, out
+            params['mode'], embeddings, params['fix_embeddings'],
+            params['sentence_hs'], params['sentence_bidir'], params['sentence_dropout'],
+            params['article_hs'], params['article_bidir'], params['article_dropout'],
+            params['utterance_hs'], params['utterance_bidir'], params['utterance_dropout'],
+            params['context_hs'], params['context_bidir'], params['context_dropout'],
+            params['rnn_gate'],
+            custom_hs, params['mlp_activation'], params['mlp_dropout'], out
         )
 
     logger.info(dqn)
@@ -854,31 +868,31 @@ def main():
     model_id = time.time()
 
     # save parameters
-    with open("./models/q_estimator/%s_%s_args.pkl" % (model_name, model_id), 'wb') as f:
-        pkl.dump(args, f)
+    with open("./models/q_estimator/%s_%s_params.json" % (model_name, model_id), 'wb') as f:
+        json.dump(params, f)
 
     # moving networks to GPU
     if torch.cuda.is_available():
         logger.info("")
-        logger.info("cuda available! Moving variables to cuda %d..." % args.gpu)
+        logger.info("cuda available! Moving variables to cuda %d..." % params['gpu'])
         dqn.cuda()
         dqn_target.cuda()
 
     # get list of parameters to train
-    params = filter(lambda p: p.requires_grad, dqn.parameters())
+    to_train = filter(lambda p: p.requires_grad, dqn.parameters())
     # create optimizer ('adam', 'sgd', 'rmsprop', 'adagrad', 'adadelta')
-    if args.optimizer == 'adam':
-        optimizer = torch.optim.Adam(params=params, lr=args.learning_rate)
-    elif args.optimizer == 'sgd':
-        optimizer = torch.optim.SGD(params=params, lr=args.learning_rate, momentum=0.9)
-    elif args.optimizer == 'rmsprop':
-        optimizer = torch.optim.RMSprop(params=params, lr=args.learning_rate, momentum=0.9)
-    elif args.optimizer == 'adagrad':
-        optimizer = torch.optim.Adagrad(params=params, lr=args.learning_rate)
-    elif args.optimizer == 'adadelta':
-        optimizer = torch.optim.Adadelta(params=params, lr=args.learning_rate)
+    if params['optimizer'] == 'adam':
+        optimizer = torch.optim.Adam(params=to_train, lr=params['learning_rate'])
+    elif params['optimizer'] == 'sgd':
+        optimizer = torch.optim.SGD(params=to_train, lr=params['learning_rate'], momentum=0.9)
+    elif params['optimizer'] == 'rmsprop':
+        optimizer = torch.optim.RMSprop(params=to_train, lr=params['learning_rate'], momentum=0.9)
+    elif params['optimizer'] == 'adagrad':
+        optimizer = torch.optim.Adagrad(params=to_train, lr=params['learning_rate'])
+    elif params['optimizer'] == 'adadelta':
+        optimizer = torch.optim.Adadelta(params=to_train, lr=params['learning_rate'])
     else:
-        logger.info("ERROR: unknown optimizer: %s" % args.optimizer)
+        logger.info("ERROR: unknown optimizer: %s" % params['optimizer'])
         return
 
     ### Define losses
@@ -886,10 +900,12 @@ def main():
     mse = torch.nn.MSELoss()
 
     # weight classification loss because of data unbalance
-    train_class_weights = map(lambda cnt: float(cnt)/max(train_class_cnt), train_class_cnt)
-    logger.info("train count: %s" % (train_class_cnt,))
-    logger.info("train weight: %s" % (train_class_weights,))
-    ce = torch.nn.CrossEntropyLoss(weight=to_var(torch.FloatTensor(train_class_weights)))  # used for classification of immediate reward
+    #train_class_weights = map(lambda cnt: float(cnt)/max(train_class_cnt), train_class_cnt)
+    #logger.info("train count: %s" % (train_class_cnt,))
+    #logger.info("train weight: %s" % (train_class_weights,))
+    # used for classification of immediate reward
+    #ce = torch.nn.CrossEntropyLoss(weight=to_var(torch.FloatTensor(train_class_weights)))
+    ce = torch.nn.CrossEntropyLoss()
 
     #######################
     # Start Training
@@ -897,7 +913,7 @@ def main():
     start_time = time.time()
     best_valid = 100000.
     best_valid_acc = 0.
-    patience = args.patience
+    patience = params['patience']
 
     train_losses = []  # list of losses for each epoch
     train_accurs = []  # list of accuracy obj for each epoch
@@ -919,7 +935,7 @@ def main():
         dqn_target.train()
 
         # predict rewards: use cross-entropy loss
-        if args.predict_rewards:
+        if params['predict_rewards']:
             train_loss, train_acc = one_epoch(
                 dqn, ce, train_loader, optimizer=optimizer
             )
@@ -956,7 +972,7 @@ def main():
         dqn_target.eval()
 
         # predict rewards: use cross-entropy loss
-        if args.predict_rewards:
+        if params['predict_rewards']:
             valid_loss, valid_acc = one_epoch(
                 dqn, ce, valid_loader
             )
@@ -1003,7 +1019,7 @@ def main():
                 "./models/q_estimator/%s_%s_dqn.pt" % (model_name, model_id)
             )
             # Reset patience
-            patience = args.patience
+            patience = params['patience']
             logger.info("Saved new model.")
         else:
             patience -= 1
@@ -1016,9 +1032,6 @@ def main():
         time.time() - start_time
     ))
 
-    # TODO: plot train & validation losses
-    # valid = red  -- or - -
-    # train = blue -- or - -
 
     logger.info("Saving timings...")
     with open("./models/q_estimator/%s_%s_timings.json" % (model_name, model_id), 'wb') as f:
@@ -1034,9 +1047,9 @@ def main():
     #######################
     # Testing
     #######################
-    if args.debug:
+    if params['debug']:
         # predict rewards
-        if args.predict_rewards:
+        if params['predict_rewards']:
             test_loss, test_acc = one_epoch(dqn, ce, test_loader, test=True)
         # predict q values
         else:
@@ -1055,12 +1068,14 @@ def str2bool(v):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("data_f", type=str, help="Path to json data file")
-    parser.add_argument("vocab_f", type=str, help="Path to pkl vocabbulary file")
-    parser.add_argument("mode", choices=['mlp', 'rnn+mlp', 'rnn+rnn+mlp'],
+    parser.add_argument("--data_f", type=str, help="Path to json data file")
+    parser.add_argument("--vocab_f", type=str, help="Path to pkl vocabulary file")
+    parser.add_argument("--mode", choices=['mlp', 'rnn+mlp', 'rnn+rnn+mlp'],
                         default='mlp', help="type of neural network to train")
     parser.add_argument("--predict_rewards", type=str2bool, default='no',
                         help="Decide if we predict rewards of q-values")
+    parser.add_argument("--model_name", help="prefix of model name")
+    parser.add_argument("-exp", "--experiment", help="name of method in q_experiments.py that choose parameters")
     parser.add_argument("-g",  "--gpu", type=int, default=0, help="GPU number to use")
     parser.add_argument("-v", "--verbose", type=str2bool, default='no', help="Be verbose")
     parser.add_argument("-d", "--debug", type=str2bool, default='no', help="use toy domain & print on test set")
@@ -1079,7 +1094,7 @@ if __name__ == '__main__':
                         help="Maximum number of training passes to do on the full train set")
     parser.add_argument("-bs", "--batch_size", type=int, default=128,
                         help="batch size during training")
-    parser.add_argument("--update_frequence", type=int, default=100,
+    parser.add_argument("--update_frequence", type=int, default=2000,
                         help="number of iterations to do before updating target dqn")
 
     # network architecture:
@@ -1090,42 +1105,55 @@ if __name__ == '__main__':
                         help="encodding size of each sentence")
     parser.add_argument("--sentence_bidir", type=str2bool, default='no',
                         help="sentence rnn is bidirectional")
-    parser.add_argument("--sentence_dropout", type=float, default=0.1,
+    parser.add_argument("--sentence_dropout", type=float, default=0.2,
                         help="dropout probability in sentence rnn")
     ## article rnn
-    parser.add_argument("--article_hs", type=int, default=500,
+    parser.add_argument("--article_hs", type=int, default=300,
                         help="encodding size of each article")
     parser.add_argument("--article_bidir", type=str2bool, default='no',
                         help="article rnn is bidirectional")
-    parser.add_argument("--article_dropout", type=float, default=0.1,
+    parser.add_argument("--article_dropout", type=float, default=0.2,
                         help="dropout probability in article rnn")
     ## utterance rnn
     parser.add_argument("--utterance_hs", type=int, default=300,
                         help="encodding size of each utterance")
     parser.add_argument("--utterance_bidir", type=str2bool, default='no',
                         help="utterance rnn is bidirectional")
-    parser.add_argument("--utterance_dropout", type=float, default=0.1,
+    parser.add_argument("--utterance_dropout", type=float, default=0.2,
                         help="dropout probability in utterance rnn")
     ## context rnn
-    parser.add_argument("--context_hs", type=int, default=500,
+    parser.add_argument("--context_hs", type=int, default=300,
                         help="encodding size of each context")
     parser.add_argument("--context_bidir", type=str2bool, default='no',
                         help="context rnn is bidirectional")
-    parser.add_argument("--context_dropout", type=float, default=0.1,
+    parser.add_argument("--context_dropout", type=float, default=0.2,
                         help="dropout probability in context rnn")
     ## mlp
     parser.add_argument("--mlp_activation", choices=['sigmoid', 'relu', 'prelu'],
                         type=str, default='prelu', help="Activation function")
-    parser.add_argument("--mlp_dropout", type=float, default=0.1,
+    parser.add_argument("--mlp_dropout", type=float, default=0.2,
                         help="dropout probability in mlp")
     args = parser.parse_args()
     logger.info("")
     logger.info("%s" % args)
     logger.info("")
 
+    if args.experiment:
+        params = eval(args.experiment)()
+        # overite some arguments if provided
+        if args.data_f: params['data_f'] = args.data_f
+        if args.vocab_f: params['vocab_f'] = args.vocab_f
+        if args.model_name: params['model_name'] = args.model_name
+        if args.gpu: params['gpu'] = args.gpu
+        if args.verbose: params['verbose'] = args.verbose
+        if args.debug: params['debug'] = args.debug
+    else:
+        params = to_dict(args)
+
+    logger.info("%s" % params)
+    logger.info("")
+
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % args.gpu
-    # os.environ["TF_CPP_MIN_LOG_LEVEL"] = '3'
+    os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % params['gpu']
 
     main()
-
