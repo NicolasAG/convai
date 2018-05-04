@@ -524,8 +524,6 @@ class DeepQNetwork(torch.nn.Module):
 
             # Dueling Q-network: value prediction
             value = ACTIVATIONS[self.mlp_activation](self.fc_value_1(state_enc))
-            value = self.dropout(value)  # dropout layer
-            value = self.fc_value_2(value)  # last layer: no activation
 
             # Dueling Q-network: advantage prediction
             # input to advantage prediction : (state, candidate, custom_enc)
