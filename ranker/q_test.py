@@ -6,6 +6,9 @@ from extract_amt_for_q_ranker import Vocabulary
 from embedding_metrics import w2v
 from q_experiments import *
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import numpy as np
 import cPickle as pkl
 import argparse
@@ -19,29 +22,48 @@ import os
 logger = logging.getLogger(__name__)
 
 
-def get_data(old_args):
+def get_raw_data(old_args=None):
     """
-    Load data to train Q Network.
-    :return: vocabulary, testing examples, embeddings
+    Load raw data. Takes a while!
     """
-    # Load toy domain dataset
-    if old_args.debug:
-        data_f = "./data/q_ranker_colorful_data.json"
-        vocab_f = "./data/q_ranker_colorful_vocab.pkl"
-    # Load regular dataset
+
+    if old_args:
+        # Load toy domain dataset
+        if old_args['debug']:
+            data_f = "./data/q_ranker_colorful_data.json"
+        # Load regular dataset
+        else:
+            data_f = old_args['data_f']
+    # Load default dataset
     else:
-        data_f = old_args.data_f
-        vocab_f = old_args.vocab_f
+        # oversampled --> useless for test
+        #data_f = "./data/q_ranker_amt_data++_1525301962.86.json"
+        #vocab_f = "./data/q_ranker_amt_vocab_1525301962.86.pkl"
+        # regular
+        data_f = "./data/q_ranker_amt_data_1524939554.0.json"
 
     logger.info("")
     logger.info("Loading data...")
     with open(data_f, 'rb') as f:
         raw_data = json.load(f)
+
+    return raw_data
+
+
+def get_data(old_args, raw_data):
+    """
+    Load data to train Q Network.
+    :return: vocabulary, testing examples, embeddings
+    """
+    # Load toy domain dataset
+    if old_args['debug']:
+        vocab_f = "./data/q_ranker_colorful_vocab.pkl"
+    # Load regular dataset
+    else:
+        vocab_f = old_args['vocab_f']
+
     test_data = raw_data['test'][0]
     test_size = raw_data['test'][1]
-
-    logger.info("got %d train examples" % train_size)
-    logger.info("got %d valid examples" % valid_size)
     logger.info("got %d test examples" % test_size)
 
     logger.info("")
@@ -52,14 +74,13 @@ def get_data(old_args):
 
     logger.info("")
     logger.info("Get data loaders...")
-    test_loader, _ = get_loader(
-        json=test_data, vocab=vocab, q_net_mode=old_args.mode, rescale_rewards=not old_args.predict_rewards,
-        batch_size=old_args.batch_size, shuffle=False, num_workers=0
+    test_loader, test_conv = get_loader(
+        json=test_data, vocab=vocab, q_net_mode=old_args['mode'], rescale_rewards=not old_args['predict_rewards'],
+        batch_size=old_args['batch_size'], shuffle=False, num_workers=0
     )
     logger.info("done.")
 
     logger.info("")
-    # TODO: LOAD WORD EMBEDDINGS!!!!
     logger.info("Building word embeddings...")
     embeddings = np.random.uniform(-0.1, 0.1, size=(len(vocab), w2v.vector_size))
     pretrained = 0
@@ -71,14 +92,14 @@ def get_data(old_args):
             pretrained, len(vocab), float(pretrained)/len(vocab)
     ))
 
-    # take arbitrarily the first training example to find the size of the custom encoding
-    first_article = train_data.keys()[0]
-    custom_hs = len(train_data[first_article][0]['action']['custom_enc'])
+    # take arbitrarily the first testing example to find the size of the custom encoding
+    first_article = test_data.keys()[0]
+    custom_hs = len(test_data[first_article][0]['action']['custom_enc'])
 
-    return test_loader, vocab, embeddings, custom_hs
+    return test_conv, test_loader, vocab, embeddings, custom_hs
 
 
-def one_epoch(dqn, loss, data_loader):
+def one_epoch(dqn, loss, data_loader, mode):
     """
     Performs one epoch over the specified data
     :param dqn: q-network to perform forward pass
@@ -86,7 +107,7 @@ def one_epoch(dqn, loss, data_loader):
     :param data_loader: data iterator
     :return: average loss & accuracy dictionary: acc, TP, TN, FP, FN
     """
-    if args.mode == 'mlp':
+    if mode == 'mlp':
         epoch_loss, epoch_accuracy, nb_batches = _one_mlp_epoch(dqn, loss, data_loader)
     else:
         epoch_loss, epoch_accuracy, nb_batches = _one_rnn_epoch(dqn, loss, data_loader)
@@ -165,7 +186,7 @@ def _one_mlp_epoch(dqn, loss, data_loader):
             ))
 
         # print the first 40 examples of this batch with proba 0.5
-        if np.random.choice([0,1]) == 1:
+        if args.verbose and np.random.choice([0,1]) == 1:
             print "batch %d" % (step+1)
             end = min(len(rewards.data), 40)
             for b_idx in range(end):
@@ -274,7 +295,7 @@ def _one_rnn_epoch(dqn, loss, data_loader):
             ))
 
         # print the first 40 examples of this batch with proba 0.5
-        if np.random.choice([0, 1]) == 1:
+        if args.verbose and np.random.choice([0, 1]) == 1:
             print "batch %d" % (step + 1)
             end = min(len(rewards.data), 40)
             for b_idx in range(end):
@@ -290,7 +311,7 @@ def _one_rnn_epoch(dqn, loss, data_loader):
     return epoch_loss, epoch_accuracy, nb_batches
 
 
-def one_episode(dqn, huber, data_loader):
+def one_episode(dqn, huber, data_loader, mode):
     """
     Performs one episode over the specified data
     :param dqn: q-network to perform forward pass
@@ -298,7 +319,7 @@ def one_episode(dqn, huber, data_loader):
     :param data_loader: data iterator
     :return: average huber loss, number of batch seen
     """
-    if args.mode == 'mlp':
+    if mode == 'mlp':
         epoch_huber_loss, nb_batches = _one_mlp_episode(dqn, huber, data_loader)
     else:
         epoch_huber_loss, nb_batches = _one_rnn_episode(dqn, huber, data_loader)
@@ -376,7 +397,7 @@ def _one_mlp_episode(dqn, huber, data_loader):
             ))
 
         # print the first 40 examples of this batch with proba 0.5
-        if np.random.choice([0, 1]) == 1:
+        if args.verbose and np.random.choice([0, 1]) == 1:
             print "batch %d" % (step + 1)
             end = min(len(rewards.data), 40)
             for b_idx in range(end):
@@ -644,7 +665,7 @@ def _one_rnn_episode(dqn, huber, data_loader):
             ))
 
         # print the first 40 examples of this batch with proba 0.5
-        if np.random.choice([0, 1]) == 1:
+        if args.verbose and np.random.choice([0, 1]) == 1:
             print "batch %d" % (step + 1)
             end = min(len(rewards_t.data), 40)
             for b_idx in range(end):
@@ -672,17 +693,14 @@ def main():
             old_args = pkl.load(f)
             old_params = to_dict(old_args)
     else:
-        with open('%s_args.json' % args.model_prefix, 'rb') as f:
+        with open('%s_params.json' % args.model_prefix, 'rb') as f:
             old_params = json.load(f)
 
-    # TODO: replace with old_params dictionary
-    # TODO: plot loss curves
-    # TODO: print best score
-    # TODO: report test accuracy of r-ranker
-    # TODO: compute q-ranker accuracy & report it on test set
-    # TODO: score test candidates
+    # TODO: next line is super long and takes a lot of memory.
+    #  remove when testing more than one model
+    raw_data = get_raw_data(old_args=old_params)
 
-    test_loader, vocab, embeddings, custom_hs = get_data(old_args)
+    test_conv, test_loader, vocab, embeddings, custom_hs = get_data(old_params, raw_data)
 
     #######################
     # Build DQN
@@ -690,40 +708,40 @@ def main():
     logger.info("")
     logger.info("Building Q-Network...")
     # MLP network
-    if old_args.mode == 'mlp':
+    if old_params['mode'] == 'mlp':
         # output dimension
-        if old_args.predict_rewards:
+        if old_params['predict_rewards']:
             out = 2
         else:
             out = 1
         # dqn
-        dqn = QNetwork(custom_hs, old_args.mlp_activation, old_args.mlp_dropout, out)
-        dqn_target = QNetwork(custom_hs, old_args.mlp_activation, old_args.mlp_dropout, out)
+        dqn = QNetwork(custom_hs, old_params['mlp_activation'], old_params['mlp_dropout'], out)
+        dqn_target = QNetwork(custom_hs, old_params['mlp_activation'], old_params['mlp_dropout'], out)
     # RNNs + MLP network
     else:
         # output dimension
-        if old_args.predict_rewards:
+        if old_params['predict_rewards']:
             out = 2
         else:
             out = 1
         # dqn
         dqn = DeepQNetwork(
-            old_args.mode, embeddings, old_args.fix_embeddings,
-            old_args.sentence_hs, old_args.sentence_bidir, old_args.sentence_dropout,
-            old_args.article_hs, old_args.article_bidir, old_args.article_dropout,
-            old_args.utterance_hs, old_args.utterance_bidir, old_args.utterance_dropout,
-            old_args.context_hs, old_args.context_bidir, old_args.context_dropout,
-            old_args.rnn_gate,
-            custom_hs, old_args.mlp_activation, old_args.mlp_dropout, out
+            old_params['mode'], embeddings, old_params['fix_embeddings'],
+            old_params['sentence_hs'], old_params['sentence_bidir'], old_params['sentence_dropout'],
+            old_params['article_hs'], old_params['article_bidir'], old_params['article_dropout'],
+            old_params['utterance_hs'], old_params['utterance_bidir'], old_params['utterance_dropout'],
+            old_params['context_hs'], old_params['context_bidir'], old_params['context_dropout'],
+            old_params['rnn_gate'],
+            custom_hs, old_params['mlp_activation'], old_params['mlp_dropout'], out
         )
         dqn_target = DeepQNetwork(
-            old_args.mode, embeddings, old_args.fix_embeddings,
-            old_args.sentence_hs, old_args.sentence_bidir, old_args.sentence_dropout,
-            old_args.article_hs, old_args.article_bidir, old_args.article_dropout,
-            old_args.utterance_hs, old_args.utterance_bidir, old_args.utterance_dropout,
-            old_args.context_hs, old_args.context_bidir, old_args.context_dropout,
-            old_args.rnn_gate,
-            custom_hs, old_args.mlp_activation, old_args.mlp_dropout, out
+            old_params['mode'], embeddings, old_params['fix_embeddings'],
+            old_params['sentence_hs'], old_params['sentence_bidir'], old_params['sentence_dropout'],
+            old_params['article_hs'], old_params['article_bidir'], old_params['article_dropout'],
+            old_params['utterance_hs'], old_params['utterance_bidir'], old_params['utterance_dropout'],
+            old_params['context_hs'], old_params['context_bidir'], old_params['context_dropout'],
+            old_params['rnn_gate'],
+            custom_hs, old_params['mlp_activation'], old_params['mlp_dropout'], out
         )
 
     dqn.load_state_dict(torch.load("%s_dqn.pt" % args.model_prefix))
@@ -743,6 +761,57 @@ def main():
     ce = torch.nn.CrossEntropyLoss()  # used for classification of immediate reward
 
     #######################
+    # Plot train & valid stats
+    #######################
+    logger.info("Plotting timings...")
+    with open("%s_timings.json" % args.model_prefix, 'rb') as f:
+        timings = json.load(f)
+
+    train_losses = timings['train_losses']
+    train_accs = [e['acc'] for e in timings['train_accurs']]
+    valid_losses = timings['valid_losses']
+    valid_accs = [e['acc'] for e in timings['valid_accurs']]
+
+    if len(train_accs) > 0 and len(valid_accs) > 0:
+        # Predicting immediate Reward
+        assert len(train_losses) == len(valid_losses) == len(train_accs) == len(valid_accs)
+        predict_r = True
+    else:
+        # Predicting Q value
+        assert len(train_losses) == len(valid_losses)
+        assert len(train_accs) == len(valid_accs) == 0
+        predict_r = False
+
+    plt.plot(range(1, len(train_losses) + 1), train_losses, 'b-', label='train')
+    plt.plot(range(1, len(valid_losses) + 1), valid_losses, 'r-', label='valid')
+    plt.title("Training and Validation loss over time")
+    plt.xlabel("epochs")
+    plt.ylabel("CrossEntropy Loss" if predict_r else "Huber Loss")
+    plt.savefig("%s_losses.png" % args.model_prefix)
+    plt.close()
+
+    best_valid_loss_idx = np.argmax(valid_losses)
+    logger.info("best valid loss: %g achieved at epoch %d" %
+                (valid_losses[best_valid_loss_idx], best_valid_loss_idx))
+    logger.info("training loss at this epoch: %g" % train_losses[best_valid_loss_idx])
+
+    if predict_r:
+        plt.plot(range(1, len(train_accs) + 1), train_accs, 'b-', label='train')
+        plt.plot(range(1, len(valid_accs) + 1), valid_accs, 'r-', label='valid')
+        plt.title("Training and Validation accuracy over time")
+        plt.xlabel("epochs")
+        plt.ylabel("Accuracy")
+        plt.savefig("%s_accuracy.png" % args.model_prefix)
+        plt.close()
+
+        best_valid_acc_idx = np.argmax(valid_accs)
+        logger.info("best valid acc: %g achieved at epoch %d" %
+                    (valid_accs[best_valid_acc_idx], best_valid_acc_idx))
+        logger.info("training acc at this epoch: %g" % train_accs[best_valid_acc_idx])
+
+    logger.info("done.")
+
+    #######################
     # Start Testing
     #######################
     start_time = time.time()
@@ -754,13 +823,14 @@ def main():
     dqn_target.eval()
 
     # predict rewards: use cross-entropy loss
-    if old_args.predict_rewards:
-        loss, accuracy = one_epoch(dqn, ce, test_loader)
+    if old_params['predict_rewards']:
+        loss, accuracy = one_epoch(dqn, ce, test_loader, old_params['mode'])
+        # report test accuracy of r-ranker
         logger.info("Test loss: %g - test accuracy:\n%s" % (loss, json.dumps(accuracy, indent=2)))
 
     # predict q values: use huber loss (or MSE)
     else:
-        loss, _ = one_episode(dqn, huber, test_loader)
+        loss, _ = one_episode(dqn, huber, test_loader, old_params['mode'])
         logger.info("Test loss: %g" % loss)
 
 
@@ -768,18 +838,25 @@ def main():
         time.time() - start_time
     ))
 
-    logger.info("Plotting timings...")
-    with open("%s_timings.json" % args.model_prefix, 'rb') as f:
-        timings = json.load(f)
 
-    # TODO: plot train & validation losses
-    # valid = red  -- or - -
-    # train = blue -- or - -
+    # TODO: compute q-ranker accuracy & report it on test set
+    #for article, entries in test_conv.json.iteritems():
+    #    for i, entry in enumerate(entries):
+    '''
+    'chat_id': option['chat_unique_id'],
+    'state': copy.deepcopy(context),
+    'action': {
+        'candidate': candidate,
+        'custom_enc': custom_encoding
+    },
+    'reward': 1 if (choice_idx == option_idx) else 0,
+    'next_state': next_state,
+    'next_actions': next_actions,
+    'quality': conv_quality
+    '''
 
-    # timings['train_losses']
-    # timings['train_accurs']
-    # timings['valid_losses']
-    # timings['valid_accurs']
+    # TODO: score test candidates
+
     logger.info("done.")
 
 
