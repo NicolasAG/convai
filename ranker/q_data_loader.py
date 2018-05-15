@@ -325,4 +325,4 @@ def get_loader(json, vocab, q_net_mode, rescale_rewards, batch_size, shuffle, nu
                                   shuffle=shuffle,
                                   num_workers=num_workers,
                                   collate_fn=collate_fn)
-    return data_loader, conv.class_counter
+    return data_loader, conv

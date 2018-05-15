@@ -56,7 +56,7 @@ def get_data(data_f, vocab_f):
 
     logger.info("")
     logger.info("Get data loaders...")
-    train_loader, train_class_counter = get_loader(
+    train_loader, train_conv = get_loader(
         json=train_data, vocab=vocab, q_net_mode=params['mode'], rescale_rewards=not params['predict_rewards'],
         batch_size=params['batch_size'], shuffle=True, num_workers=0
     )
@@ -68,6 +68,7 @@ def get_data(data_f, vocab_f):
         json=test_data, vocab=vocab, q_net_mode=params['mode'], rescale_rewards=not params['predict_rewards'],
         batch_size=params['batch_size'], shuffle=False, num_workers=0
     )
+    train_class_counter = train_conv.class_counter
     logger.info("done.")
 
     logger.info("")
