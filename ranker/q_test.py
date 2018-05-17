@@ -1,7 +1,8 @@
 import torch
+import torch.nn.functional as F
 from torch.autograd import Variable
 from q_networks import to_var, to_tensor, QNetwork, DeepQNetwork
-from q_data_loader import get_loader
+from q_data_loader import get_loader, collate_fn
 from extract_amt_for_q_ranker import Vocabulary
 from embedding_metrics import w2v
 from q_experiments import *
@@ -37,15 +38,14 @@ def get_raw_data(old_args=None):
     # Load default dataset
     else:
         # oversampled --> useless for test
-        #data_f = "./data/q_ranker_amt_data++_1525301962.86.json"
-        #vocab_f = "./data/q_ranker_amt_vocab_1525301962.86.pkl"
+        #data_f = "./data/q_ranker_amt_data++_1525301962.86.pkl"
         # regular
-        data_f = "./data/q_ranker_amt_data_1524939554.0.json"
+        data_f = "./data/q_ranker_amt_data_1524939554.0.pkl"
 
     logger.info("")
     logger.info("Loading data...")
-    with open(data_f, 'rb') as f:
-        raw_data = json.load(f)
+    with open(data_f.replace('.json', '.pkl'), 'rb') as f:
+        raw_data = pkl.load(f)
 
     return raw_data
 
@@ -698,7 +698,8 @@ def main():
 
     # TODO: next line is super long and takes a lot of memory.
     #  remove when testing more than one model
-    raw_data = get_raw_data(old_args=old_params)
+    #raw_data = get_raw_data(old_args=old_params)
+    raw_data = get_raw_data()
 
     test_conv, test_loader, vocab, embeddings, custom_hs = get_data(old_params, raw_data)
 
@@ -760,9 +761,10 @@ def main():
     mse = torch.nn.MSELoss()
     ce = torch.nn.CrossEntropyLoss()  # used for classification of immediate reward
 
-    #######################
-    # Plot train & valid stats
-    #######################
+    ############################
+    # Plot train & valid stats #
+    ############################
+    logger.info("")
     logger.info("Plotting timings...")
     with open("%s_timings.json" % args.model_prefix, 'rb') as f:
         timings = json.load(f)
@@ -787,10 +789,11 @@ def main():
     plt.title("Training and Validation loss over time")
     plt.xlabel("epochs")
     plt.ylabel("CrossEntropy Loss" if predict_r else "Huber Loss")
+    plt.legend(loc='best')
     plt.savefig("%s_losses.png" % args.model_prefix)
     plt.close()
 
-    best_valid_loss_idx = np.argmax(valid_losses)
+    best_valid_loss_idx = np.argmin(valid_losses)
     logger.info("best valid loss: %g achieved at epoch %d" %
                 (valid_losses[best_valid_loss_idx], best_valid_loss_idx))
     logger.info("training loss at this epoch: %g" % train_losses[best_valid_loss_idx])
@@ -801,6 +804,7 @@ def main():
         plt.title("Training and Validation accuracy over time")
         plt.xlabel("epochs")
         plt.ylabel("Accuracy")
+        plt.legend(loc='best')
         plt.savefig("%s_accuracy.png" % args.model_prefix)
         plt.close()
 
@@ -816,7 +820,7 @@ def main():
     #######################
     start_time = time.time()
     logger.info("")
-    logger.info("Testing model...")
+    logger.info("Testing model in batches...")
 
     # put in inference mode (Dropout OFF)
     dqn.eval()
@@ -839,26 +843,316 @@ def main():
     ))
 
 
-    # TODO: compute q-ranker accuracy & report it on test set
-    #for article, entries in test_conv.json.iteritems():
-    #    for i, entry in enumerate(entries):
-    '''
-    'chat_id': option['chat_unique_id'],
-    'state': copy.deepcopy(context),
-    'action': {
-        'candidate': candidate,
-        'custom_enc': custom_encoding
-    },
-    'reward': 1 if (choice_idx == option_idx) else 0,
-    'next_state': next_state,
-    'next_actions': next_actions,
-    'quality': conv_quality
-    '''
+    #####################################################################
+    # PREDICT VALUES FOR EACH TEST EXAMPLE & GROUP BY CONV_ID + CONTEXT #
+    #####################################################################
+    start_time = time.time()
+    logger.info("")
+    logger.info("Testing model one example at a time & generating report.json")
 
-    # TODO: score test candidates
+    chats = {}  # map from chat ID to list of (context - candidate) pairs
+    '''
+    chat_id : [
+        {
+            'context'    : [list of strings],
+            'candidates' : [list of strings],
+            'rewards'    : [list of ints],
+            'predictions': [list of floats]
+        },
+        {
+            ...
+        },
+        ...
+    ],
+    chat_id : [
+        ...
+    ],
+    '''
+    ###
+    # BUILD REPORT: regroup each convo+context and present their candidate, score, predictions
+    ###
+    for item, data in enumerate(test_conv):
+        article, idx = test_conv.ids[item]
+        entry = test_conv.json_data[article][idx]
+        '''
+        'chat_id': <string>,
+        'state': <list of strings> ie: context,
+        'action': {
+            'candidate': <string>  ie: candidate,
+            'custom_enc': <list of float>
+        },
+        'reward': <int {0,1}>,
+        'next_state': <list of strings || None> ie: next_context,
+        'next_actions': <list of actions || None> ie: next possible actions
+        'quality': <int {1,2,3,4,5}>,
+        '''
+        idx = -1
+        # if chat already exists,
+        if entry['chat_id'] in chats:
+            for i, c in enumerate(chats[entry['chat_id']]):
+                # if context already exists, add this candidate response
+                if c['context'] == entry['state']:
+                    c['candidates'].append(entry['action']['candidate'])
+                    c['rewards'].append(entry['reward'])
+                    idx = i
+                    break
+            # if context doesn't exists, add it as a new one with this candidate response
+            if idx == -1:
+                chats[entry['chat_id']].append({
+                    'context': entry['state'],
+                    'candidates': [entry['action']['candidate']],
+                    'rewards': [entry['reward']]
+                })
+        # if chat doesn't exists, add a new one
+        else:
+            chats[entry['chat_id']] = [{
+                'context': entry['state'],
+                'candidates': [entry['action']['candidate']],
+                'rewards': [entry['reward']]
+            }]
+            idx = 0  # it's the first and last chat so idx=0 or idx=-1 are both ok
 
+        #logger.info("item: %s" % item)
+        #logger.info("")
+        articles, n_sents, l_sents, \
+            contexts, n_turns, l_turns, \
+            candidates, n_tokens, \
+            custom_encs, rewards, \
+            next_states, n_next_turns, l_next_turns, \
+            next_candidates, n_next_candidates, l_next_candidates, \
+            next_custom_encs = data
+        #logger.info("articles: %s" % articles)
+        #logger.info("n_sents: %s" % n_sents)
+        #logger.info("l_sents: %s" % l_sents)
+        #logger.info("contexts: %s" % contexts)
+        #logger.info("n_turns: %s" % n_turns)
+        #logger.info("l_turns: %s" % l_turns)
+        #logger.info("candidates: %s" % candidates)
+        #logger.info("n_tokens: %s" % n_tokens)
+        #logger.info("custom_encs: %s" % custom_encs)
+        #logger.info("rewards: %s" % rewards)
+        #logger.info("next_states: %s" % next_states)
+        #logger.info("n_next_turns: %s" % n_next_turns)
+        #logger.info("l_next_turns: %s" % l_next_turns)
+        #logger.info("next_candidates: %s" % next_candidates)
+        #logger.info("n_next_candidates: %s" % n_next_candidates)
+        #logger.info("l_next_candidates: %s" % l_next_candidates)
+        #logger.info("next_custom_encs: %s" % next_custom_encs)
+
+        # batch size is 1 so need to encapsulate data in tuple
+        data = ([articles, n_sents, l_sents,
+                 contexts, n_turns, l_turns,
+                 candidates, n_tokens,
+                 custom_encs, rewards,
+                 next_states, n_next_turns, l_next_turns,
+                 next_candidates, n_next_candidates, l_next_candidates,
+                 next_custom_encs
+        ],)
+
+        # put data in batches & create masks
+        data = collate_fn(data)  # batch size is 1!!
+
+        # Classification of candidate responses:
+        if old_params['predict_rewards']:
+            # with a simple MLP
+            if old_params['mode'] == 'mlp':
+                _, _, _, custom_encs, rewards, _, _ = data
+                # articles : tuple of list of sentences. each sentence is a Tensor. ~(1, n_sents, n_tokens)
+                # contexts : tuple of list of turns. each turn is a Tensor. ~(1, n_turns, n_tokens)
+                # candidates : tuple of Tensors. ~(1, n_tokens)
+                # custom_encs : Tensor ~(1, enc)
+                # rewards : Tensor ~(1,)
+
+                # reward not scaled for classification
+                assert rewards[0] == entry['reward']
+
+                # Convert Tensors to Variables
+                custom_encs = to_var(custom_encs)  # ~(1, enc)
+                # Forward pass: predict rewards
+                predictions = dqn(custom_encs)  # ~(1, 2)
+                predictions = F.softmax(predictions[0], dim=0)
+
+                try:
+                    chats[entry['chat_id']][idx]['predictions'].append(predictions[1])
+                except KeyError:
+                    chats[entry['chat_id']][idx]['predictions'] = [predictions[1]]
+
+            # with RNNs and MLP
+            else:
+                _, articles_tensors, n_sents, l_sents,\
+                    _, contexts_tensors, n_turns, l_turns,\
+                    candidates_tensors, n_tokens, custom_encs, rewards,\
+                    _, _, _, _, _, _, _, _ = data
+                # articles : tuple of list of sentences. each sentence is a Tensor. ~(1, n_sents, n_tokens)
+                # articles_tensor : Tensor ~(1 x n_sents, max_len)
+                # n_sents : Tensor ~(1)
+                # l_sents : Tensor ~(1 x n_sents)
+                # contexts : tuple of list of turns. each turn is a Tensor. ~(1, n_turns, n_tokens)
+                # contexts_tensor : Tensor ~(1 x n_turns, max_len)
+                # n_turns : Tensor ~(1)
+                # l_turns : Tensir ~(1 x n_turns)
+                # candidates_tensor : Tensor ~(1, max_len)
+                # n_tokens : Tensor ~(1)
+                # custom_encs : Tensor ~(1, enc)
+                # rewards : Tensor ~(1,)
+
+                # Convert Tensors to Variables
+                articles_tensors = to_var(articles_tensors)  # ~(1 x n_sents, max_len)
+                n_sents = to_var(n_sents)  # ~(1)
+                l_sents = to_var(l_sents)  # ~(1 x n_sents)
+                contexts_tensors = to_var(contexts_tensors)  # ~(1 x n_turns, max_len)
+                n_turns = to_var(n_turns)  # ~(1)
+                l_turns = to_var(l_turns)  # ~(1 x n_turns)
+                candidates_tensors = to_var(candidates_tensors)  # ~(1, max_len)
+                n_tokens = to_var(n_tokens)  # ~(1)
+                custom_encs = to_var(custom_encs)  # ~(1, enc)
+
+                # reward not scaled for classification
+                assert rewards[0] == entry['reward']
+
+                # Forward pass: predict q-values
+                predictions = dqn(
+                    articles_tensors, n_sents, l_sents,
+                    contexts_tensors, n_turns, l_turns,
+                    candidates_tensors, n_tokens,
+                    custom_encs
+                )  # ~ (1, 2)
+                predictions = F.softmax(predictions[0], dim=0)
+
+                print predictions
+
+                try:
+                    chats[entry['chat_id']][idx]['predictions'].append(predictions[1])
+                except KeyError:
+                    chats[entry['chat_id']][idx]['predictions'] = [predictions[1]]
+
+        # Prediction of Q-value
+        else:
+            # with a simple MLP
+            if old_params['mode'] == 'mlp':
+                _, _, _, custom_encs, rewards, _, _ = data
+                # articles : tuple of list of sentences. each sentence is a Tensor. ~(1, n_sents, n_tokens)
+                # contexts : tuple of list of turns. each turn is a Tensor. ~(1, n_turns, n_tokens)
+                # candidates : tuple of Tensors. ~(1, n_tokens)
+                # custom_encs : Tensor ~(1, enc)
+                # rewards : Tensor ~(1,)
+                # non_final_mask : boolean list ~(1)
+                # non_final_next_custom_encs : tuple of list of Tensors: ~(1-, n_actions, enc)
+
+                # reward is scaled for q-prediction
+                assert rewards[0] == test_conv._rescale_rewards(entry['reward'], entry['quality'])
+
+                # Convert Tensors to Variables
+                custom_encs = to_var(custom_encs)  # ~(1, enc)
+                # Forward pass: predict current state-action value
+                q_values = dqn(custom_encs)  # ~(1)
+
+                print q_values[0]
+
+                try:
+                    chats[entry['chat_id']][idx]['prediction'].append(q_values[0])
+                except KeyError:
+                    chats[entry['chat_id']][idx]['prediction'] = [q_values[0]]
+
+            # with RNNs and MLP
+            else:
+                _, articles_tensors, n_sents, l_sents,\
+                    _, contexts_tensors, n_turns, l_turns,\
+                    candidates_tensors, n_tokens,\
+                    custom_encs, rewards,\
+                    _, _, _, _, _, _, _, _ = data
+                # articles : tuple of list of sentences. each sentence is a Tensor. ~(1, n_sents, n_tokens)
+                # articles_tensor : Tensor ~(1 x n_sents, max_len)
+                # n_sents : Tensor ~(1)
+                # l_sents : Tensor ~(1 x n_sents)
+                # contexts : tuple of list of turns. each turn is a Tensor. ~(1, n_turns, n_tokens)
+                # contexts_tensor : Tensor ~(1 x n_turns, max_len)
+                # n_turns : Tensor ~(1)
+                # l_turns : Tensir ~(1 x n_turns)
+                # candidates_tensor : Tensor ~(1, max_len)
+                # n_tokens : Tensor ~(1)
+                # custom_encs : Tensor ~(1, enc)
+                # rewards : Tensor ~(1,)
+                # non_final_mask : boolean list ~(1)
+                # ...
+                # non_final_next_custom_encs : tuple of list of Tensors: ~(1-, n_actions, enc)
+
+                # reward is scaled for q-prediction
+                assert rewards[0] == test_conv._rescale_rewards(entry['reward'], entry['quality'])
+
+                # Convert Tensors to Variables
+                # state:
+                articles_tensors_t = to_var(articles_tensors)  # ~(1 x n_sentences, max_len)
+                n_sents_t = to_var(n_sents)  # ~(1)
+                l_sents_t = to_var(l_sents)  # ~(1 x n_sentences)
+                contexts_tensors_t = to_var(contexts_tensors)  # ~(1 x n_turns, max_len)
+                n_turns_t = to_var(n_turns)  # ~(1)
+                l_turns_t = to_var(l_turns)  # ~(1 x n_turns)
+                # action:
+                candidates_tensors_t = to_var(candidates_tensors)  # ~(1, max_len)
+                n_tokens_t = to_var(n_tokens)  # ~(1)
+                custom_encs_t = to_var(custom_encs)  # ~(1, enc)
+
+                # Forward pass: predict current state-action value
+                q_values = dqn(
+                    articles_tensors_t, n_sents_t, l_sents_t,
+                    contexts_tensors_t, n_turns_t, l_turns_t,
+                    candidates_tensors_t, n_tokens_t,
+                    custom_encs_t
+                )  # ~(1,)
+
+                print q_values[0]
+
+                try:
+                    chats[entry['chat_id']][idx]['prediction'].append(q_values[0])
+                except KeyError:
+                    chats[entry['chat_id']][idx]['prediction'] = [q_values[0]]
+
+    logger.info("Finished 1-by-1 testing. Time elapsed: %g seconds" % (
+        time.time() - start_time
+    ))
+
+    ###
+    # Measuring accuracy
+    ###
+    logger.info("")
+    logger.info("Measuring accuracy at predicting best candidate...")
+    correct = 0.0
+    total = 0.0
+
+    for chat_id, contexts in chats.iteritems():
+        for c in contexts:
+            '''
+            {
+                'context'    : [list of strings],
+                'candidates' : [list of strings],
+                'rewards'    : [list of ints],
+                'predictions': [list of floats]
+            },
+            '''
+            # sum of all candidate rewards is at most 1
+            assert np.sum(c['rewards']) <= 1
+
+            if np.argmax(c['rewards']) == np.argmax(c['predictions']):
+                '''
+                TODO: solve this!!!
+                RuntimeError: bool value of Variable objects containing non-empty torch.cuda.ByteTensor is ambiguous
+                '''
+                correct += 1
+            total += 1
+
+    logger.info("Predicted like human behavior: %d / %d = %g" % (
+        correct, total, correct / total
+    ))
+
+    ###
+    # Saving report
+    ###
+    logger.info("")
+    logger.info("Saving report...")
+    with open("%s_report.json" % args.model_prefix, 'wb') as f:
+        json.dump(chats, f, indent=2)
     logger.info("done.")
-
 
 
 def str2bool(v):
@@ -883,6 +1177,9 @@ if __name__ == '__main__':
 
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % args.gpu
+
+    # To handle multiple workers on data loader!!
+    torch.multiprocessing.set_sharing_strategy('file_system')
 
     main()
 
