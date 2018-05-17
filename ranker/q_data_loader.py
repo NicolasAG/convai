@@ -126,20 +126,20 @@ class ConversationDataset(data.Dataset):
         )
         context, n_turn, l_turn = self.convert_big_string_to_idx(
             context,
-            start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
-            end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
+            start_tag='<sot>' if self.mode == 'rnn+rnn+mlp' else '<sos>',
+            end_tag='<eot>' if self.mode == 'rnn+rnn+mlp' else '<eos>'
         )
         candidate = self.string_to_idx(
             candidate,
-            start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
-            end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
+            start_tag='<sot>' if self.mode == 'rnn+rnn+mlp' else '<sos>',
+            end_tag='<eot>' if self.mode == 'rnn+rnn+mlp' else '<eos>'
         )
 
         if next_state:
             next_state, n_next_turn, l_next_turn = self.convert_big_string_to_idx(
                 next_state,
-                start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
-                end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
+                start_tag='<sot>' if self.mode == 'rnn+rnn+mlp' else '<sos>',
+                end_tag='<eot>' if self.mode == 'rnn+rnn+mlp' else '<eos>'
             )  # list of Tensor. Each Tensor is an utterance
         else:
             next_state = None
@@ -149,8 +149,8 @@ class ConversationDataset(data.Dataset):
         if next_candidates:
             next_candidates, n_next_candidate, l_next_candidate = self.convert_big_string_to_idx(
                 next_candidates,
-                start_tag='<sos>' if self.mode == 'rnn+mlp' else '<sot>',
-                end_tag='<eos>' if self.mode == 'rnn+mlp' else '<eot>'
+                start_tag='<sot>' if self.mode == 'rnn+rnn+mlp' else '<sos>',
+                end_tag='<eot>' if self.mode == 'rnn+rnn+mlp' else '<eos>'
             )  # list of Tensors. Each Tensor is a candidate
         else:
             next_candidates = None
