@@ -35,8 +35,8 @@ def get_data(data_f, vocab_f):
     """
     logger.info("")
     logger.info("Loading data...")
-    with open(data_f, 'rb') as f:
-        raw_data = json.load(f)
+    with open(data_f.replace('.json', '.pkl'), 'rb') as f:
+        raw_data = pkl.load(f)
     train_data = raw_data['train'][0]
     train_size = raw_data['train'][1]
     valid_data = raw_data['valid'][0]
