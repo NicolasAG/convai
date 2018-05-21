@@ -22,6 +22,7 @@ def to_dict(args):
         'update_frequence': args.update_frequence,  # update target DQN
         # RNN params:
         'rnn_gate': args.rnn_gate,  # ['rnn', 'gru', 'lstm']
+        'use_custom_encs': args.use_custom_encs,
 
         'sentence_hs': args.sentence_hs,
         'sentence_bidir': args.sentence_bidir,
@@ -74,6 +75,7 @@ def default_params(mode, r):
         'update_frequence': 2000,  # update target DQN
         # RNN params:
         'rnn_gate': 'gru',  # ['rnn', 'gru', 'lstm']
+        'use_custom_encs': True,
 
         'sentence_hs': 300,
         'sentence_bidir': False,

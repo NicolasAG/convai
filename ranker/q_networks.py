@@ -511,7 +511,10 @@ class DeepQNetwork(torch.nn.Module):
 
             # Dueling Q-network: advantage prediction
             # input to advantage prediction : (state, candidate, custom_enc)
-            advantage = torch.cat((state_enc, candidate_enc, custom_enc), 1)  # ~(bs, hs)
+            if custom_enc:
+                advantage = torch.cat((state_enc, candidate_enc, custom_enc), 1)  # ~(bs, hs)
+            else:
+                advantage = torch.cat((state_enc, candidate_enc), 1)  # ~(bs, hs)
             advantage = F.prelu(self.fc_adv_1(advantage), self.prelu_param)
             advantage = F.prelu(self.fc_adv_2(advantage), self.prelu_param)
 
@@ -527,7 +530,10 @@ class DeepQNetwork(torch.nn.Module):
 
             # Dueling Q-network: advantage prediction
             # input to advantage prediction : (state, candidate, custom_enc)
-            advantage = torch.cat((state_enc, candidate_enc, custom_enc), 1)  # ~(bs, hs)
+            if custom_enc:
+                advantage = torch.cat((state_enc, candidate_enc, custom_enc), 1)  # ~(bs, hs)
+            else:
+                advantage = torch.cat((state_enc, candidate_enc), 1)  # ~(bs, hs)
             advantage = ACTIVATIONS[self.mlp_activation](self.fc_adv_1(advantage))
             advantage = ACTIVATIONS[self.mlp_activation](self.fc_adv_2(advantage))
 

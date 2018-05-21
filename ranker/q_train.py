@@ -34,7 +34,7 @@ def get_data(data_f, vocab_f):
                 testing examples, embeddings
     """
     logger.info("")
-    logger.info("Loading data...")
+    logger.info("Loading data from %s..." % data_f)
     with open(data_f.replace('.json', '.pkl'), 'rb') as f:
         raw_data = pkl.load(f)
     train_data = raw_data['train'][0]
@@ -294,6 +294,10 @@ def _one_rnn_epoch(dqn, loss, data_loader, optimizer, test):
         custom_encs = to_var(custom_encs)  # ~(bs, enc)
         rewards = to_var(rewards.long())  # ~(bs)
 
+        # custom encoding dimension
+        if not params['use_custom_encs']:
+            custom_encs = None
+
         # Forward pass: predict q-values
         predictions = dqn(
             articles_tensors, n_sents, l_sents,
@@ -551,6 +555,10 @@ def _one_rnn_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
         # reward:
         rewards_t = to_var(rewards)  # ~(bs)
 
+        # custom encoding dimension
+        if not params['use_custom_encs']:
+            custom_encs_t = None
+
         # Forward pass: predict current state-action value
         q_values = dqn(
             articles_tensors_t, n_sents_t, l_sents_t,
@@ -694,11 +702,14 @@ def _one_rnn_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
                 past_n_actions += tmp_n_actions
 
                 ### custom enc
-                # grab candidates custom encodings
-                tmp_custom_encs = to_var(
-                    to_tensor(non_final_next_custom_encs[idx]),
-                    volatile=True
-                )  # ~(n_actions, enc)
+                if params['use_custom_encs']:
+                    # grab candidates custom encodings
+                    tmp_custom_encs = to_var(
+                        to_tensor(non_final_next_custom_encs[idx]),
+                        volatile=True
+                    )  # ~(n_actions, enc)
+                else:
+                    tmp_custom_encs = None
 
                 tmp_q_val = dqn(
                     tmp_articles_tensors, tmp_n_sents, tmp_l_sents,
@@ -710,15 +721,25 @@ def _one_rnn_episode(itt, dqn, target_dqn, huber, data_loader, optimizer, test):
                 # append custom_enc of the max action according to current dqn
                 max_actions['candidate'].append(tmp_candidates_tensors.data[max_idx].view(-1))
                 max_actions['n_tokens'].append(tmp_n_tokens.data[max_idx])
-                max_actions['custom_enc'].append(tmp_custom_encs.data[max_idx].view(-1))
+                if params['use_custom_encs']:
+                    max_actions['custom_enc'].append(tmp_custom_encs.data[max_idx].view(-1))
 
-            next_q_values = target_dqn(
-                articles_tensors_tp1, n_sents_tp1, l_sents_tp1,
-                contexts_tensors_tp1, n_turns_tp1, l_turns_tp1,
-                to_var(torch.stack(max_actions['candidate']), volatile=True),
-                to_var(torch.cat(max_actions['n_tokens']), volatile=True),
-                to_var(torch.stack(max_actions['custom_enc']), volatile=True)
-            )  # ~(bs)
+            if params['use_custom_encs']:
+                next_q_values = target_dqn(
+                    articles_tensors_tp1, n_sents_tp1, l_sents_tp1,
+                    contexts_tensors_tp1, n_turns_tp1, l_turns_tp1,
+                    to_var(torch.stack(max_actions['candidate']), volatile=True),
+                    to_var(torch.cat(max_actions['n_tokens']), volatile=True),
+                    to_var(torch.stack(max_actions['custom_enc']), volatile=True)
+                )  # ~(bs)
+            else:
+                next_q_values = target_dqn(
+                    articles_tensors_tp1, n_sents_tp1, l_sents_tp1,
+                    contexts_tensors_tp1, n_turns_tp1, l_turns_tp1,
+                    to_var(torch.stack(max_actions['candidate']), volatile=True),
+                    to_var(torch.cat(max_actions['n_tokens']), volatile=True),
+                    None
+                )  # ~(bs)
             next_state_action_values = to_var(torch.zeros(non_final_mask.size()))
             next_state_action_values[non_final_mask] = next_q_values
 
@@ -844,6 +865,9 @@ def main():
             out = 2
         else:
             out = 1
+        # custom encoding dimension
+        if not params['use_custom_encs']:
+            custom_hs = 0
         # dqn
         dqn = DeepQNetwork(
             params['mode'], embeddings, params['fix_embeddings'],
@@ -1101,6 +1125,8 @@ if __name__ == '__main__':
     # network architecture:
     parser.add_argument("--rnn_gate", choices=['rnn', 'gru', 'lstm'],
                         default="gru", help="RNN gate type.")
+    parser.add_argument("--use_custom_encs", type=str2bool, default='yes',
+                        help="add custom encodings to action space")
     ## sentence rnn
     parser.add_argument("--sentence_hs", type=int, default=300,
                         help="encodding size of each sentence")
