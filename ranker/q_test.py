@@ -43,7 +43,7 @@ def get_raw_data(old_args=None):
         data_f = "./data/q_ranker_amt_data_1524939554.0.pkl"
 
     logger.info("")
-    logger.info("Loading data...")
+    logger.info("Loading data from %s..." % data_f)
     with open(data_f.replace('.json', '.pkl'), 'rb') as f:
         raw_data = pkl.load(f)
 
@@ -311,7 +311,7 @@ def _one_rnn_epoch(dqn, loss, data_loader):
     return epoch_loss, epoch_accuracy, nb_batches
 
 
-def one_episode(dqn, huber, data_loader, mode):
+def one_episode(dqn, dqn_target, gamma, huber, data_loader, mode):
     """
     Performs one episode over the specified data
     :param dqn: q-network to perform forward pass
@@ -320,15 +320,15 @@ def one_episode(dqn, huber, data_loader, mode):
     :return: average huber loss, number of batch seen
     """
     if mode == 'mlp':
-        epoch_huber_loss, nb_batches = _one_mlp_episode(dqn, huber, data_loader)
+        epoch_huber_loss, nb_batches = _one_mlp_episode(dqn, dqn_target, gamma, huber, data_loader)
     else:
-        epoch_huber_loss, nb_batches = _one_rnn_episode(dqn, huber, data_loader)
+        epoch_huber_loss, nb_batches = _one_rnn_episode(dqn, dqn_target, gamma, huber, data_loader)
 
     epoch_huber_loss /= nb_batches
 
     return epoch_huber_loss, nb_batches
 
-def _one_mlp_episode(dqn, huber, data_loader):
+def _one_mlp_episode(dqn, dqn_target, gamma, huber, data_loader):
     """
     Performs one epoch over the specified data
     :param dqn: q-network to perform forward pass
@@ -379,7 +379,7 @@ def _one_mlp_episode(dqn, huber, data_loader):
                 max_actions.append(actions.data[max_idx].view(-1))
 
             next_state_action_values = to_var(torch.zeros(non_final_mask.size()))
-            next_state_action_values[non_final_mask] = target_dqn(
+            next_state_action_values[non_final_mask] = dqn_target(
                 to_var(torch.stack(max_actions), volatile=True)
             )  # ~(bs-)
             # Now, we don't want to mess up the loss with a volatile flag, so let's
@@ -387,7 +387,7 @@ def _one_mlp_episode(dqn, huber, data_loader):
             # requires_grad=False
             next_state_action_values.volatile = False
             # Compute the expected Q values
-            expected_state_action_values = (next_state_action_values * args.gamma) + rewards
+            expected_state_action_values = (next_state_action_values * gamma) + rewards
 
         # Compute loss
         huber_loss = huber(q_values, expected_state_action_values)
@@ -414,7 +414,7 @@ def _one_mlp_episode(dqn, huber, data_loader):
 
     return epoch_huber_loss, nb_batches
 
-def _one_rnn_episode(dqn, huber, data_loader):
+def _one_rnn_episode(dqn, dqn_target, gamma, huber, data_loader):
     """
     Performs one epoch over the specified data
     :param dqn: q-network to perform forward pass
@@ -627,7 +627,7 @@ def _one_rnn_episode(dqn, huber, data_loader):
                 max_actions['n_tokens'].append(tmp_n_tokens.data[max_idx])
                 max_actions['custom_enc'].append(tmp_custom_encs.data[max_idx].view(-1))
 
-            next_q_values = target_dqn(
+            next_q_values = dqn_target(
                 articles_tensors_tp1, n_sents_tp1, l_sents_tp1,
                 contexts_tensors_tp1, n_turns_tp1, l_turns_tp1,
                 to_var(torch.stack(max_actions['candidate']), volatile=True),
@@ -655,7 +655,7 @@ def _one_rnn_episode(dqn, huber, data_loader):
             # requires_grad=False
             next_state_action_values.volatile = False
             # Compute the expected Q values
-            expected_state_action_values = (next_state_action_values * args.gamma) + rewards_t
+            expected_state_action_values = (next_state_action_values * gamma) + rewards_t
 
         # Compute loss
         huber_loss = huber(q_values, expected_state_action_values)
@@ -695,6 +695,8 @@ def main():
     else:
         with open('%s_params.json' % args.model_prefix, 'rb') as f:
             old_params = json.load(f)
+
+    logger.info("old parameters: %s" % old_params)
 
     # TODO: next line is super long and takes a lot of memory.
     #  remove when testing more than one model
@@ -755,6 +757,7 @@ def main():
         logger.info("")
         logger.info("cuda available! Moving variables to cuda %d..." % args.gpu)
         dqn.cuda()
+        dqn_target.cuda()
 
     # Define losses
     huber = torch.nn.SmoothL1Loss()  # MSE used in -1 < . < 1 ; Absolute used elsewhere
@@ -774,21 +777,19 @@ def main():
     valid_losses = timings['valid_losses']
     valid_accs = [e['acc'] for e in timings['valid_accurs']]
 
-    if len(train_accs) > 0 and len(valid_accs) > 0:
+    if old_params['predict_rewards']:
         # Predicting immediate Reward
         assert len(train_losses) == len(valid_losses) == len(train_accs) == len(valid_accs)
-        predict_r = True
     else:
         # Predicting Q value
         assert len(train_losses) == len(valid_losses)
         assert len(train_accs) == len(valid_accs) == 0
-        predict_r = False
 
     plt.plot(range(1, len(train_losses) + 1), train_losses, 'b-', label='train')
     plt.plot(range(1, len(valid_losses) + 1), valid_losses, 'r-', label='valid')
     plt.title("Training and Validation loss over time")
     plt.xlabel("epochs")
-    plt.ylabel("CrossEntropy Loss" if predict_r else "Huber Loss")
+    plt.ylabel("CrossEntropy Loss" if old_params['predict_rewards'] else "Huber Loss")
     plt.legend(loc='best')
     plt.savefig("%s_losses.png" % args.model_prefix)
     plt.close()
@@ -798,7 +799,7 @@ def main():
                 (valid_losses[best_valid_loss_idx], best_valid_loss_idx))
     logger.info("training loss at this epoch: %g" % train_losses[best_valid_loss_idx])
 
-    if predict_r:
+    if old_params['predict_rewards']:
         plt.plot(range(1, len(train_accs) + 1), train_accs, 'b-', label='train')
         plt.plot(range(1, len(valid_accs) + 1), valid_accs, 'r-', label='valid')
         plt.title("Training and Validation accuracy over time")
@@ -834,7 +835,8 @@ def main():
 
     # predict q values: use huber loss (or MSE)
     else:
-        loss, _ = one_episode(dqn, huber, test_loader, old_params['mode'])
+        loss, _ = one_episode(dqn, dqn_target, old_params['gamma'],
+                              huber, test_loader, old_params['mode'])
         logger.info("Test loss: %g" % loss)
 
 
@@ -950,7 +952,9 @@ def main():
         ],)
 
         # put data in batches & create masks
+        logger.setLevel(logging.WARNING)  # ignore warning of no next state since batch size is 1 anyway
         data = collate_fn(data)  # batch size is 1!!
+        logger.setLevel(logging.DEBUG)    # reset logger level
 
         # Classification of candidate responses:
         if old_params['predict_rewards']:
@@ -973,9 +977,9 @@ def main():
                 predictions = F.softmax(predictions[0], dim=0)
 
                 try:
-                    chats[entry['chat_id']][idx]['predictions'].append(predictions[1])
+                    chats[entry['chat_id']][idx]['predictions'].append(predictions.data[1])
                 except KeyError:
-                    chats[entry['chat_id']][idx]['predictions'] = [predictions[1]]
+                    chats[entry['chat_id']][idx]['predictions'] = [predictions.data[1]]
 
             # with RNNs and MLP
             else:
@@ -1019,12 +1023,10 @@ def main():
                 )  # ~ (1, 2)
                 predictions = F.softmax(predictions[0], dim=0)
 
-                print predictions
-
                 try:
-                    chats[entry['chat_id']][idx]['predictions'].append(predictions[1])
+                    chats[entry['chat_id']][idx]['predictions'].append(predictions.data[1])
                 except KeyError:
-                    chats[entry['chat_id']][idx]['predictions'] = [predictions[1]]
+                    chats[entry['chat_id']][idx]['predictions'] = [predictions.data[1]]
 
         # Prediction of Q-value
         else:
@@ -1040,19 +1042,18 @@ def main():
                 # non_final_next_custom_encs : tuple of list of Tensors: ~(1-, n_actions, enc)
 
                 # reward is scaled for q-prediction
-                assert rewards[0] == test_conv._rescale_rewards(entry['reward'], entry['quality'])
+                # comparing floats with '==' is not a good idea, use .isclose() instead.
+                assert np.isclose(rewards[0], test_conv._rescale_rewards(entry['reward'], entry['quality']))
 
                 # Convert Tensors to Variables
                 custom_encs = to_var(custom_encs)  # ~(1, enc)
                 # Forward pass: predict current state-action value
                 q_values = dqn(custom_encs)  # ~(1)
 
-                print q_values[0]
-
                 try:
-                    chats[entry['chat_id']][idx]['prediction'].append(q_values[0])
+                    chats[entry['chat_id']][idx]['predictions'].append(q_values.data[0][0])
                 except KeyError:
-                    chats[entry['chat_id']][idx]['prediction'] = [q_values[0]]
+                    chats[entry['chat_id']][idx]['predictions'] = [q_values.data[0][0]]
 
             # with RNNs and MLP
             else:
@@ -1078,7 +1079,8 @@ def main():
                 # non_final_next_custom_encs : tuple of list of Tensors: ~(1-, n_actions, enc)
 
                 # reward is scaled for q-prediction
-                assert rewards[0] == test_conv._rescale_rewards(entry['reward'], entry['quality'])
+                # comparing floats with '==' is not a good idea, use .isclose() instead.
+                assert np.isclose(rewards[0], test_conv._rescale_rewards(entry['reward'], entry['quality']))
 
                 # Convert Tensors to Variables
                 # state:
@@ -1101,12 +1103,10 @@ def main():
                     custom_encs_t
                 )  # ~(1,)
 
-                print q_values[0]
-
                 try:
-                    chats[entry['chat_id']][idx]['prediction'].append(q_values[0])
+                    chats[entry['chat_id']][idx]['predictions'].append(q_values.data[0][0])
                 except KeyError:
-                    chats[entry['chat_id']][idx]['prediction'] = [q_values[0]]
+                    chats[entry['chat_id']][idx]['predictions'] = [q_values.data[0][0]]
 
     logger.info("Finished 1-by-1 testing. Time elapsed: %g seconds" % (
         time.time() - start_time
@@ -1134,10 +1134,6 @@ def main():
             assert np.sum(c['rewards']) <= 1
 
             if np.argmax(c['rewards']) == np.argmax(c['predictions']):
-                '''
-                TODO: solve this!!!
-                RuntimeError: bool value of Variable objects containing non-empty torch.cuda.ByteTensor is ambiguous
-                '''
                 correct += 1
             total += 1
 
@@ -1153,6 +1149,18 @@ def main():
     with open("%s_report.json" % args.model_prefix, 'wb') as f:
         json.dump(chats, f, indent=2)
     logger.info("done.")
+
+
+    ###
+    # TODO
+    ###
+    # analyse report:
+    # - measure recall@1, @2, ..., @5
+    # - plot proportion of #of possible candidate: #of2, #of3, ..., #of9
+    # - measure #of_candidate avg
+    # - plot recall@1 as a function of context length
+    # - plot proportion of context length: #of2, #of3, ..., #of10
+    # - measure context length avg
 
 
 def str2bool(v):
