@@ -1,0 +1,115 @@
+loading word2vec embeddings...
+2018-05-23 17:24:01,971: features: INFO: loading nltk english stop words...
+2018-05-23 17:24:01,978: features: INFO: set([u'all', u'just', u'being', u'over', u'both', u'through', u'yourselves', u'its', u'before', u'o', u'hadn', u'herself', u'll', u'had', u'should', u'to', u'only', u'won', u'under', u'ours', u'has', u'do', u'them', u'his', u'very', u'they', u'not', u'during', u'now', u'him', u'nor', u'd', u'did', u'didn', u'this', u'she', u'each', u'further', u'where', u'few', u'because', u'doing', u'some', u'hasn', u'are', u'our', u'ourselves', u'out', u'what', u'for', u'while', u're', u'does', u'above', u'between', u'mustn', u't', u'be', u'we', u'who', u'were', u'here', u'shouldn', u'hers', u'by', u'on', u'about', u'couldn', u'of', u'against', u's', u'isn', u'or', u'own', u'into', u'yourself', u'down', u'mightn', u'wasn', u'your', u'from', u'her', u'their', u'aren', u'there', u'been', u'whom', u'too', u'wouldn', u'themselves', u'weren', u'was', u'until', u'more', u'himself', u'that', u'but', u'don', u'with', u'than', u'those', u'he', u'me', u'myself', u'ma', u'these', u'up', u'will', u'below', u'ain', u'can', u'theirs', u'my', u'and', u've', u'then', u'is', u'am', u'it', u'doesn', u'an', u'as', u'itself', u'at', u'have', u'in', u'any', u'if', u'again', u'no', u'when', u'same', u'how', u'other', u'which', u'you', u'shan', u'needn', u'haven', u'after', u'most', u'such', u'why', u'a', u'off', u'i', u'm', u'yours', u'so', u'y', u'the', u'having', u'once'])
+2018-05-23 17:24:01,978: features: INFO: 
+2018-05-23 17:24:02,026: extract_amt_for_q_ranker: INFO: using ALL features: ['ArticleLength', 'AverageWordEmbedding_Article', 'AverageWordEmbedding_Candidate', 'AverageWordEmbedding_LastK', 'AverageWordEmbedding_User', 'AverageWordEmbedding_kUser', 'BigramOverlap', 'CandidateLength', 'ConfusionWords', 'DialogActCandidate', 'DialogActLastUser', 'DialogLength', 'EntityOverlap', 'GenericTurns', 'IntensifierWords', 'LastUserLength', 'Negation', 'NonStopWordOverlap', 'ProfanityWords', 'SentimentScoreCandidate', 'SentimentScoreLastUser', 'Similarity_CandidateArticle', 'Similarity_CandidateArticle_noStop', 'Similarity_CandidateKUser', 'Similarity_CandidateKUser_noStop', 'Similarity_CandidateLastK', 'Similarity_CandidateLastK_noStop', 'Similarity_CandidateUser', 'TrigramOverlap', 'WhWords']
+2018-05-23 17:24:02,183: __main__: INFO: 
+2018-05-23 17:24:02,183: __main__: INFO: Namespace(gpu=0, model_prefix='models/q_estimator/DeepR/Deep_R-Network[exp14]os_1526850484.22', verbose=False)
+2018-05-23 17:24:02,183: __main__: INFO: 
+2018-05-23 17:24:02,189: __main__: INFO: old parameters: {u'sentence_hs': 300, u'verbose': False, u'article_bidir': False, u'utterance_hs': 300, u'update_frequence': 2000, u'article_hs': 300, u'epochs': 100000, u'patience': 20, u'mlp_dropout': 0.2, u'context_dropout': 0.2, u'utterance_dropout': 0.2, u'fix_embeddings': False, u'data_f': u'./data/q_ranker_amt_data++_1525301962.86.json', u'experiment': None, u'sentence_bidir': False, u'gpu': 0, u'article_dropout': 0.2, u'optimizer': u'adam', u'learning_rate': 0.001, u'batch_size': 128, u'sentence_dropout': 0.2, u'context_hs': 300, u'predict_rewards': True, u'rnn_gate': u'gru', u'mlp_activation': u'prelu', u'utterance_bidir': False, u'model_name': u'DeepR/Deep_R-Network[exp14]os', u'vocab_f': u'./data/q_ranker_amt_vocab_1525301962.86.pkl', u'mode': u'rnn+mlp', u'debug': False, u'context_bidir': False, u'gamma': 0.99}
+2018-05-23 17:24:02,189: __main__: INFO: 
+2018-05-23 17:24:02,190: __main__: INFO: Loading data from ./data/q_ranker_amt_data_1524939554.0.pkl...
+2018-05-23 17:24:26,525: __main__: INFO: got 7083 test examples
+2018-05-23 17:24:26,525: __main__: INFO: 
+2018-05-23 17:24:26,525: __main__: INFO: Loading vocabulary...
+2018-05-23 17:24:26,560: __main__: INFO: number of unique tokens: 24448
+2018-05-23 17:24:26,560: __main__: INFO: 
+2018-05-23 17:24:26,560: __main__: INFO: Get data loaders...
+2018-05-23 17:24:26,597: __main__: INFO: done.
+2018-05-23 17:24:26,598: __main__: INFO: 
+2018-05-23 17:24:26,598: __main__: INFO: Building word embeddings...
+2018-05-23 17:24:26,698: __main__: INFO: Got 16787/24448 = 0.686641 pretrained embeddings
+2018-05-23 17:24:26,698: __main__: INFO: 
+2018-05-23 17:24:26,698: __main__: INFO: Building Q-Network...
+2018-05-23 17:24:34,389: __main__: INFO: DeepQNetwork(
+(embed): Embedding(24448, 300)
+(sentence_rnn): GRU(300, 300, batch_first=True, dropout=0.2)
+(article_rnn): GRU(300, 300, batch_first=True, dropout=0.2)
+(utterance_rnn): GRU(300, 300, batch_first=True, dropout=0.2)
+(context_rnn): GRU(300, 300, batch_first=True, dropout=0.2)
+(fc_1): Linear(in_features=600, out_features=300, bias=True)
+(fc_2): Linear(in_features=300, out_features=150, bias=True)
+(fc_3): Linear(in_features=150, out_features=150, bias=True)
+(fc_value_1): Linear(in_features=150, out_features=75, bias=True)
+(fc_value_2): Linear(in_features=75, out_features=2, bias=True)
+(fc_adv_1): Linear(in_features=2029, out_features=1014, bias=True)
+(fc_adv_2): Linear(in_features=1014, out_features=507, bias=True)
+(fc_adv_3): Linear(in_features=507, out_features=2, bias=True)
+(dropout): Dropout(p=0.2)
+)
+2018-05-23 17:24:34,390: __main__: INFO: 
+2018-05-23 17:24:34,390: __main__: INFO: cuda available! Moving variables to cuda 0...
+2018-05-23 17:24:34,829: __main__: INFO: 
+2018-05-23 17:24:34,829: __main__: INFO: Plotting timings...
+2018-05-23 17:24:34,948: __main__: INFO: best valid loss: 0.537149 achieved at epoch 0
+2018-05-23 17:24:34,949: __main__: INFO: training loss at this epoch: 0.710861
+2018-05-23 17:24:35,030: __main__: INFO: best valid acc: 0.816022 achieved at epoch 62
+2018-05-23 17:24:35,030: __main__: INFO: training acc at this epoch: 0.996352
+2018-05-23 17:24:35,030: __main__: INFO: done.
+2018-05-23 17:24:35,030: __main__: INFO: 
+2018-05-23 17:24:35,031: __main__: INFO: Testing model in batches...
+2018-05-23 17:24:55,355: __main__: INFO: Test loss: 2.04034 - test accuracy:
+{
+"acc": 0.8098785299003322, 
+"TN": 0.9062888714377396, 
+"FN": 0.7586614470349545, 
+"FP": 0.09371112856226035, 
+"TP": 0.2413385529650456
+}
+2018-05-23 17:24:55,355: __main__: INFO: Finished testing. Time elapsed: 20.3249 seconds
+2018-05-23 17:24:55,355: __main__: INFO: 
+2018-05-23 17:24:55,355: __main__: INFO: Testing model one example at a time & generating report.json
+2018-05-23 17:25:47,774: __main__: INFO: Finished 1-by-1 testing. Time elapsed: 52.419 seconds
+2018-05-23 17:25:47,775: __main__: INFO: 
+2018-05-23 17:25:47,775: __main__: INFO: Saving report...
+2018-05-23 17:25:47,952: __main__: INFO: done.
+2018-05-23 17:25:47,952: __main__: INFO: 
+2018-05-23 17:25:47,952: __main__: INFO: Measuring recall at predicting best candidate...
+2018-05-23 17:25:47,997: __main__: INFO: Predicted like human behavior:
+2018-05-23 17:25:47,997: __main__: INFO: - recall@1: 313 / 1028 = 0.304475
+2018-05-23 17:25:47,998: __main__: INFO: - recall@2: 547 / 1028 = 0.532101
+2018-05-23 17:25:47,998: __main__: INFO: - recall@3: 675 / 1028 = 0.656615
+2018-05-23 17:25:47,998: __main__: INFO: - recall@4: 779 / 1028 = 0.757782
+2018-05-23 17:25:47,998: __main__: INFO: - recall@5: 868 / 1028 = 0.844358
+2018-05-23 17:25:47,998: __main__: INFO: - recall@6: 940 / 1028 = 0.914397
+2018-05-23 17:25:47,998: __main__: INFO: - recall@7: 993 / 1028 = 0.965953
+2018-05-23 17:25:47,998: __main__: INFO: - recall@8: 1028 / 1028 = 1
+2018-05-23 17:25:47,998: __main__: INFO: - recall@9: 1028 / 1028 = 1
+2018-05-23 17:25:48,078: __main__: INFO: 
+2018-05-23 17:25:48,078: __main__: INFO: Counting number of candidate responses & context lengths...
+2018-05-23 17:25:48,079: __main__: INFO: Number of candidate responses:
+2018-05-23 17:25:48,079: __main__: INFO: - #of examples with 1 candidates available: 0 / 1028 = 0
+2018-05-23 17:25:48,079: __main__: INFO: - #of examples with 2 candidates available: 177 / 1028 = 0.172179
+2018-05-23 17:25:48,079: __main__: INFO: - #of examples with 3 candidates available: 0 / 1028 = 0
+2018-05-23 17:25:48,079: __main__: INFO: - #of examples with 4 candidates available: 0 / 1028 = 0
+2018-05-23 17:25:48,079: __main__: INFO: - #of examples with 5 candidates available: 3 / 1028 = 0.00291829
+2018-05-23 17:25:48,079: __main__: INFO: - #of examples with 6 candidates available: 3 / 1028 = 0.00291829
+2018-05-23 17:25:48,079: __main__: INFO: - #of examples with 7 candidates available: 66 / 1028 = 0.0642023
+2018-05-23 17:25:48,079: __main__: INFO: - #of examples with 8 candidates available: 777 / 1028 = 0.755837
+2018-05-23 17:25:48,079: __main__: INFO: - #of examples with 9 candidates available: 2 / 1028 = 0.00194553
+2018-05-23 17:25:48,080: __main__: INFO: Average number of candidates: 6.89008
+2018-05-23 17:25:48,162: __main__: INFO: 
+2018-05-23 17:25:48,162: __main__: INFO: Length of context:
+2018-05-23 17:25:48,162: __main__: INFO: - #of examples with 1 messages in context: 177 / 1028 = 0.172179
+2018-05-23 17:25:48,162: __main__: INFO: - #of examples with 2 messages in context: 0 / 1028 = 0
+2018-05-23 17:25:48,162: __main__: INFO: - #of examples with 3 messages in context: 177 / 1028 = 0.172179
+2018-05-23 17:25:48,162: __main__: INFO: - #of examples with 4 messages in context: 0 / 1028 = 0
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 5 messages in context: 177 / 1028 = 0.172179
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 6 messages in context: 0 / 1028 = 0
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 7 messages in context: 177 / 1028 = 0.172179
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 8 messages in context: 0 / 1028 = 0
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 9 messages in context: 177 / 1028 = 0.172179
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 10 messages in context: 0 / 1028 = 0
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 11 messages in context: 75 / 1028 = 0.0729572
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 12 messages in context: 0 / 1028 = 0
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 13 messages in context: 28 / 1028 = 0.0272374
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 14 messages in context: 0 / 1028 = 0
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 15 messages in context: 17 / 1028 = 0.016537
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 16 messages in context: 0 / 1028 = 0
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 17 messages in context: 12 / 1028 = 0.0116732
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 18 messages in context: 0 / 1028 = 0
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 19 messages in context: 7 / 1028 = 0.00680934
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with 20 messages in context: 0 / 1028 = 0
+2018-05-23 17:25:48,163: __main__: INFO: - #of examples with more messages in context: 4 / 1028 = 0.00389105
+2018-05-23 17:25:48,163: __main__: INFO: Average context size: 6.12062
+2018-05-23 17:25:48,275: __main__: INFO: done.
