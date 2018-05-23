@@ -139,10 +139,17 @@ def one_epoch(dqn, loss, data_loader, optimizer=None, test=False):
 
     epoch_loss /= nb_batches
     epoch_accuracy['acc'] /= nb_batches
-    epoch_accuracy['TP'] /= nb_batches
-    epoch_accuracy['TN'] /= nb_batches
-    epoch_accuracy['FP'] /= nb_batches
-    epoch_accuracy['FN'] /= nb_batches
+    epoch_accuracy['F1'] /= nb_batches
+
+    epoch_accuracy['TPR'] /= nb_batches  # true positive rate = recall = sensitivity = hit rate
+    epoch_accuracy['TNR'] /= nb_batches  # true negative rate = specificity
+    epoch_accuracy['PPV'] /= nb_batches  # positive predictive value = precision
+    epoch_accuracy['NPV'] /= nb_batches  # negative predictive value
+
+    epoch_accuracy['FNR'] /= nb_batches  # false negative rate = miss rate
+    epoch_accuracy['FPR'] /= nb_batches  # false positive rate = fall out
+    epoch_accuracy['FDR'] /= nb_batches  # false discovery rate
+    epoch_accuracy['FOR'] /= nb_batches  # false omission rate
 
     return epoch_loss, epoch_accuracy
 
@@ -158,7 +165,9 @@ def _one_mlp_epoch(dqn, loss, data_loader, optimizer, test):
     :return: epoch loss & accuracy
     """
     epoch_loss = 0.0
-    epoch_accuracy = {'acc': 0., 'TP': 0., 'TN': 0., 'FP': 0., 'FN': 0.}
+    epoch_accuracy = {'acc': 0., 'F1': 0.,
+                      'TPR': 0., 'TNR': 0., 'PPV': 0., 'NPV': 0.,
+                      'FNR': 0., 'FPR': 0., 'FDR': 0., 'FOR': 0.}
     nb_batches = 0.0
 
     '''
@@ -201,12 +210,19 @@ def _one_mlp_epoch(dqn, loss, data_loader, optimizer, test):
                 print "WARNING: unknown reward (%s) or prediction (%s)" % (r, pred)
         tmp_acc = (tmp_tn + tmp_tp) / (tmp_tp + tmp_tn + tmp_fp + tmp_fn)
         epoch_accuracy['acc'] += tmp_acc
+        epoch_accuracy['F1'] += (2 * tmp_tp / (2 * tmp_tp + tmp_fp + tmp_fn))
         if tmp_tn + tmp_fp > 0:
-            epoch_accuracy['TN'] += (tmp_tn / (tmp_tn + tmp_fp))  # true negative rate = specificity
-            epoch_accuracy['FP'] += (tmp_fp / (tmp_tn + tmp_fp))  # false positive rate = fall-out
+            epoch_accuracy['TNR'] += (tmp_tn / (tmp_tn + tmp_fp))  # true negative rate = specificity
+            epoch_accuracy['FPR'] += (tmp_fp / (tmp_tn + tmp_fp))  # false positive rate = fall-out
         if tmp_fn + tmp_tp > 0:
-            epoch_accuracy['FN'] += (tmp_fn / (tmp_fn + tmp_tp))  # false negative rate
-            epoch_accuracy['TP'] += (tmp_tp / (tmp_fn + tmp_tp))  # true positive rate = sensitivity
+            epoch_accuracy['FNR'] += (tmp_fn / (tmp_fn + tmp_tp))  # false negative rate = miss rate
+            epoch_accuracy['TPR'] += (tmp_tp / (tmp_fn + tmp_tp))  # true positive rate = sensitivity = recall = hit rate
+        if tmp_tp + tmp_fp > 0:
+            epoch_accuracy['PPV'] += (tmp_tp / (tmp_tp + tmp_fp))  # positive predictive value = precision
+            epoch_accuracy['FDR'] += (tmp_fp / (tmp_tp + tmp_fp))  # false discovery rate
+        if tmp_tn + tmp_fn > 0:
+            epoch_accuracy['NPV'] += (tmp_tn / (tmp_tn + tmp_fn))  # negative predicting value
+            epoch_accuracy['FOR'] += (tmp_fn / (tmp_tn + tmp_fn))  # false omission rate
 
         if params['verbose']:
             logger.info("step %.3d - loss %.6f - acc %g" % (
@@ -250,7 +266,9 @@ def _one_rnn_epoch(dqn, loss, data_loader, optimizer, test):
     :return: epoch loss & accuracy
     """
     epoch_loss = 0.0
-    epoch_accuracy = {'acc': 0., 'TP': 0., 'TN': 0., 'FP': 0., 'FN': 0.}
+    epoch_accuracy = {'acc': 0., 'F1': 0.,
+                      'TPR': 0., 'TNR': 0., 'PPV': 0., 'NPV': 0.,
+                      'FNR': 0., 'FPR': 0., 'FDR': 0., 'FOR': 0.}
     nb_batches = 0.0
 
     '''
@@ -326,12 +344,19 @@ def _one_rnn_epoch(dqn, loss, data_loader, optimizer, test):
                 print "WARNING: unknown reward (%s) or prediction (%s)" % (r, pred)
         tmp_acc = (tmp_tn + tmp_tp) / (tmp_tp + tmp_tn + tmp_fp + tmp_fn)
         epoch_accuracy['acc'] += tmp_acc
+        epoch_accuracy['F1'] += (2 * tmp_tp / (2 * tmp_tp + tmp_fp + tmp_fn))
         if tmp_tn + tmp_fp > 0:
-            epoch_accuracy['TN'] += (tmp_tn / (tmp_tn + tmp_fp))  # true negative rate = specificity
-            epoch_accuracy['FP'] += (tmp_fp / (tmp_tn + tmp_fp))  # false positive rate = fall-out
+            epoch_accuracy['TNR'] += (tmp_tn / (tmp_tn + tmp_fp))  # true negative rate = specificity
+            epoch_accuracy['FPR'] += (tmp_fp / (tmp_tn + tmp_fp))  # false positive rate = fall-out
         if tmp_fn + tmp_tp > 0:
-            epoch_accuracy['FN'] += (tmp_fn / (tmp_fn + tmp_tp))  # false negative rate
-            epoch_accuracy['TP'] += (tmp_tp / (tmp_fn + tmp_tp))  # true positive rate = sensitivity
+            epoch_accuracy['FNR'] += (tmp_fn / (tmp_fn + tmp_tp))  # false negative rate = miss rate
+            epoch_accuracy['TPR'] += (tmp_tp / (tmp_fn + tmp_tp))  # true positive rate = sensitivity = recall = hit rate
+        if tmp_tp + tmp_fp > 0:
+            epoch_accuracy['PPV'] += (tmp_tp / (tmp_tp + tmp_fp))  # positive predictive value = precision
+            epoch_accuracy['FDR'] += (tmp_fp / (tmp_tp + tmp_fp))  # false discovery rate
+        if tmp_tn + tmp_fn > 0:
+            epoch_accuracy['NPV'] += (tmp_tn / (tmp_tn + tmp_fn))  # negative predicting value
+            epoch_accuracy['FOR'] += (tmp_fn / (tmp_tn + tmp_fn))  # false omission rate
 
         if params['verbose']:
             logger.info("step %.3d - loss %.6f - accuracy %g" % (
