@@ -99,25 +99,34 @@ def get_data(old_args, raw_data):
     return test_conv, test_loader, vocab, embeddings, custom_hs
 
 
-def one_epoch(dqn, loss, data_loader, mode):
+def one_epoch(dqn, loss, data_loader, old_params):
     """
     Performs one epoch over the specified data
     :param dqn: q-network to perform forward pass
     :param loss: cross entropy loss function
     :param data_loader: data iterator
+    :param old_params: parameters of previous model
     :return: average loss & accuracy dictionary: acc, TP, TN, FP, FN
     """
-    if mode == 'mlp':
+    if old_params['mode'] == 'mlp':
         epoch_loss, epoch_accuracy, nb_batches = _one_mlp_epoch(dqn, loss, data_loader)
     else:
-        epoch_loss, epoch_accuracy, nb_batches = _one_rnn_epoch(dqn, loss, data_loader)
+        epoch_loss, epoch_accuracy, nb_batches = _one_rnn_epoch(dqn, loss, data_loader,
+                                                                old_params.get('use_custom_encs', True))
 
     epoch_loss /= nb_batches
     epoch_accuracy['acc'] /= nb_batches
-    epoch_accuracy['TP'] /= nb_batches
-    epoch_accuracy['TN'] /= nb_batches
-    epoch_accuracy['FP'] /= nb_batches
-    epoch_accuracy['FN'] /= nb_batches
+    epoch_accuracy['F1'] /= nb_batches
+
+    epoch_accuracy['TPR'] /= nb_batches  # true positive rate = recall = sensitivity = hit rate
+    epoch_accuracy['TNR'] /= nb_batches  # true negative rate = specificity
+    epoch_accuracy['PPV'] /= nb_batches  # positive predictive value = precision
+    epoch_accuracy['NPV'] /= nb_batches  # negative predictive value
+
+    epoch_accuracy['FNR'] /= nb_batches  # false negative rate = miss rate
+    epoch_accuracy['FPR'] /= nb_batches  # false positive rate = fall out
+    epoch_accuracy['FDR'] /= nb_batches  # false discovery rate
+    epoch_accuracy['FOR'] /= nb_batches  # false omission rate
 
     return epoch_loss, epoch_accuracy
 
@@ -130,7 +139,9 @@ def _one_mlp_epoch(dqn, loss, data_loader):
     :return: epoch loss & accuracy
     """
     epoch_loss = 0.0
-    epoch_accuracy = {'acc': 0., 'TP': 0., 'TN': 0., 'FP': 0., 'FN': 0.}
+    epoch_accuracy = {'acc': 0., 'F1':0.,
+                      'TPR': 0., 'TNR': 0., 'PPV': 0., 'NPV': 0.,
+                      'FNR': 0., 'FPR': 0., 'FDR': 0., 'FOR': 0.}
     nb_batches = 0.0
 
     '''
@@ -173,12 +184,19 @@ def _one_mlp_epoch(dqn, loss, data_loader):
                 print "WARNING: unknown reward (%s) or prediction (%s)" % (r, pred)
         tmp_acc = (tmp_tn + tmp_tp) / (tmp_tp + tmp_tn + tmp_fp + tmp_fn)
         epoch_accuracy['acc'] += tmp_acc
+        epoch_accuracy['F1'] += (2*tmp_tp / (2*tmp_tp + tmp_fp + tmp_fn))
         if tmp_tn + tmp_fp > 0:
-            epoch_accuracy['TN'] += (tmp_tn / (tmp_tn + tmp_fp))  # true negative rate = specificity
-            epoch_accuracy['FP'] += (tmp_fp / (tmp_tn + tmp_fp))  # false positive rate = fall-out
+            epoch_accuracy['TNR'] += (tmp_tn / (tmp_tn + tmp_fp))  # true negative rate = specificity
+            epoch_accuracy['FPR'] += (tmp_fp / (tmp_tn + tmp_fp))  # false positive rate = fall-out
         if tmp_fn + tmp_tp > 0:
-            epoch_accuracy['FN'] += (tmp_fn / (tmp_fn + tmp_tp))  # false negative rate
-            epoch_accuracy['TP'] += (tmp_tp / (tmp_fn + tmp_tp))  # true positive rate = sensitivity
+            epoch_accuracy['FNR'] += (tmp_fn / (tmp_fn + tmp_tp))  # false negative rate = miss rate
+            epoch_accuracy['TPR'] += (tmp_tp / (tmp_fn + tmp_tp))  # true positive rate = sensitivity = recall = hit rate
+        if tmp_tp + tmp_fp > 0:
+            epoch_accuracy['PPV'] += (tmp_tp / (tmp_tp + tmp_fp)) # positive predictive value = precision
+            epoch_accuracy['FDR'] += (tmp_fp / (tmp_tp + tmp_fp)) # false discovery rate
+        if tmp_tn + tmp_fn > 0:
+            epoch_accuracy['NPV'] += (tmp_tn / (tmp_tn + tmp_fn)) # negative predicting value
+            epoch_accuracy['FOR'] += (tmp_fn / (tmp_tn + tmp_fn)) # false omission rate
 
         if args.verbose:
             logger.info("step %.3d - loss %.6f - acc %g" % (
@@ -201,16 +219,19 @@ def _one_mlp_epoch(dqn, loss, data_loader):
 
     return epoch_loss, epoch_accuracy, nb_batches
 
-def _one_rnn_epoch(dqn, loss, data_loader):
+def _one_rnn_epoch(dqn, loss, data_loader, use_custom_encs):
     """
     Performs one epoch over the specified data
     :param dqn: q-network to perform forward pass
     :param loss: cross entropy loss function
     :param data_loader: data iterator
+    :param use_custom_encs: if using custom_encs
     :return: epoch loss & accuracy
     """
     epoch_loss = 0.0
-    epoch_accuracy = {'acc': 0., 'TP': 0., 'TN': 0., 'FP': 0., 'FN': 0.}
+    epoch_accuracy = {'acc': 0., 'F1': 0.,
+                      'TPR': 0., 'TNR': 0., 'PPV': 0., 'NPV': 0.,
+                      'FNR': 0., 'FPR': 0., 'FDR': 0., 'FOR': 0.}
     nb_batches = 0.0
 
     '''
@@ -254,6 +275,10 @@ def _one_rnn_epoch(dqn, loss, data_loader):
         custom_encs = to_var(custom_encs)  # ~(bs, enc)
         rewards = to_var(rewards.long())  # ~(bs)
 
+        # custom encoding dimension
+        if not use_custom_encs:
+            custom_encs = None
+
         # Forward pass: predict q-values
         predictions = dqn(
             articles_tensors, n_sents, l_sents,
@@ -282,17 +307,19 @@ def _one_rnn_epoch(dqn, loss, data_loader):
                 print "WARNING: unknown reward (%s) or prediction (%s)" % (r, pred)
         tmp_acc = (tmp_tn + tmp_tp) / (tmp_tp + tmp_tn + tmp_fp + tmp_fn)
         epoch_accuracy['acc'] += tmp_acc
+        epoch_accuracy['F1'] += (2 * tmp_tp / (2 * tmp_tp + tmp_fp + tmp_fn))
         if tmp_tn + tmp_fp > 0:
-            epoch_accuracy['TN'] += (tmp_tn / (tmp_tn + tmp_fp))  # true negative rate = specificity
-            epoch_accuracy['FP'] += (tmp_fp / (tmp_tn + tmp_fp))  # false positive rate = fall-out
+            epoch_accuracy['TNR'] += (tmp_tn / (tmp_tn + tmp_fp))  # true negative rate = specificity
+            epoch_accuracy['FPR'] += (tmp_fp / (tmp_tn + tmp_fp))  # false positive rate = fall-out
         if tmp_fn + tmp_tp > 0:
-            epoch_accuracy['FN'] += (tmp_fn / (tmp_fn + tmp_tp))  # false negative rate
-            epoch_accuracy['TP'] += (tmp_tp / (tmp_fn + tmp_tp))  # true positive rate = sensitivity
-
-        if args.verbose:
-            logger.info("step %.3d - loss %.6f - accuracy %g" % (
-                step + 1, tmp_loss.data[0], tmp_acc
-            ))
+            epoch_accuracy['FNR'] += (tmp_fn / (tmp_fn + tmp_tp))  # false negative rate = miss rate
+            epoch_accuracy['TPR'] += (tmp_tp / (tmp_fn + tmp_tp))  # true positive rate = sensitivity = recall = hit rate
+        if tmp_tp + tmp_fp > 0:
+            epoch_accuracy['PPV'] += (tmp_tp / (tmp_tp + tmp_fp))  # positive predictive value = precision
+            epoch_accuracy['FDR'] += (tmp_fp / (tmp_tp + tmp_fp))  # false discovery rate
+        if tmp_tn + tmp_fn > 0:
+            epoch_accuracy['NPV'] += (tmp_tn / (tmp_tn + tmp_fn))  # negative predicting value
+            epoch_accuracy['FOR'] += (tmp_fn / (tmp_tn + tmp_fn))  # false omission rate
 
         # print the first 40 examples of this batch with proba 0.5
         if args.verbose and np.random.choice([0, 1]) == 1:
@@ -311,18 +338,21 @@ def _one_rnn_epoch(dqn, loss, data_loader):
     return epoch_loss, epoch_accuracy, nb_batches
 
 
-def one_episode(dqn, dqn_target, gamma, huber, data_loader, mode):
+def one_episode(dqn, dqn_target, huber, data_loader, old_params):
     """
     Performs one episode over the specified data
     :param dqn: q-network to perform forward pass
+    :param dqn_target: target network to compute dqn target
     :param huber: huber loss function
     :param data_loader: data iterator
+    :param old_params: parameters of previous model
     :return: average huber loss, number of batch seen
     """
-    if mode == 'mlp':
-        epoch_huber_loss, nb_batches = _one_mlp_episode(dqn, dqn_target, gamma, huber, data_loader)
+    if old_params['mode'] == 'mlp':
+        epoch_huber_loss, nb_batches = _one_mlp_episode(dqn, dqn_target, old_params['gamma'], huber, data_loader)
     else:
-        epoch_huber_loss, nb_batches = _one_rnn_episode(dqn, dqn_target, gamma, huber, data_loader)
+        epoch_huber_loss, nb_batches = _one_rnn_episode(dqn, dqn_target, old_params['gamma'], huber, data_loader,
+                                                        old_params.get('use_custom_encs', True))
 
     epoch_huber_loss /= nb_batches
 
@@ -332,6 +362,8 @@ def _one_mlp_episode(dqn, dqn_target, gamma, huber, data_loader):
     """
     Performs one epoch over the specified data
     :param dqn: q-network to perform forward pass
+    :param dqn_target: target network to compute DQN target
+    :param gamma: discount factor
     :param huber: huber loss function
     :param data_loader: data iterator
     :return: epoch huber loss, number of batch seen
@@ -414,12 +446,15 @@ def _one_mlp_episode(dqn, dqn_target, gamma, huber, data_loader):
 
     return epoch_huber_loss, nb_batches
 
-def _one_rnn_episode(dqn, dqn_target, gamma, huber, data_loader):
+def _one_rnn_episode(dqn, dqn_target, gamma, huber, data_loader, use_custom_encs):
     """
     Performs one epoch over the specified data
     :param dqn: q-network to perform forward pass
+    :param dqn_target: target network to compute DQN target
+    :param gamma: discount factor
     :param huber: huber loss function
     :param data_loader: data iterator
+    :param use_custom_encs: if using custom_encs
     :return: epoch huber loss, number of batch seen
     """
     epoch_huber_loss = 0.0
@@ -465,6 +500,10 @@ def _one_rnn_episode(dqn, dqn_target, gamma, huber, data_loader):
         custom_encs_t = to_var(custom_encs)  # ~(bs, enc)
         # reward:
         rewards_t = to_var(rewards)  # ~(bs)
+
+        # custom encoding dimension
+        if not use_custom_encs:
+            custom_encs_t = None
 
         # Forward pass: predict current state-action value
         q_values = dqn(
@@ -609,11 +648,14 @@ def _one_rnn_episode(dqn, dqn_target, gamma, huber, data_loader):
                 past_n_actions += tmp_n_actions
 
                 ### custom enc
-                # grab candidates custom encodings
-                tmp_custom_encs = to_var(
-                    to_tensor(non_final_next_custom_encs[idx]),
-                    volatile=True
-                )  # ~(n_actions, enc)
+                if use_custom_encs:
+                    # grab candidates custom encodings
+                    tmp_custom_encs = to_var(
+                        to_tensor(non_final_next_custom_encs[idx]),
+                        volatile=True
+                    )  # ~(n_actions, enc)
+                else:
+                    tmp_custom_encs = None
 
                 tmp_q_val = dqn(
                     tmp_articles_tensors, tmp_n_sents, tmp_l_sents,
@@ -625,15 +667,25 @@ def _one_rnn_episode(dqn, dqn_target, gamma, huber, data_loader):
                 # append custom_enc of the max action according to current dqn
                 max_actions['candidate'].append(tmp_candidates_tensors.data[max_idx].view(-1))
                 max_actions['n_tokens'].append(tmp_n_tokens.data[max_idx])
-                max_actions['custom_enc'].append(tmp_custom_encs.data[max_idx].view(-1))
+                if use_custom_encs:
+                    max_actions['custom_enc'].append(tmp_custom_encs.data[max_idx].view(-1))
 
-            next_q_values = dqn_target(
-                articles_tensors_tp1, n_sents_tp1, l_sents_tp1,
-                contexts_tensors_tp1, n_turns_tp1, l_turns_tp1,
-                to_var(torch.stack(max_actions['candidate']), volatile=True),
-                to_var(torch.cat(max_actions['n_tokens']), volatile=True),
-                to_var(torch.stack(max_actions['custom_enc']), volatile=True)
-            )  # ~(bs)
+            if use_custom_encs:
+                next_q_values = dqn_target(
+                    articles_tensors_tp1, n_sents_tp1, l_sents_tp1,
+                    contexts_tensors_tp1, n_turns_tp1, l_turns_tp1,
+                    to_var(torch.stack(max_actions['candidate']), volatile=True),
+                    to_var(torch.cat(max_actions['n_tokens']), volatile=True),
+                    to_var(torch.stack(max_actions['custom_enc']), volatile=True)
+                )  # ~(bs)
+            else:
+                next_q_values = dqn_target(
+                    articles_tensors_tp1, n_sents_tp1, l_sents_tp1,
+                    contexts_tensors_tp1, n_turns_tp1, l_turns_tp1,
+                    to_var(torch.stack(max_actions['candidate']), volatile=True),
+                    to_var(torch.cat(max_actions['n_tokens']), volatile=True),
+                    None
+                )  # ~(bs)
             next_state_action_values = to_var(torch.zeros(non_final_mask.size()))
             next_state_action_values[non_final_mask] = next_q_values
 
@@ -683,95 +735,7 @@ def _one_rnn_episode(dqn, dqn_target, gamma, huber, data_loader):
     return epoch_huber_loss, nb_batches
 
 
-def main():
-    #######################
-    # Load Data
-    #######################
-
-    if os.path.exists('%s_args.pkl' % args.model_prefix):
-        with open('%s_args.pkl' % args.model_prefix, 'rb') as f:
-            old_args = pkl.load(f)
-            old_params = to_dict(old_args)
-    else:
-        with open('%s_params.json' % args.model_prefix, 'rb') as f:
-            old_params = json.load(f)
-
-    logger.info("old parameters: %s" % old_params)
-
-    # TODO: next line is super long and takes a lot of memory.
-    #  remove when testing more than one model
-    #raw_data = get_raw_data(old_args=old_params)
-    raw_data = get_raw_data()
-
-    test_conv, test_loader, vocab, embeddings, custom_hs = get_data(old_params, raw_data)
-
-    #######################
-    # Build DQN
-    #######################
-    logger.info("")
-    logger.info("Building Q-Network...")
-    # MLP network
-    if old_params['mode'] == 'mlp':
-        # output dimension
-        if old_params['predict_rewards']:
-            out = 2
-        else:
-            out = 1
-        # dqn
-        dqn = QNetwork(custom_hs, old_params['mlp_activation'], old_params['mlp_dropout'], out)
-        dqn_target = QNetwork(custom_hs, old_params['mlp_activation'], old_params['mlp_dropout'], out)
-    # RNNs + MLP network
-    else:
-        # output dimension
-        if old_params['predict_rewards']:
-            out = 2
-        else:
-            out = 1
-        # dqn
-        dqn = DeepQNetwork(
-            old_params['mode'], embeddings, old_params['fix_embeddings'],
-            old_params['sentence_hs'], old_params['sentence_bidir'], old_params['sentence_dropout'],
-            old_params['article_hs'], old_params['article_bidir'], old_params['article_dropout'],
-            old_params['utterance_hs'], old_params['utterance_bidir'], old_params['utterance_dropout'],
-            old_params['context_hs'], old_params['context_bidir'], old_params['context_dropout'],
-            old_params['rnn_gate'],
-            custom_hs, old_params['mlp_activation'], old_params['mlp_dropout'], out
-        )
-        dqn_target = DeepQNetwork(
-            old_params['mode'], embeddings, old_params['fix_embeddings'],
-            old_params['sentence_hs'], old_params['sentence_bidir'], old_params['sentence_dropout'],
-            old_params['article_hs'], old_params['article_bidir'], old_params['article_dropout'],
-            old_params['utterance_hs'], old_params['utterance_bidir'], old_params['utterance_dropout'],
-            old_params['context_hs'], old_params['context_bidir'], old_params['context_dropout'],
-            old_params['rnn_gate'],
-            custom_hs, old_params['mlp_activation'], old_params['mlp_dropout'], out
-        )
-
-    dqn.load_state_dict(torch.load("%s_dqn.pt" % args.model_prefix))
-    dqn_target.load_state_dict(torch.load("%s_dqn.pt" % args.model_prefix))
-
-    logger.info(dqn)
-
-    # moving networks to GPU
-    if torch.cuda.is_available():
-        logger.info("")
-        logger.info("cuda available! Moving variables to cuda %d..." % args.gpu)
-        dqn.cuda()
-        dqn_target.cuda()
-
-    # Define losses
-    huber = torch.nn.SmoothL1Loss()  # MSE used in -1 < . < 1 ; Absolute used elsewhere
-    mse = torch.nn.MSELoss()
-    ce = torch.nn.CrossEntropyLoss()  # used for classification of immediate reward
-
-    ############################
-    # Plot train & valid stats #
-    ############################
-    logger.info("")
-    logger.info("Plotting timings...")
-    with open("%s_timings.json" % args.model_prefix, 'rb') as f:
-        timings = json.load(f)
-
+def plot_timings(timings, old_params):
     train_losses = timings['train_losses']
     train_accs = [e['acc'] for e in timings['train_accurs']]
     valid_losses = timings['valid_losses']
@@ -814,46 +778,12 @@ def main():
                     (valid_accs[best_valid_acc_idx], best_valid_acc_idx))
         logger.info("training acc at this epoch: %g" % train_accs[best_valid_acc_idx])
 
-    logger.info("done.")
 
-    #######################
-    # Start Testing
-    #######################
-    start_time = time.time()
-    logger.info("")
-    logger.info("Testing model in batches...")
-
-    # put in inference mode (Dropout OFF)
-    dqn.eval()
-    dqn_target.eval()
-
-    # predict rewards: use cross-entropy loss
-    if old_params['predict_rewards']:
-        loss, accuracy = one_epoch(dqn, ce, test_loader, old_params['mode'])
-        # report test accuracy of r-ranker
-        logger.info("Test loss: %g - test accuracy:\n%s" % (loss, json.dumps(accuracy, indent=2)))
-
-    # predict q values: use huber loss (or MSE)
-    else:
-        loss, _ = one_episode(dqn, dqn_target, old_params['gamma'],
-                              huber, test_loader, old_params['mode'])
-        logger.info("Test loss: %g" % loss)
-
-
-    logger.info("Finished testing. Time elapsed: %g seconds" % (
-        time.time() - start_time
-    ))
-
-
-    #####################################################################
-    # PREDICT VALUES FOR EACH TEST EXAMPLE & GROUP BY CONV_ID + CONTEXT #
-    #####################################################################
-    start_time = time.time()
-    logger.info("")
-    logger.info("Testing model one example at a time & generating report.json")
-
-    chats = {}  # map from chat ID to list of (context - candidate) pairs
-    '''
+def test_individually(dqn, test_conv, old_params):
+    """
+    Build a map from chat ID to list of (context, candidates, rewards, predictions) list
+    :param test_conv: raw json data of test set
+    :return: a map of this form:
     chat_id : [
         {
             'context'    : [list of strings],
@@ -869,10 +799,9 @@ def main():
     chat_id : [
         ...
     ],
-    '''
-    ###
-    # BUILD REPORT: regroup each convo+context and present their candidate, score, predictions
-    ###
+    """
+    chats = {}
+
     for item, data in enumerate(test_conv):
         article, idx = test_conv.ids[item]
         entry = test_conv.json_data[article][idx]
@@ -914,32 +843,32 @@ def main():
             }]
             idx = 0  # it's the first and last chat so idx=0 or idx=-1 are both ok
 
-        #logger.info("item: %s" % item)
-        #logger.info("")
+        # logger.info("item: %s" % item)
+        # logger.info("")
         articles, n_sents, l_sents, \
-            contexts, n_turns, l_turns, \
-            candidates, n_tokens, \
-            custom_encs, rewards, \
-            next_states, n_next_turns, l_next_turns, \
-            next_candidates, n_next_candidates, l_next_candidates, \
-            next_custom_encs = data
-        #logger.info("articles: %s" % articles)
-        #logger.info("n_sents: %s" % n_sents)
-        #logger.info("l_sents: %s" % l_sents)
-        #logger.info("contexts: %s" % contexts)
-        #logger.info("n_turns: %s" % n_turns)
-        #logger.info("l_turns: %s" % l_turns)
-        #logger.info("candidates: %s" % candidates)
-        #logger.info("n_tokens: %s" % n_tokens)
-        #logger.info("custom_encs: %s" % custom_encs)
-        #logger.info("rewards: %s" % rewards)
-        #logger.info("next_states: %s" % next_states)
-        #logger.info("n_next_turns: %s" % n_next_turns)
-        #logger.info("l_next_turns: %s" % l_next_turns)
-        #logger.info("next_candidates: %s" % next_candidates)
-        #logger.info("n_next_candidates: %s" % n_next_candidates)
-        #logger.info("l_next_candidates: %s" % l_next_candidates)
-        #logger.info("next_custom_encs: %s" % next_custom_encs)
+        contexts, n_turns, l_turns, \
+        candidates, n_tokens, \
+        custom_encs, rewards, \
+        next_states, n_next_turns, l_next_turns, \
+        next_candidates, n_next_candidates, l_next_candidates, \
+        next_custom_encs = data
+        # logger.info("articles: %s" % articles)
+        # logger.info("n_sents: %s" % n_sents)
+        # logger.info("l_sents: %s" % l_sents)
+        # logger.info("contexts: %s" % contexts)
+        # logger.info("n_turns: %s" % n_turns)
+        # logger.info("l_turns: %s" % l_turns)
+        # logger.info("candidates: %s" % candidates)
+        # logger.info("n_tokens: %s" % n_tokens)
+        # logger.info("custom_encs: %s" % custom_encs)
+        # logger.info("rewards: %s" % rewards)
+        # logger.info("next_states: %s" % next_states)
+        # logger.info("n_next_turns: %s" % n_next_turns)
+        # logger.info("l_next_turns: %s" % l_next_turns)
+        # logger.info("next_candidates: %s" % next_candidates)
+        # logger.info("n_next_candidates: %s" % n_next_candidates)
+        # logger.info("l_next_candidates: %s" % l_next_candidates)
+        # logger.info("next_custom_encs: %s" % next_custom_encs)
 
         # batch size is 1 so need to encapsulate data in tuple
         data = ([articles, n_sents, l_sents,
@@ -949,12 +878,13 @@ def main():
                  next_states, n_next_turns, l_next_turns,
                  next_candidates, n_next_candidates, l_next_candidates,
                  next_custom_encs
-        ],)
+                 ],)
 
         # put data in batches & create masks
-        logger.setLevel(logging.WARNING)  # ignore warning of no next state since batch size is 1 anyway
+        l = logging.getLogger('q_data_loader')
+        l.setLevel(logging.ERROR)  # ignore warning of no next state since batch size is 1 anyway
         data = collate_fn(data)  # batch size is 1!!
-        logger.setLevel(logging.DEBUG)    # reset logger level
+        l.setLevel(logging.DEBUG)  # reset logger level
 
         # Classification of candidate responses:
         if old_params['predict_rewards']:
@@ -983,10 +913,10 @@ def main():
 
             # with RNNs and MLP
             else:
-                _, articles_tensors, n_sents, l_sents,\
-                    _, contexts_tensors, n_turns, l_turns,\
-                    candidates_tensors, n_tokens, custom_encs, rewards,\
-                    _, _, _, _, _, _, _, _ = data
+                _, articles_tensors, n_sents, l_sents, \
+                _, contexts_tensors, n_turns, l_turns, \
+                candidates_tensors, n_tokens, custom_encs, rewards, \
+                _, _, _, _, _, _, _, _ = data
                 # articles : tuple of list of sentences. each sentence is a Tensor. ~(1, n_sents, n_tokens)
                 # articles_tensor : Tensor ~(1 x n_sents, max_len)
                 # n_sents : Tensor ~(1)
@@ -1013,6 +943,10 @@ def main():
 
                 # reward not scaled for classification
                 assert rewards[0] == entry['reward']
+
+                # custom encoding dimension
+                if not old_params.get('use_custom_encs', True):
+                    custom_encs = None
 
                 # Forward pass: predict q-values
                 predictions = dqn(
@@ -1057,11 +991,11 @@ def main():
 
             # with RNNs and MLP
             else:
-                _, articles_tensors, n_sents, l_sents,\
-                    _, contexts_tensors, n_turns, l_turns,\
-                    candidates_tensors, n_tokens,\
-                    custom_encs, rewards,\
-                    _, _, _, _, _, _, _, _ = data
+                _, articles_tensors, n_sents, l_sents, \
+                _, contexts_tensors, n_turns, l_turns, \
+                candidates_tensors, n_tokens, \
+                custom_encs, rewards, \
+                _, _, _, _, _, _, _, _ = data
                 # articles : tuple of list of sentences. each sentence is a Tensor. ~(1, n_sents, n_tokens)
                 # articles_tensor : Tensor ~(1 x n_sents, max_len)
                 # n_sents : Tensor ~(1)
@@ -1095,6 +1029,10 @@ def main():
                 n_tokens_t = to_var(n_tokens)  # ~(1)
                 custom_encs_t = to_var(custom_encs)  # ~(1, enc)
 
+                # custom encoding dimension
+                if not old_params.get('use_custom_encs', True):
+                    custom_encs_t = None
+
                 # Forward pass: predict current state-action value
                 q_values = dqn(
                     articles_tensors_t, n_sents_t, l_sents_t,
@@ -1108,16 +1046,11 @@ def main():
                 except KeyError:
                     chats[entry['chat_id']][idx]['predictions'] = [q_values.data[0][0]]
 
-    logger.info("Finished 1-by-1 testing. Time elapsed: %g seconds" % (
-        time.time() - start_time
-    ))
+    return chats
 
-    ###
-    # Measuring accuracy
-    ###
-    logger.info("")
-    logger.info("Measuring accuracy at predicting best candidate...")
-    correct = 0.0
+
+def get_recall(chats):
+    recalls = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     total = 0.0
 
     for chat_id, contexts in chats.iteritems():
@@ -1133,12 +1066,230 @@ def main():
             # sum of all candidate rewards is at most 1
             assert np.sum(c['rewards']) <= 1
 
-            if np.argmax(c['rewards']) == np.argmax(c['predictions']):
-                correct += 1
+            # sorted idx of candidate scores
+            _, sorted_idx = torch.Tensor(c['predictions']).sort(descending=True)
+            # idx of chosen candidate
+            idx = np.argmax(c['rewards'])
+
+            # Recall @ 1
+            if idx in sorted_idx[:1]:
+                for i in range(9):
+                    recalls[i] += 1
+            # Recal @ 2
+            elif idx in sorted_idx[:2]:
+                for i in range(1, 9):
+                    recalls[i] += 1
+            # Recal @ 3
+            elif idx in sorted_idx[:3]:
+                for i in range(2, 9):
+                    recalls[i] += 1
+            # Recal @ 4
+            elif idx in sorted_idx[:4]:
+                for i in range(3, 9):
+                    recalls[i] += 1
+            # Recal @ 5
+            elif idx in sorted_idx[:5]:
+                for i in range(4, 9):
+                    recalls[i] += 1
+            # Recal @ 6
+            elif idx in sorted_idx[:6]:
+                for i in range(5, 9):
+                    recalls[i] += 1
+            # Recal @ 7
+            elif idx in sorted_idx[:7]:
+                for i in range(6, 9):
+                    recalls[i] += 1
+            # Recal @ 8
+            elif idx in sorted_idx[:8]:
+                for i in range(7, 9):
+                    recalls[i] += 1
+            # Recal @ 9
+            elif idx in sorted_idx[:9]:
+                for i in range(8, 9):
+                    recalls[i] += 1
+
             total += 1
 
-    logger.info("Predicted like human behavior: %d / %d = %g" % (
-        correct, total, correct / total
+    return recalls, total
+
+
+def get_proportions(chats):
+    candidate_counts = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    total_counts = 0.0
+    context_lengths = [0.0, 0.0, 0.0, 0.0, 0.0,
+                       0.0, 0.0, 0.0, 0.0, 0.0,
+                       0.0, 0.0, 0.0, 0.0, 0.0,
+                       0.0, 0.0, 0.0, 0.0, 0.0]
+    total_lengths = 0.0
+    long_contexts = 0.0
+    total = 0.0
+
+    for chat_id, contexts in chats.iteritems():
+        for c in contexts:
+            '''
+            {
+                'context'    : [list of strings],
+                'candidates' : [list of strings],
+                'rewards'    : [list of ints],
+                'predictions': [list of floats]
+            },
+            '''
+            assert len(c['candidates']) == len(c['rewards']) == len(c['predictions'])
+
+            candidate_counts[len(c['candidates'])-1] += 1
+            total_counts += len(c['candidates'])
+
+            try:
+                context_lengths[len(c['context'])-1] += 1
+            except IndexError:
+                # logger.info("long context: %d" % len(c['context']))
+                long_contexts += 1
+            total_lengths += len(c['context'])
+
+            total += 1
+
+    return (candidate_counts, total_counts), (context_lengths, long_contexts, total_lengths), total
+
+
+
+def main():
+    #######################
+    # Load Data
+    #######################
+
+    if os.path.exists('%s_args.pkl' % args.model_prefix):
+        with open('%s_args.pkl' % args.model_prefix, 'rb') as f:
+            old_args = pkl.load(f)
+            old_params = to_dict(old_args)
+    else:
+        with open('%s_params.json' % args.model_prefix, 'rb') as f:
+            old_params = json.load(f)
+
+    logger.info("old parameters: %s" % old_params)
+
+    # TODO: next line is super long and takes a lot of memory.
+    #  remove when testing more than one model
+    #raw_data = get_raw_data(old_args=old_params)
+    raw_data = get_raw_data()
+
+    test_conv, test_loader, vocab, embeddings, custom_hs = get_data(old_params, raw_data)
+
+    #######################
+    # Build DQN
+    #######################
+    logger.info("")
+    logger.info("Building Q-Network...")
+    # MLP network
+    if old_params['mode'] == 'mlp':
+        # output dimension
+        if old_params['predict_rewards']:
+            out = 2
+        else:
+            out = 1
+        # dqn
+        dqn = QNetwork(custom_hs, old_params['mlp_activation'], old_params['mlp_dropout'], out)
+        dqn_target = QNetwork(custom_hs, old_params['mlp_activation'], old_params['mlp_dropout'], out)
+    # RNNs + MLP network
+    else:
+        # output dimension
+        if old_params['predict_rewards']:
+            out = 2
+        else:
+            out = 1
+        # custom encoding dimension
+        if not old_params.get('use_custom_encs', True):
+            custom_hs = 0
+        # dqn
+        dqn = DeepQNetwork(
+            old_params['mode'], embeddings, old_params['fix_embeddings'],
+            old_params['sentence_hs'], old_params['sentence_bidir'], old_params['sentence_dropout'],
+            old_params['article_hs'], old_params['article_bidir'], old_params['article_dropout'],
+            old_params['utterance_hs'], old_params['utterance_bidir'], old_params['utterance_dropout'],
+            old_params['context_hs'], old_params['context_bidir'], old_params['context_dropout'],
+            old_params['rnn_gate'],
+            custom_hs, old_params['mlp_activation'], old_params['mlp_dropout'], out
+        )
+        dqn_target = DeepQNetwork(
+            old_params['mode'], embeddings, old_params['fix_embeddings'],
+            old_params['sentence_hs'], old_params['sentence_bidir'], old_params['sentence_dropout'],
+            old_params['article_hs'], old_params['article_bidir'], old_params['article_dropout'],
+            old_params['utterance_hs'], old_params['utterance_bidir'], old_params['utterance_dropout'],
+            old_params['context_hs'], old_params['context_bidir'], old_params['context_dropout'],
+            old_params['rnn_gate'],
+            custom_hs, old_params['mlp_activation'], old_params['mlp_dropout'], out
+        )
+
+    # restore old parameters
+    dqn.load_state_dict(torch.load("%s_dqn.pt" % args.model_prefix))
+    dqn_target.load_state_dict(torch.load("%s_dqn.pt" % args.model_prefix))
+
+    # put in inference mode (Dropout OFF)
+    dqn.eval()
+    dqn_target.eval()
+
+    logger.info(dqn)
+
+    # moving networks to GPU
+    if torch.cuda.is_available():
+        logger.info("")
+        logger.info("cuda available! Moving variables to cuda %d..." % args.gpu)
+        dqn.cuda()
+        dqn_target.cuda()
+
+    # Define losses
+    huber = torch.nn.SmoothL1Loss()  # MSE used in -1 < . < 1 ; Absolute used elsewhere
+    mse = torch.nn.MSELoss()
+    ce = torch.nn.CrossEntropyLoss()  # used for classification of immediate reward
+
+    ############################
+    # Plot train & valid stats #
+    ############################
+    logger.info("")
+    logger.info("Plotting timings...")
+    with open("%s_timings.json" % args.model_prefix, 'rb') as f:
+        timings = json.load(f)
+
+    plot_timings(timings, old_params)
+    logger.info("done.")
+
+    #######################
+    # Start Testing
+    #######################
+    start_time = time.time()
+    logger.info("")
+    logger.info("Testing model in batches...")
+
+    # predict rewards: use cross-entropy loss
+    if old_params['predict_rewards']:
+        loss, accuracy = one_epoch(dqn, ce, test_loader, old_params)
+        # report test accuracy of r-ranker
+        logger.info("Test loss: %g - test accuracy:\n%s" % (loss, json.dumps(accuracy, indent=2)))
+
+    # predict q values: use huber loss (or MSE)
+    else:
+        loss, _ = one_episode(dqn, dqn_target, huber, test_loader, old_params)
+        logger.info("Test loss: %g" % loss)
+
+
+    logger.info("Finished testing. Time elapsed: %g seconds" % (
+        time.time() - start_time
+    ))
+
+
+    #####################################################################
+    # PREDICT VALUES FOR EACH TEST EXAMPLE & GROUP BY CONV_ID + CONTEXT #
+    #####################################################################
+    start_time = time.time()
+    logger.info("")
+    logger.info("Testing model one example at a time & generating report.json")
+
+    ###
+    # BUILD REPORT: regroup each convo+context and present their candidate, score, predictions
+    ###
+    chats = test_individually(dqn, test_conv, old_params)
+
+    logger.info("Finished 1-by-1 testing. Time elapsed: %g seconds" % (
+        time.time() - start_time
     ))
 
     ###
@@ -1150,17 +1301,91 @@ def main():
         json.dump(chats, f, indent=2)
     logger.info("done.")
 
+    ###
+    # Measuring accuracy
+    ###
+    logger.info("")
+    logger.info("Measuring recall at predicting best candidate...")
+
+    recalls, total = get_recall(chats)
+
+    logger.info("Predicted like human behavior:")
+    for idx, r in enumerate(recalls):
+        logger.info("- recall@%d: %d / %d = %g" % (
+            idx+1, r, total, r / total
+        ))
+    # - plot recalls: r@1, r@2, ..., r@9
+    recalls = np.array(recalls) / total
+    plt.bar(range(len(recalls)), recalls, tick_label=range(1, len(recalls) + 1))
+    #plt.xticks(fontsize=20)
+    plt.title("Recall @ k measure")
+    plt.xlabel("k")
+    plt.ylabel("recall")
+    plt.savefig("%s_recalls.png" % args.model_prefix)
+    plt.close()
 
     ###
-    # TODO
+    # Get stats: number of candidates, context lengths, etc...
+    # Do it ONCE for all model: these are stats of the test set itself
     ###
-    # analyse report:
-    # - measure recall@1, @2, ..., @5
-    # - plot proportion of #of possible candidate: #of2, #of3, ..., #of9
+    '''
+    logger.info("")
+    logger.info("Counting number of candidate responses & context lengths...")
+
+    (candidate_counts, total_counts), (context_lengths, long_contexts, total_lengths), total = get_proportions(chats)
+
+    logger.info("Number of candidate responses:")
+    for length, count in enumerate(candidate_counts):
+        logger.info("- #of examples with %d candidates available: %d / %d = %g" % (
+            length + 1, count, total, count / total
+        ))
     # - measure #of_candidate avg
-    # - plot recall@1 as a function of context length
-    # - plot proportion of context length: #of2, #of3, ..., #of10
+    logger.info("Average number of candidates: %g" % (total_counts / total))
+    # - plot proportion of #of possible candidate: #of2, #of3, ..., #of9
+    candidate_counts = np.array(candidate_counts) / total
+    plt.bar(range(len(candidate_counts)), candidate_counts, tick_label=range(1, len(candidate_counts)+1))
+    #plt.xticks(fontsize=20)
+    plt.title("Number of candidate responses available")
+    plt.xlabel("#of candidates")
+    plt.ylabel("Proportion")
+    plt.savefig("./models/q_estimator/test_candidates_proportion.png")
+    plt.close()
+
+    logger.info("")
+
+    logger.info("Length of context:")
+    for length, count in enumerate(context_lengths):
+        logger.info("- #of examples with %d messages in context: %d / %d = %g" % (
+            length + 1, count, total, count / total
+        ))
+    logger.info("- #of examples with more messages in context: %d / %d = %g" % (
+        long_contexts, total, long_contexts / total
+    ))
     # - measure context length avg
+    logger.info("Average context size: %g" % (total_lengths / total))
+    # - plot proportion of context length: #of2, #of3, ..., #of10
+    context_lengths.append(long_contexts)
+    context_lengths = np.array(context_lengths) / total
+    plt.bar(
+        range(len(context_lengths)),
+        context_lengths,
+        tick_label=range(1, len(context_lengths))+['>']
+    )
+    #plt.xticks(fontsize=20)
+    plt.title("Context lengths")
+    plt.xlabel("#of messages")
+    plt.ylabel("Proportion")
+    plt.savefig("./models/q_estimator/test_contextlength_proportion.png")
+    plt.close()
+    '''
+
+    logger.info("done.")
+
+
+    ################################################
+    # TODO: plot recall@1 as a function of context length
+    ################################################
+
 
 
 def str2bool(v):
