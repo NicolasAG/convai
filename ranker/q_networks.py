@@ -511,7 +511,7 @@ class DeepQNetwork(torch.nn.Module):
 
             # Dueling Q-network: advantage prediction
             # input to advantage prediction : (state, candidate, custom_enc)
-            if custom_enc:
+            if custom_enc is not None:
                 advantage = torch.cat((state_enc, candidate_enc, custom_enc), 1)  # ~(bs, hs)
             else:
                 advantage = torch.cat((state_enc, candidate_enc), 1)  # ~(bs, hs)
@@ -530,7 +530,7 @@ class DeepQNetwork(torch.nn.Module):
 
             # Dueling Q-network: advantage prediction
             # input to advantage prediction : (state, candidate, custom_enc)
-            if custom_enc:
+            if custom_enc is not None:
                 advantage = torch.cat((state_enc, candidate_enc, custom_enc), 1)  # ~(bs, hs)
             else:
                 advantage = torch.cat((state_enc, candidate_enc), 1)  # ~(bs, hs)
