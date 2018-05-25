@@ -993,8 +993,8 @@ def main():
             # Save train accuracies
             train_accurs.append(train_acc)
 
-            logger.info("Epoch: %d - train loss: %g - train acc: %g" % (
-                epoch + 1, train_loss, train_acc['acc']
+            logger.info("Epoch: %d - train loss: %g - train acc: %g - train F1: %g" % (
+                epoch + 1, train_loss, train_acc['acc'], train_acc['F1']
             ))
 
         # predict q values: use huber loss (or MSE)

@@ -18,9 +18,9 @@ if [ "$MODE" = 'mlp_r' ] ; then
             do
                 for lr in "${learningrates[@]}"
                 do
-                    echo "Train MLP R ranker with" $op "(" $lr ") and" $ac "activations and" $drop "dropout"
-                    #echo "SmallR/Small_R-Network[exp$exp]os"
-                    hyperdash run -n "train PT mlp R ranker++ exp$exp" python q_train.py \
+                    echo "Train MLP R ranker with" $op "(" $lr ") and" $ac "activations and" $drop "dropout -- stop on F1"
+                    hyperdash run -n "train PT mlp_f1 R ranker++ exp$exp" python q_train_stoponF1.py \
+                        --gpu 1 \
                         --data_f ./data/q_ranker_amt_data++_1525301962.86.json \
                         --vocab_f ./data/q_ranker_amt_vocab_1525301962.86.pkl \
                         --mode mlp \
@@ -29,7 +29,7 @@ if [ "$MODE" = 'mlp_r' ] ; then
                         --learning_rate $lr \
                         --mlp_activation $ac \
                         --mlp_dropout $drop \
-                        --model_name "SmallR/Small_R-Network[exp$exp]os"
+                        --model_name "SmallR/Small_R-Network[exp$exp]os+F1"
                     exp=$((exp+1))
                 done
             done
