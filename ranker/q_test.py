@@ -1151,6 +1151,39 @@ def get_proportions(chats):
     return (candidate_counts, total_counts), (context_lengths, long_contexts, total_lengths), total
 
 
+def recallat1_contextlen(chats):
+    recalls = [0.0, 0.0, 0.0, 0.0, 0.0,
+               0.0, 0.0, 0.0, 0.0, 0.0,
+               0.0, 0.0, 0.0, 0.0, 0.0,
+               0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    total = 0.0
+
+    for chat_id, contexts in chats.iteritems():
+        for c in contexts:
+            '''
+            {
+                'context'    : [list of strings],
+                'candidates' : [list of strings],
+                'rewards'    : [list of ints],
+                'predictions': [list of floats]
+            },
+            '''
+            # sorted idx of candidate scores
+            _, sorted_idx = torch.Tensor(c['predictions']).sort(descending=True)
+            # idx of chosen candidate
+            idx = np.argmax(c['rewards'])
+
+            # Recall @ 1
+            if idx in sorted_idx[:1]:
+                try:
+                    recalls[len(c['context']) - 1] += 1
+                except IndexError:
+                    recalls[-1] += 1
+
+            total += 1
+
+    return recalls, total
+
 
 def main():
     #######################
@@ -1317,11 +1350,32 @@ def main():
     # - plot recalls: r@1, r@2, ..., r@9
     recalls = np.array(recalls) / total
     plt.bar(range(len(recalls)), recalls, tick_label=range(1, len(recalls) + 1))
-    #plt.xticks(fontsize=20)
-    plt.title("Recall @ k measure")
+    plt.title("Recall@k measure")
     plt.xlabel("k")
     plt.ylabel("recall")
     plt.savefig("%s_recalls.png" % args.model_prefix)
+    plt.close()
+
+    ###
+    # Compute recall@1 for each context length
+    ###
+    logger.info("")
+    logger.info("Measuring recall@1 for each context length...")
+
+    recalls, total = recallat1_contextlen(chats)
+
+    logger.info("Predicted like human behavior:")
+    for c_len, r in enumerate(recalls):
+        logger.info("- recall@1 for context of size %d: %d / %d = %g" % (
+            c_len + 1, r, total, r / total
+        ))
+    # - plot recalls:
+    recalls = np.array(recalls) / total
+    plt.bar(range(len(recalls)), recalls, tick_label=range(1, len(recalls))+['>'])
+    plt.title("Recall@1 for each context length")
+    plt.xlabel("#of messages")
+    plt.ylabel("recall")
+    plt.savefig("%s_recall1_c-len.png" % args.model_prefix)
     plt.close()
 
     ###
@@ -1344,7 +1398,6 @@ def main():
     # - plot proportion of #of possible candidate: #of2, #of3, ..., #of9
     candidate_counts = np.array(candidate_counts) / total
     plt.bar(range(len(candidate_counts)), candidate_counts, tick_label=range(1, len(candidate_counts)+1))
-    #plt.xticks(fontsize=20)
     plt.title("Number of candidate responses available")
     plt.xlabel("#of candidates")
     plt.ylabel("Proportion")
@@ -1371,7 +1424,6 @@ def main():
         context_lengths,
         tick_label=range(1, len(context_lengths))+['>']
     )
-    #plt.xticks(fontsize=20)
     plt.title("Context lengths")
     plt.xlabel("#of messages")
     plt.ylabel("Proportion")
