@@ -252,7 +252,7 @@ class ModelClient(multiprocessing.Process):
         ###
         # Build NN ranker models and set their parameters
         ###
-        # NOTE: stupid theano can't load two graph within the same session -_-
+        # NOTE: stupid tensorflow can't load two graph within the same session -_-
         # SOLUTION: taken from https://stackoverflow.com/a/41646443
         self.model_graph_short = tf.Graph()
         with self.model_graph_short.as_default():
