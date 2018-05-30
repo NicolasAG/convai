@@ -1156,7 +1156,10 @@ def recallat1_contextlen(chats):
                0.0, 0.0, 0.0, 0.0, 0.0,
                0.0, 0.0, 0.0, 0.0, 0.0,
                0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    total = 0.0
+    totals = [0.0, 0.0, 0.0, 0.0, 0.0,
+               0.0, 0.0, 0.0, 0.0, 0.0,
+               0.0, 0.0, 0.0, 0.0, 0.0,
+               0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
     for chat_id, contexts in chats.iteritems():
         for c in contexts:
@@ -1176,13 +1179,16 @@ def recallat1_contextlen(chats):
             # Recall @ 1
             if idx in sorted_idx[:1]:
                 try:
-                    recalls[len(c['context']) - 1] += 1
+                    recalls[len(c['context']) - 1] += 1.
                 except IndexError:
-                    recalls[-1] += 1
+                    recalls[-1] += 1.
 
-            total += 1
+            try:
+                totals[len(c['context']) - 1] += 1.
+            except IndexError:
+                totals[-1] += 1.
 
-    return recalls, total
+    return recalls, totals
 
 
 def main():
@@ -1362,15 +1368,15 @@ def main():
     logger.info("")
     logger.info("Measuring recall@1 for each context length...")
 
-    recalls, total = recallat1_contextlen(chats)
+    recalls, totals = recallat1_contextlen(chats)
 
     logger.info("Predicted like human behavior:")
     for c_len, r in enumerate(recalls):
         logger.info("- recall@1 for context of size %d: %d / %d = %g" % (
-            c_len + 1, r, total, r / total
+            c_len + 1, r, totals[c_len], r / totals[c_len]
         ))
     # - plot recalls:
-    recalls = np.array(recalls) / total
+    recalls = np.array(recalls) / np.array(totals)
     plt.bar(range(len(recalls)), recalls, tick_label=range(1, len(recalls))+['>'])
     plt.title("Recall@1 for each context length")
     plt.xlabel("#of messages")
