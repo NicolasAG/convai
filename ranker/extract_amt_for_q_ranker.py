@@ -236,6 +236,8 @@ def build_data(lemm):
                     'state': copy.deepcopy(context),
                     'action': {
                         'candidate': candidate,
+                        'model_name': option['model_name'],
+                        'score': option['conf'],
                         'custom_enc': custom_encoding
                     },
                     'reward': 1 if (choice_idx == option_idx) else 0,
