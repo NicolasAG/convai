@@ -237,7 +237,8 @@ def build_data(lemm):
                     'action': {
                         'candidate': candidate,
                         'model_name': option['model_name'],
-                        'score': option['conf'],
+                        'conf': option['conf'],
+                        'score': option['score'],
                         'custom_enc': custom_encoding
                     },
                     'reward': 1 if (choice_idx == option_idx) else 0,
@@ -314,23 +315,20 @@ def split(json_data, n_ex, valid_prop, test_prop, oversample=False):
         else:
             if article not in train_data:
                 train_data[article] = []
-            if oversample:
-                # go through each examples individually and add as many positive ones as negative ones
-                for ex in examples:
-                    train_data[article].append(ex)  # add each example at least once
-                    if ex['reward'] == 1:
-                        n_pos += 1  # count++
+            # go through each examples individually and count the positive & negative ones
+            for ex in examples:
+                train_data[article].append(ex)  # add each example at least once
+                if ex['reward'] == 1:
+                    n_pos += 1  # count++
+                    n_train += 1
+                    # if oversample, copy the positive example as many times as necessary
+                    while oversample and n_pos < n_neg:
+                        train_data[article].append(ex)
+                        n_pos += 1
                         n_train += 1
-                        while n_pos < n_neg:  # copy the positive example as many times as necessary
-                            train_data[article].append(ex)
-                            n_pos += 1
-                            n_train += 1
-                    else:
-                        n_neg += 1
-                        n_train += 1
-            else:
-                train_data[article].extend(examples)
-                n_train += len(examples)
+                else:
+                    n_neg += 1
+                    n_train += 1
 
     return (train_data, n_train, n_pos, n_neg), (valid_data, n_valid), (test_data, n_test)
 
@@ -447,7 +445,7 @@ def main():
     ))
 
     logger.info("")
-    logger.info("Saving to json file...")
+    logger.info("Saving to json & pkl file...")
     unique_id = str(time.time())
 
     if args.oversample:
@@ -463,6 +461,17 @@ def main():
                 },
                 f
         )
+    with open(file_path.replace('.json', '.pkl'), 'wb') as f:
+         pkl.dump(
+                {
+                    'train': [train[0], train[1]],
+                    'valid': [valid[0], valid[1]],
+                    'test': [test[0], test[1]]
+                },
+                f,
+                protocol=pkl.HIGHEST_PROTOCOL
+        )
+
     logger.info("done.")
 
     # Build vocab on training set
@@ -474,7 +483,7 @@ def main():
     logger.info("Saving vocab to pkl file...")
     file_path = "./data/q_ranker_amt_vocab_%s.pkl" % unique_id
     with open(file_path, 'wb') as f:
-        pkl.dump(vocab, f)
+        pkl.dump(vocab, f, protocol=pkl.HIGHEST_PROTOCOL)
     logger.info("done.")
 
 
