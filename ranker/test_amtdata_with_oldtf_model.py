@@ -9,6 +9,7 @@ import numpy as np
 import cPickle as pkl
 import re
 import spacy
+import json
 
 import torch
 
@@ -40,10 +41,8 @@ def get_test_data():
     Load raw data. Takes a while!
     """
 
-    # oversampled --> useless for test
-    #data_f = "./data/q_ranker_amt_data++_1525301962.86.pkl"
     # regular
-    data_f = "./data/q_ranker_amt_data_1527686347.86.pkl"
+    data_f = "./data/q_ranker_amt_data_1527760664.38.pkl"
 
     logger.info("")
     logger.info("Loading data from %s..." % data_f)
@@ -246,8 +245,6 @@ def test_individually(chats):
             # if candidate responses contains dumb_qa then there must have been a match
             if 'dumb_qa' in c['model_names']:
                 idx = c['model_names'].index('dumb_qa')
-                logger.info("dumb qa matched? '%s'" % c['context'][-1])
-                logger.info("responded '%s'" % c['candidates'][idx])
                 assert c['ranker_confs'][idx] == '0', "ranker conf (%s) != '0'" % c['ranker_confs'][idx]
                 assert c['ranker_scores'][idx] == '-1', "ranker score (%s) != '-1'" % c['ranker_scores'][idx]
                 assert len(c['candidates']) == 9, "number of candidates (%d) != 9" % len(c['candidates'])
@@ -311,6 +308,7 @@ def test_individually(chats):
                         c['predictions'][idx] = float(c['ranker_confs'][idx])
 
                     c['predictions'] = c['predictions'] / np.sum(c['predictions'])
+                    c['predictions'] = c['predictions'].tolist()
                     continue  # go to next interaction
 
             # step6: If not bored, then select from best model
@@ -337,6 +335,7 @@ def test_individually(chats):
                     c['predictions'][idx] = float(c['ranker_confs'][idx])
 
                 c['predictions'] = c['predictions'] / np.sum(c['predictions'])
+                c['predictions'] = c['predictions'].tolist()
                 continue  # go to next interaction
 
             # last step: if still no response, then just send a random fact
@@ -373,7 +372,7 @@ def get_recall(chats):
             assert np.sum(c['rewards']) <= 1
 
             # sum of all predictions is exactly 1 since we selected only one
-            assert np.sum(c['predictions']) == 1
+            assert np.isclose(np.sum(c['predictions']), 1.0)
 
             # sorted idx of candidate scores
             _, sorted_idx = torch.Tensor(c['predictions']).sort(descending=True)
@@ -518,8 +517,9 @@ def main():
 
     logger.info("Predicted like human behavior:")
     for c_len, r in enumerate(recalls):
-        logger.info("- recall@1 for context of size %d: %d / %d = %g" % (
-            c_len + 1, r, totals[c_len], r / totals[c_len]
+
+        logger.info("- recall@1 for context of size %d: %d / %d = %s" % (
+            c_len + 1, r, totals[c_len], (r / totals[c_len] if totals[c_len] > 0 else "inf")
         ))
     # - plot recalls:
     recalls = np.array(recalls) / np.array(totals)
@@ -529,6 +529,8 @@ def main():
     plt.ylabel("recall")
     plt.savefig("./models/short_term_on_amt_recall1_c-len.png")
     plt.close()
+
+    logger.info("done.")
 
 
 if __name__ == '__main__':
