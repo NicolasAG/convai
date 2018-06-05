@@ -740,6 +740,10 @@ def plot_timings(timings, old_params):
     train_accs = [e['acc'] for e in timings['train_accurs']]
     valid_losses = timings['valid_losses']
     valid_accs = [e['acc'] for e in timings['valid_accurs']]
+    if 'F1' in timings['train_accurs'][0]:
+        train_f1 = [e['F1'] for e in timings['train_accurs']]
+        valid_f1 = [e['F1'] for e in timings['valid_accurs']]
+
 
     if old_params['predict_rewards']:
         # Predicting immediate Reward
@@ -777,6 +781,21 @@ def plot_timings(timings, old_params):
         logger.info("best valid acc: %g achieved at epoch %d" %
                     (valid_accs[best_valid_acc_idx], best_valid_acc_idx))
         logger.info("training acc at this epoch: %g" % train_accs[best_valid_acc_idx])
+
+    if train_f1 and valid_f1:
+        plt.plot(range(1, len(train_f1) + 1), train_f1, 'b-', label='train')
+        plt.plot(range(1, len(valid_f1) + 1), valid_f1, 'r-', label='valid')
+        plt.title("Training and Validation F1 score over time")
+        plt.xlabel("epochs")
+        plt.ylabel("F1")
+        plt.legend(loc='best')
+        plt.savefig("%s_f1.png" % args.model_prefix)
+        plt.close()
+
+        best_valid_f1_idx = np.argmax(valid_f1)
+        logger.info("best valid f1: %g achieved at epoch %d" %
+                    (valid_f1[best_valid_f1_idx], best_valid_f1_idx))
+        logger.info("training f1 at this epoch: %g" % train_f1[best_valid_f1_idx])
 
 
 def test_individually(dqn, test_conv, old_params):
@@ -1372,8 +1391,8 @@ def main():
 
     logger.info("Predicted like human behavior:")
     for c_len, r in enumerate(recalls):
-        logger.info("- recall@1 for context of size %d: %d / %d = %g" % (
-            c_len + 1, r, totals[c_len], r / totals[c_len]
+        logger.info("- recall@1 for context of size %d: %d / %d = %s" % (
+            c_len + 1, r, totals[c_len], (r / totals[c_len] if totals[c_len] > 0 else "inf")
         ))
     # - plot recalls:
     recalls = np.array(recalls) / np.array(totals)
