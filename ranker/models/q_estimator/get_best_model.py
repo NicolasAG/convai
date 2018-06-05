@@ -116,7 +116,7 @@ def main():
              oversampled_no_custom_encs_and_f1, oversampled_and_f1],
             ['reg', 'os', 'noe', 'os+noe', 'os+noe+F1', 'os+F1']):
         if regex is not None:
-            print "\nLooking for the best <<%s>> model in %s..." % (desc, args.prefix)
+            print "\nLooking for the best << %s >> model in %s..." % (desc, args.prefix)
             best_model = None
             best_score = 0.0 if 'R' in args.prefix else 1.0
             # loop through each file
@@ -187,6 +187,7 @@ def main():
     multiplier = [0., 0.5, 1, 1.5, 2.]  # used to position xticks
 
     # Plot optimizers
+    '''
     pos = range(len(optimizers))
     for desc, c in zip(optimizers.values()[0].keys(), ['r', 'g', 'b', 'y']):
         plt.bar(
@@ -207,6 +208,7 @@ def main():
     plt.ylabel("score")
     plt.savefig("%s_optimizers.png" % args.prefix.replace('/', ''))
     plt.close()
+    '''
     # Plot learning rates
     pos = range(len(learningrates))
     for desc, c in zip(learningrates.values()[0].keys(), ['r', 'g', 'b', 'y']):
