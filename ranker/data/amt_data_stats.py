@@ -133,7 +133,7 @@ def get_proportions(convos):
 
     total = 0.0
 
-    missing_at_7 = {  # ignoring 'dumb_qa'
+    missings = {  # ignoring 'dumb_qa'
         'hred-twitter': 0., 'hred-reddit': 0., 'nqg': 0.,
         'drqa': 0., 'topic_model': 0., 'fact_gen': 0.,
         'candidate_question': 0., 'alicebot': 0.,
@@ -212,17 +212,15 @@ def get_proportions(convos):
                 total_counts += len(turn['options'])
 
                 # DEBUG
-                # print model names that are missing (except 'dumb_qa') when only 7 candidate responses are available
-                if len(turn['options']) == 7:
-                #if len(turn['options']) == 6:
-                #if len(turn['options']) == 5:
+                # print model names that are missing (except 'dumb_qa') when only 7,6,5 candidate responses are available
+                if len(turn['options']) in [7, 6, 5]:
                     all_names = set([
                         'hred-twitter', 'hred-reddit', 'nqg',
                         'drqa', 'topic_model', 'fact_gen',
                         'candidate_question', 'alicebot'])
                     names = set([op['model_name'] for op in turn['options'].values()])
                     missing = list(all_names - names)
-                    assert len(missing) == 1
+                    #assert len(missing) == 1
                     #if missing[0] == 'alicebot':
                     #    print "alice is missing... context below:"
                     #    print turn['options']['1']['context'][-3]
@@ -231,9 +229,8 @@ def get_proportions(convos):
                     #    print ""
                     #elif missing[0] == 'topic_model':
                     #    print turn['options']['1']['context']
-                    missing_at_7[missing[0]] += 1
-                    #missing_at_7[missing[1]] += 1
-                    #missing_at_7[missing[2]] += 1
+                    for model_name in missing:
+                        missings[model_name] += 1
 
             try:
                 context_lengths[c_len-1] += 1
@@ -243,7 +240,7 @@ def get_proportions(convos):
 
             total += 1
 
-    return (candidate_counts, total_counts), (context_lengths, long_contexts, total_lengths), total, missing_at_7
+    return (candidate_counts, total_counts), (context_lengths, long_contexts, total_lengths), total, missings
 
 
 
@@ -333,21 +330,21 @@ def main():
     ###
     print "\nCounting number of candidate responses & context lengths..."
 
-    (candidate_counts, total_counts), (context_lengths, long_contexts, total_lengths), total, missing_at_7 = get_proportions(results)
-    print "missing models when only 7 candidates are available:"
-    total_miss = np.sum(missing_at_7.values())
-    for model_name, miss in missing_at_7.items():
+    (candidate_counts, total_counts), (context_lengths, long_contexts, total_lengths), total, missings = get_proportions(results)
+    print "missing models when only 7,6,5 candidates are available:"
+    total_miss = np.sum(missings.values())
+    for model_name, miss in missings.items():
         print " - %s\tmiss: %d / %d = %f" % (model_name, miss, total_miss, miss / total_miss)
     print ""
     # plot missing models
-    model_names = missing_at_7.keys()
-    misses = np.array(missing_at_7.values()) / total_miss
+    model_names = missings.keys()
+    misses = np.array(missings.values()) / total_miss
     plt.bar(range(len(misses)), misses, tick_label=model_names)
     plt.xticks(fontsize=10, rotation=-30)
-    plt.title("Proportion of models not available when we only have 7 candidates")
+    plt.title("Proportion of unavailable models when we have 7, 6, or 5 candidates")
     plt.xlabel("Model")
     plt.ylabel("Proportion")
-    plt.savefig("amt_data_miss@7.png")
+    plt.savefig("amt_data_missings.png")
     plt.close()
 
 
