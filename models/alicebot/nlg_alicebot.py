@@ -18,7 +18,9 @@ class NLGAlice():
         #self.kernel.loadBrain('./models/response_models/alicebot/alicekernel_20170629.brain')
         #self.kernel.loadBrain('./models/response_models/alicebot/alicekernel_20170701.brain')
         #self.kernel.loadBrain('./models/response_models/alicebot/alicekernel_20170709.brain')
+
         self.kernel.loadBrain('/root/convai/models/alicebot/alicekernel_20170711.brain')
+        #self.kernel.loadBrain('./alicekernel_20170711.brain')
 
     def compute_responses(self, dialogue_history, nlu_rep, user=None):
         # TODO: Currently we assume that nlu_rep is a dictionary and it contains
@@ -48,12 +50,15 @@ class NLGAlice():
             response_kernel = self.kernel.respond(input_).strip()
 
             response_kernel_no_backslash = response_kernel.replace("\\", "")
-            if response_kernel_no_backslash.count("\"") == 2:
-                response_kernel_no_backslask_split = response_kernel_no_backslash.split("\"")
-                if len(response_kernel_no_backslask_split) == 3:
-                    if response_kernel_no_backslask_split[1] > 3:
-                        response_kernel = ""
-                        continue
+            ###
+            # WHAT IS THAT?
+            ###
+            #if response_kernel_no_backslash.count("\"") == 2:
+            #    response_kernel_no_backslask_split = response_kernel_no_backslash.split("\"")
+            #    if len(response_kernel_no_backslask_split) == 3:
+            #        if response_kernel_no_backslask_split[1] > 3:
+            #            response_kernel = ""
+            #            continue
 
             break
 
