@@ -3,7 +3,6 @@ This script previously extracted test amt data and label the chosen message
 in each conversation interaction according to some specific short term
 ranker, previously trained for the ConvAI competition.
 """
-import argparse
 import logging
 import numpy as np
 import cPickle as pkl
@@ -62,13 +61,15 @@ def regroup_chats(raw_data):
     :return: a map of this form:
     chat_id : [
         {
+            'article'      : string,
             'context'      : [list of strings],
             'candidates'   : [list of strings],
             'model_names'  : [list of strings],
             'ranker_confs' : [list of floats],
             'ranker_scores': [list of floats],
             'rewards'      : [list of ints],
-            'predictions'  : [list of floats]
+            'predictions_oldRules' : [list of floats]
+            'predictions_oldClass' : [list of floats]
         },
         {
             ...
@@ -113,7 +114,8 @@ def regroup_chats(raw_data):
                         c['ranker_confs'].append(entry['action']['conf'])
                         c['ranker_scores'].append(entry['action']['score'])
                         c['rewards'].append(entry['reward'])
-                        c['predictions'].append(0.0)  # placeholder for now
+                        c['predictions_oldRules'].append(0.0)  # placeholder for now
+                        c['predictions_oldClass'].append(0.0)  # placeholder for now
                         idx = i
                         break
                 # if context doesn't exists, add it as a new one with this candidate response
@@ -126,7 +128,8 @@ def regroup_chats(raw_data):
                         'ranker_confs': [entry['action']['conf']],
                         'ranker_scores': [entry['action']['score']],
                         'rewards': [entry['reward']],
-                        'predictions': [0.0]  # placeholder for now
+                        'predictions_oldRules': [0.0],  # placeholder for now
+                        'predictions_oldClass': [0.0]  # placeholder for now
                     })
             # if chat doesn't exists, add a new one
             else:
@@ -138,7 +141,8 @@ def regroup_chats(raw_data):
                     'ranker_confs': [entry['action']['conf']],
                     'ranker_scores': [entry['action']['score']],
                     'rewards': [entry['reward']],
-                    'predictions': [0.0]  # placeholder for now
+                    'predictions_oldRules': [0.0],  # placeholder for now
+                    'predictions_oldClass': [0.0]  # placeholder for now
                 }]
 
     logger.info("got %d chats." % len(chats))
@@ -224,21 +228,23 @@ def test_individually(chats):
                 'ranker_confs' : [list of string numbers],
                 'ranker_scores': [list of string numbers],
                 'rewards'      : [list of ints],
-                'predictions'  : [list of floats]
+                'predictions_oldRules': [list of floats],
+                'predictions_oldClass': [list of floats]
             } '''
-            assert len(c['candidates']) == len(c['model_names']) == len(c['ranker_confs']) \
-                   == len(c['ranker_scores']) == len(c['rewards']) == len(c['predictions'])
+            assert len(c['candidates']) == len(c['model_names']) == len(c['ranker_confs']) == len(c['ranker_scores'])\
+                   == len(c['rewards']) == len(c['predictions_oldRules']) == len(c['predictions_oldClass'])
+
+            # for the noRule/onlyClassifier policy, put in the confidence scores as float values
+            c['predictions_oldClass'] = map(lambda s: float(s), c['ranker_confs'])
 
             # step1: if context length = 1, chose randomly between NQG and EntitySentence
             if len(c['context']) == 1:
                 assert len(c['candidates']) == 2, "number of candidates (%d) != 2" % len(c['candidates'])
-                assert c['model_names'][0] in ['candidate_question', 'nqg'], "model name (%s) unknown" % \
-                                                                             c['model_names'][0]
-                assert c['model_names'][1] in ['candidate_question', 'nqg'], "model name (%s) unknown" % \
-                                                                             c['model_names'][1]
+                assert c['model_names'][0] in ['candidate_question', 'nqg'], "model name (%s) unknown" % c['model_names'][0]
+                assert c['model_names'][1] in ['candidate_question', 'nqg'], "model name (%s) unknown" % c['model_names'][1]
 
                 choice = np.random.choice([0, 1])
-                c['predictions'][choice] = 1.0
+                c['predictions_oldRules'][choice] = 1.0
                 continue  # go to next interaction
 
             # step2: if query falls under dumb questions, respond appropriately
@@ -249,7 +255,7 @@ def test_individually(chats):
                 assert c['ranker_scores'][idx] == '-1', "ranker score (%s) != '-1'" % c['ranker_scores'][idx]
                 assert len(c['candidates']) == 9, "number of candidates (%d) != 9" % len(c['candidates'])
 
-                c['predictions'][idx] = 1.0
+                c['predictions_oldRules'][idx] = 1.0
                 continue  # go to next interaction
 
             # step3: if query falls under topic request, respond with the article topic
@@ -258,7 +264,7 @@ def test_individually(chats):
                 assert c['ranker_confs'][idx] == '0', "ranker confs (%s) != '0'" % c['ranker_confs'][idx]
                 assert c['ranker_scores'][idx] == '-1', "ranker scores (%s) != '-1'" % c['ranker_scores'][idx]
 
-                c['predictions'][idx] = 1.0
+                c['predictions_oldRules'][idx] = 1.0
                 continue  # go to next interaction
 
             # nouns of the previous user message
@@ -276,7 +282,7 @@ def test_individually(chats):
                 # if there is a common noun between question and article select DrQA
                 if len(common) > 0 and 'drqa' in c['model_names']:
                     idx = c['model_names'].index('drqa')
-                    c['predictions'][idx] = 1.0
+                    c['predictions_oldRules'][idx] = 1.0
                     continue  # go to next interaction
 
             ###
@@ -305,16 +311,16 @@ def test_individually(chats):
                 if len(bored_idx) > 0:
                     # assign model selection probability based on estimator confidence
                     for idx in bored_idx:
-                        c['predictions'][idx] = float(c['ranker_confs'][idx])
+                        c['predictions_oldRules'][idx] = float(c['ranker_confs'][idx])
 
-                    c['predictions'] = c['predictions'] / np.sum(c['predictions'])
-                    c['predictions'] = c['predictions'].tolist()
+                    c['predictions_oldRules'] = c['predictions_oldRules'] / np.sum(c['predictions_oldRules'])
+                    c['predictions_oldRules'] = c['predictions_oldRules'].tolist()
                     continue  # go to next interaction
 
             # step6: If not bored, then select from best model
             if best_model:
                 idx = c['model_names'].index(best_model)
-                c['predictions'][idx] = 1.0
+                c['predictions_oldRules'][idx] = 1.0
                 continue  # go to next interaction
 
             # step7: Sample from the other models based on confidence probability
@@ -332,16 +338,16 @@ def test_individually(chats):
             if len(available_idx) > 0:
                 # assign model selection probability based on estimator confidence
                 for idx in available_idx:
-                    c['predictions'][idx] = float(c['ranker_confs'][idx])
+                    c['predictions_oldRules'][idx] = float(c['ranker_confs'][idx])
 
-                c['predictions'] = c['predictions'] / np.sum(c['predictions'])
-                c['predictions'] = c['predictions'].tolist()
+                c['predictions_oldRules'] = c['predictions_oldRules'] / np.sum(c['predictions_oldRules'])
+                c['predictions_oldRules'] = c['predictions_oldRules'].tolist()
                 continue  # go to next interaction
 
             # last step: if still no response, then just send a random fact
             if 'fact_gen' in c['model_names']:
                 idx = c['model_names'].index('fact_gen')
-                c['predictions'][idx] = 1.0
+                c['predictions_oldRules'][idx] = 1.0
                 continue  # go to next interaction
 
             # at this stage only one response should have been selected!
@@ -350,7 +356,8 @@ def test_individually(chats):
     return chats
 
 
-def get_recall(chats):
+def get_recall(chats, policy):
+    assert policy in ['RuleBased', 'Sample', 'Argmax']
     recalls = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     total = 0.0
 
@@ -365,17 +372,39 @@ def get_recall(chats):
                 'ranker_confs' : [list of string numbers],
                 'ranker_scores': [list of string numbers],
                 'rewards'      : [list of ints],
-                'predictions'  : [list of floats]
+                'predictions_oldRules': [list of floats],
+                'predictions_oldClass': [list of floats]
             },
             '''
             # sum of all candidate rewards is at most 1
             assert np.sum(c['rewards']) <= 1
 
-            # sum of all predictions is exactly 1 since we selected only one
-            assert np.isclose(np.sum(c['predictions']), 1.0)
+            # sum of all predictions with ruleBased policy is exactly 1
+            assert np.isclose(np.sum(c['predictions_oldRules']), 1.0)
 
-            # sorted idx of candidate scores
-            _, sorted_idx = torch.Tensor(c['predictions']).sort(descending=True)
+            # Get sorted idx of candidate scores
+            if policy == 'RuleBased':
+                # select response according to rule based
+                _, sorted_idx = torch.Tensor(c['predictions_oldRules']).sort(descending=True)
+            elif policy == 'Argmax':
+                # select the max response
+                _, sorted_idx = torch.Tensor(c['predictions_oldClass']).sort(descending=True)
+            elif policy == 'Sample':
+                # sample response according to probability score
+                min_value = min([p for p in c['predictions_oldClass'] if p > 0])
+                min_value /= 10.
+                #print c['predictions_oldClass'], min_value
+                probas = map(lambda p: min_value if p == 0.0 else p, c['predictions_oldClass'])
+                #print probas
+                probas = probas / np.sum(probas)
+                #print probas
+                sorted_idx = np.random.choice(range(len(probas)),
+                                              size=len(probas),
+                                              replace=False,
+                                              p=probas)
+            else:
+                raise ValueError("Unkown policy: %s" % policy)
+
             # idx of chosen candidate
             idx = np.argmax(c['rewards'])
 
@@ -421,7 +450,8 @@ def get_recall(chats):
     return recalls, total
 
 
-def recallat1_contextlen(chats):
+def recallat1_contextlen(chats, policy):
+    assert policy in ['RuleBased', 'Sample', 'Argmax']
     recalls = [0.0, 0.0, 0.0, 0.0, 0.0,
                0.0, 0.0, 0.0, 0.0, 0.0,
                0.0, 0.0, 0.0, 0.0, 0.0,
@@ -442,11 +472,33 @@ def recallat1_contextlen(chats):
                 'ranker_confs' : [list of string numbers],
                 'ranker_scores': [list of string numbers],
                 'rewards'      : [list of ints],
-                'predictions'  : [list of floats]
+                'predictions_oldRules': [list of floats],
+                'predictions_oldClass': [list of floats]
             },
             '''
-            # sorted idx of candidate scores
-            _, sorted_idx = torch.Tensor(c['predictions']).sort(descending=True)
+            # Get sorted idx of candidate scores
+            if policy == 'RuleBased':
+                # select response according to rule based
+                _, sorted_idx = torch.Tensor(c['predictions_oldRules']).sort(descending=True)
+            elif policy == 'Argmax':
+                # select the max response
+                _, sorted_idx = torch.Tensor(c['predictions_oldClass']).sort(descending=True)
+            elif policy == 'Sample':
+                # sample response according to probability score
+                min_value = min([p for p in c['predictions_oldClass'] if p > 0])
+                min_value /= 10.
+                #print c['predictions_oldClass']
+                probas = map(lambda p: min_value if p == 0.0 else p, c['predictions_oldClass'])
+                #print probas
+                probas = probas / np.sum(probas)
+                # print probas
+                sorted_idx = np.random.choice(range(len(probas)),
+                                              size=len(probas),
+                                              replace=False,
+                                              p=probas)
+            else:
+                raise ValueError("Unkown policy: %s" % policy)
+
             # idx of chosen candidate
             idx = np.argmax(c['rewards'])
 
@@ -488,21 +540,55 @@ def main():
     ###
     # Measuring accuracy
     ###
+    barwidth = 0.3
+
     logger.info("")
     logger.info("Measuring recall at predicting best candidate...")
 
-    recalls, total = get_recall(chats)
+    # Get recall for different selection strategies
+    recalls_rulebased, total_rulebased = get_recall(chats, 'RuleBased')
+    recalls_argmax, total_argmax = get_recall(chats, 'Argmax')
+    recalls_sample, total_sample = get_recall(chats, 'Sample')
 
-    logger.info("Predicted like human behavior:")
-    for idx, r in enumerate(recalls):
+    logger.info("Predicted like human behavior with rulebased selection:")
+    for idx, r in enumerate(recalls_rulebased):
         logger.info("- recall@%d: %d / %d = %g" % (
-            idx + 1, r, total, r / total
+            idx + 1, r, total_rulebased, r / total_rulebased
         ))
+    logger.info("Predicted like human behavior with argmax selection:")
+    for idx, r in enumerate(recalls_argmax):
+        logger.info("- recall@%d: %d / %d = %g" % (
+            idx + 1, r, total_argmax, r / total_argmax
+        ))
+    logger.info("Predicted like human behavior with sampled selection:")
+    for idx, r in enumerate(recalls_sample):
+        logger.info("- recall@%d: %d / %d = %g" % (
+            idx + 1, r, total_sample, r / total_sample
+        ))
+
     # - plot recalls: r@1, r@2, ..., r@9
-    recalls = np.array(recalls) / total
-    plt.bar(range(len(recalls)), recalls, tick_label=range(1, len(recalls) + 1))
+    recalls_rulebased = np.array(recalls_rulebased) / total_rulebased
+    recalls_argmax = np.array(recalls_argmax) / total_argmax
+    recalls_sample = np.array(recalls_sample) / total_sample
+    plt.bar(range(len(recalls_rulebased)),
+            recalls_rulebased,
+            color='r', width=barwidth,
+            label='Rule-Based')
+    plt.bar([x + barwidth for x in range(len(recalls_argmax))],
+            recalls_argmax,
+            color='b', width=barwidth,
+            label='Argmax')
+    plt.bar([x + 2*barwidth for x in range(len(recalls_sample))],
+            recalls_sample,
+            color='g', width=barwidth,
+            label='Sampled')
+    plt.legend(loc='best')
     plt.title("Recall@k measure")
     plt.xlabel("k")
+    plt.xticks(
+        [r + barwidth for r in range(len(recalls_rulebased))],
+        range(1, len(recalls_rulebased) + 1)
+    )
     plt.ylabel("recall")
     plt.savefig("./models/short_term_on_amt_recalls.png")
     plt.close()
@@ -513,19 +599,50 @@ def main():
     logger.info("")
     logger.info("Measuring recall@1 for each context length...")
 
-    recalls, totals = recallat1_contextlen(chats)
+    # Get recall for different selection strategies
+    recalls_rulebased, totals_rulebased = recallat1_contextlen(chats, 'RuleBased')
+    recalls_argmax, totals_argmax = recallat1_contextlen(chats, 'Argmax')
+    recalls_sample, totals_sample = recallat1_contextlen(chats, 'Sample')
 
-    logger.info("Predicted like human behavior:")
-    for c_len, r in enumerate(recalls):
-
+    logger.info("Predicted like human behavior with rulebased selection:")
+    for c_len, r in enumerate(recalls_rulebased):
         logger.info("- recall@1 for context of size %d: %d / %d = %s" % (
-            c_len + 1, r, totals[c_len], (r / totals[c_len] if totals[c_len] > 0 else "inf")
+            c_len + 1, r, totals_rulebased[c_len], (r / totals_rulebased[c_len] if totals_rulebased[c_len] > 0 else "inf")
         ))
+    logger.info("Predicted like human behavior with argmax selection:")
+    for c_len, r in enumerate(recalls_argmax):
+        logger.info("- recall@1 for context of size %d: %d / %d = %s" % (
+            c_len + 1, r, totals_argmax[c_len], (r / totals_argmax[c_len] if totals_argmax[c_len] > 0 else "inf")
+        ))
+    logger.info("Predicted like human behavior with sampled selection:")
+    for c_len, r in enumerate(recalls_sample):
+        logger.info("- recall@1 for context of size %d: %d / %d = %s" % (
+            c_len + 1, r, totals_sample[c_len], (r / totals_sample[c_len] if totals_sample[c_len] > 0 else "inf")
+        ))
+
     # - plot recalls:
-    recalls = np.array(recalls) / np.array(totals)
-    plt.bar(range(len(recalls)), recalls, tick_label=range(1, len(recalls)) + ['>'])
+    recalls_rulebased = np.array(recalls_rulebased) / np.array(totals_rulebased)
+    recalls_argmax = np.array(recalls_argmax) / np.array(totals_argmax)
+    recalls_sample = np.array(recalls_sample) / np.array(totals_sample)
+    plt.bar(range(len(recalls_rulebased)),
+            recalls_rulebased,
+            color='r', width=barwidth,
+            label='Rule-Based')
+    plt.bar([x + barwidth for x in range(len(recalls_argmax))],
+            recalls_argmax,
+            color='b', width=barwidth,
+            label='Argmax')
+    plt.bar([x + 2 * barwidth for x in range(len(recalls_sample))],
+            recalls_sample,
+            color='g', width=barwidth,
+            label='Sampled')
+    plt.legend(loc='best')
     plt.title("Recall@1 for each context length")
     plt.xlabel("#of messages")
+    plt.xticks(
+        [r + barwidth for r in range(len(recalls_rulebased))],
+        range(1, len(recalls_rulebased)) + ['>']
+    )
     plt.ylabel("recall")
     plt.savefig("./models/short_term_on_amt_recall1_c-len.png")
     plt.close()
@@ -534,9 +651,5 @@ def main():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    #parser.add_argument("model_prefix", help="path to the short term ranker used in competition")
-    args = parser.parse_args()
-
     main()
 
