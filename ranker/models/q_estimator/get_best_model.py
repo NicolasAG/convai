@@ -9,6 +9,10 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
+WORST_R = 0.0  # worst validation F1 or TP+TN is 0.0
+WORST_Q = 1.0  # worst validation loss is 1.0
+
+
 def add_score(score, desc, params, optimizers, learningrates, activations, dropouts):
     """
     add score to each dictionary of params
@@ -118,7 +122,7 @@ def main():
         if regex is not None:
             print "\nLooking for the best << %s >> model in %s..." % (desc, args.prefix)
             best_model = None
-            best_score = 0.0 if 'R' in args.prefix else 1.0
+            best_score = WORST_R if 'R' in args.prefix else WORST_Q
             # loop through each file
             for fname in listdir(args.prefix):
                 # catch only files that correspond to this regular expression AND finish by 'timings.json'
@@ -131,10 +135,10 @@ def main():
                     # Valid stats
                     valid_losses = timings['valid_losses']
                     if 'R' in args.prefix and 'F1' in timings['valid_accurs'][0]:
-                        #valid_f1 = [e['F1'] for e in timings['valid_accurs']]
-                        valid_f1 = [
-                            (e['TPR'] + e['TNR']) / 2.0 for e in timings['valid_accurs']
-                        ]
+                        valid_f1 = [e['F1'] for e in timings['valid_accurs']]
+                        #valid_f1 = [
+                        #    (e['TPR'] + e['TNR']) / 2.0 for e in timings['valid_accurs']
+                        #]
                     elif 'R' in args.prefix:
                         # no F1 measure so consider average between TPR and TNR
                         valid_f1 = [
@@ -145,23 +149,34 @@ def main():
 
                     if valid_f1:
                         # add best valid f1 score to dictionaries of params
-                        print max(valid_f1),
-                        add_score(max(valid_f1), desc, params, optimizers, learningrates, activations, dropouts)
-                        # update best score
                         best_valid_f1 = max(valid_f1)
+                        print best_valid_f1,
+
+                        # bound worst values to WORST_R
+                        if best_valid_f1 < WORST_R:
+                            best_valid_f1 = WORST_R
+
+                        add_score(best_valid_f1, desc, params, optimizers, learningrates, activations, dropouts)
+                        # update best score
                         if best_valid_f1 > best_score:
                             best_score = best_valid_f1
                             best_model = fname
                     else:
                         # add best valid loss to dictionaries of params
-                        print min(valid_losses),
-                        add_score(min(valid_losses), desc, params, optimizers, learningrates, activations, dropouts)
-                        # update best score
                         best_valid_loss = min(valid_losses)
+                        print best_valid_loss,
+
+                        # bound worst values to WORST_Q
+                        if best_valid_loss > WORST_Q:
+                            best_valid_loss = WORST_Q
+
+                        add_score(best_valid_loss, desc, params, optimizers, learningrates, activations, dropouts)
+                        # update best score
                         if best_valid_loss < best_score:
                             best_score = best_valid_loss
                             best_model = fname
 
+            print ""
             print "Best model: %s" % best_model
             print "with min loss / max F1 of: %g" % best_score
             with open(join(args.prefix, best_model.replace('timings.json', 'params.json')), 'rb') as f:
@@ -187,7 +202,6 @@ def main():
     multiplier = [0., 0.5, 1, 1.5, 2.]  # used to position xticks
 
     # Plot optimizers
-    '''
     pos = range(len(optimizers))
     for desc, c in zip(optimizers.values()[0].keys(), ['r', 'g', 'b', 'y']):
         plt.bar(
@@ -208,7 +222,7 @@ def main():
     plt.ylabel("score")
     plt.savefig("%s_optimizers.png" % args.prefix.replace('/', ''))
     plt.close()
-    '''
+
     # Plot learning rates
     pos = range(len(learningrates))
     for desc, c in zip(learningrates.values()[0].keys(), ['r', 'g', 'b', 'y']):

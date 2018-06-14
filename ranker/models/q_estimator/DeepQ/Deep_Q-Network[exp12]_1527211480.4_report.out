@@ -1,0 +1,128 @@
+loading word2vec embeddings...
+2018-06-12 18:45:16,483: features: INFO: loading nltk english stop words...
+2018-06-12 18:45:16,487: features: INFO: set([u'all', u'just', u'being', u'over', u'both', u'through', u'yourselves', u'its', u'before', u'o', u'hadn', u'herself', u'll', u'had', u'should', u'to', u'only', u'won', u'under', u'ours', u'has', u'do', u'them', u'his', u'very', u'they', u'not', u'during', u'now', u'him', u'nor', u'd', u'did', u'didn', u'this', u'she', u'each', u'further', u'where', u'few', u'because', u'doing', u'some', u'hasn', u'are', u'our', u'ourselves', u'out', u'what', u'for', u'while', u're', u'does', u'above', u'between', u'mustn', u't', u'be', u'we', u'who', u'were', u'here', u'shouldn', u'hers', u'by', u'on', u'about', u'couldn', u'of', u'against', u's', u'isn', u'or', u'own', u'into', u'yourself', u'down', u'mightn', u'wasn', u'your', u'from', u'her', u'their', u'aren', u'there', u'been', u'whom', u'too', u'wouldn', u'themselves', u'weren', u'was', u'until', u'more', u'himself', u'that', u'but', u'don', u'with', u'than', u'those', u'he', u'me', u'myself', u'ma', u'these', u'up', u'will', u'below', u'ain', u'can', u'theirs', u'my', u'and', u've', u'then', u'is', u'am', u'it', u'doesn', u'an', u'as', u'itself', u'at', u'have', u'in', u'any', u'if', u'again', u'no', u'when', u'same', u'how', u'other', u'which', u'you', u'shan', u'needn', u'haven', u'after', u'most', u'such', u'why', u'a', u'off', u'i', u'm', u'yours', u'so', u'y', u'the', u'having', u'once'])
+2018-06-12 18:45:16,488: features: INFO: 
+2018-06-12 18:45:16,778: extract_amt_for_q_ranker: INFO: using ALL features: ['ArticleLength', 'AverageWordEmbedding_Article', 'AverageWordEmbedding_Candidate', 'AverageWordEmbedding_LastK', 'AverageWordEmbedding_User', 'AverageWordEmbedding_kUser', 'BigramOverlap', 'CandidateLength', 'ConfusionWords', 'DialogActCandidate', 'DialogActLastUser', 'DialogLength', 'EntityOverlap', 'GenericTurns', 'IntensifierWords', 'LastUserLength', 'Negation', 'NonStopWordOverlap', 'ProfanityWords', 'SentimentScoreCandidate', 'SentimentScoreLastUser', 'Similarity_CandidateArticle', 'Similarity_CandidateArticle_noStop', 'Similarity_CandidateKUser', 'Similarity_CandidateKUser_noStop', 'Similarity_CandidateLastK', 'Similarity_CandidateLastK_noStop', 'Similarity_CandidateUser', 'TrigramOverlap', 'WhWords']
+2018-06-12 18:45:19,584: __main__: INFO: 
+2018-06-12 18:45:19,584: __main__: INFO: Namespace(gpu=0, model_prefix='models/q_estimator/DeepQ/Deep_Q-Network[exp12]_1527211480.4', verbose=False)
+2018-06-12 18:45:19,585: __main__: INFO: 
+2018-06-12 18:45:19,587: __main__: INFO: old parameters: {u'sentence_hs': 300, u'verbose': False, u'article_bidir': False, u'utterance_hs': 300, u'update_frequence': 2000, u'article_hs': 300, u'epochs': 100000, u'patience': 20, u'mlp_dropout': 0.8, u'context_dropout': 0.8, u'utterance_dropout': 0.8, u'fix_embeddings': False, u'data_f': u'./data/q_ranker_amt_data_1524939554.0.json', u'experiment': None, u'sentence_bidir': False, u'gpu': 0, u'article_dropout': 0.8, u'optimizer': u'adam', u'learning_rate': 0.0001, u'use_custom_encs': True, u'batch_size': 128, u'sentence_dropout': 0.8, u'context_hs': 300, u'predict_rewards': False, u'rnn_gate': u'gru', u'mlp_activation': u'sigmoid', u'utterance_bidir': False, u'model_name': u'DeepQ/Deep_Q-Network[exp12]', u'vocab_f': u'./data/q_ranker_amt_vocab_1524939554.0.pkl', u'mode': u'rnn+mlp', u'debug': False, u'context_bidir': False, u'gamma': 0.99}
+2018-06-12 18:45:19,587: __main__: INFO: 
+2018-06-12 18:45:19,587: __main__: INFO: Loading data from ./data/q_ranker_amt_data_1527760664.38.pkl...
+2018-06-12 18:47:26,647: __main__: INFO: got 7083 test examples
+2018-06-12 18:47:26,647: __main__: INFO: 
+2018-06-12 18:47:26,647: __main__: INFO: Loading vocabulary...
+2018-06-12 18:47:26,732: __main__: INFO: number of unique tokens: 24448
+2018-06-12 18:47:26,732: __main__: INFO: 
+2018-06-12 18:47:26,732: __main__: INFO: Get data loaders...
+2018-06-12 18:47:26,756: __main__: INFO: done.
+2018-06-12 18:47:26,757: __main__: INFO: 
+2018-06-12 18:47:26,757: __main__: INFO: Building word embeddings...
+2018-06-12 18:47:26,864: __main__: INFO: Got 16787/24448 = 0.686641 pretrained embeddings
+2018-06-12 18:47:26,864: __main__: INFO: 
+2018-06-12 18:47:26,864: __main__: INFO: Building Q-Network...
+2018-06-12 18:47:34,250: __main__: INFO: DeepQNetwork(
+(embed): Embedding(24448, 300)
+(sentence_rnn): GRU(300, 300, batch_first=True, dropout=0.8)
+(article_rnn): GRU(300, 300, batch_first=True, dropout=0.8)
+(utterance_rnn): GRU(300, 300, batch_first=True, dropout=0.8)
+(context_rnn): GRU(300, 300, batch_first=True, dropout=0.8)
+(fc_1): Linear(in_features=600, out_features=300, bias=True)
+(fc_2): Linear(in_features=300, out_features=150, bias=True)
+(fc_3): Linear(in_features=150, out_features=150, bias=True)
+(fc_value_1): Linear(in_features=150, out_features=75, bias=True)
+(fc_value_2): Linear(in_features=75, out_features=1, bias=True)
+(fc_adv_1): Linear(in_features=2029, out_features=1014, bias=True)
+(fc_adv_2): Linear(in_features=1014, out_features=507, bias=True)
+(fc_adv_3): Linear(in_features=507, out_features=1, bias=True)
+(dropout): Dropout(p=0.8)
+)
+2018-06-12 18:47:34,251: __main__: INFO: 
+2018-06-12 18:47:34,251: __main__: INFO: cuda available! Moving variables to cuda 0...
+2018-06-12 18:47:50,517: __main__: INFO: 
+2018-06-12 18:47:50,517: __main__: INFO: Plotting timings...
+2018-06-12 18:47:50,890: __main__: INFO: best valid loss: 0.00516201 achieved at epoch 1
+2018-06-12 18:47:50,890: __main__: INFO: training loss at this epoch: 0.165021
+2018-06-12 18:47:50,891: __main__: INFO: done.
+2018-06-12 18:47:50,891: __main__: INFO: 
+2018-06-12 18:47:50,891: __main__: INFO: Testing model in batches...
+2018-06-12 18:48:20,373: __main__: INFO: Test loss: 0.0371495
+2018-06-12 18:48:20,373: __main__: INFO: Finished testing. Time elapsed: 29.4825 seconds
+2018-06-12 18:48:20,373: __main__: INFO: 
+2018-06-12 18:48:20,373: __main__: INFO: Testing model one example at a time & generating report.json
+2018-06-12 18:49:17,425: __main__: INFO: Now simulating the old chatbot decision policy...
+2018-06-12 18:49:21,580: __main__: INFO: Finished 1-by-1 testing. Time elapsed: 61.2068 seconds
+2018-06-12 18:49:21,580: __main__: INFO: 
+2018-06-12 18:49:21,580: __main__: INFO: Saving report...
+2018-06-12 18:49:21,918: __main__: INFO: done.
+2018-06-12 18:49:21,918: __main__: INFO: 
+2018-06-12 18:49:21,918: __main__: INFO: Measuring recall at predicting best candidate...
+2018-06-12 18:49:22,179: __main__: INFO: Predicted like human behavior with rulebased selection:
+2018-06-12 18:49:22,179: __main__: INFO: - recall@1: 257 / 1028 = 0.25
+2018-06-12 18:49:22,179: __main__: INFO: - recall@2: 449 / 1028 = 0.43677
+2018-06-12 18:49:22,179: __main__: INFO: - recall@3: 647 / 1028 = 0.629377
+2018-06-12 18:49:22,179: __main__: INFO: - recall@4: 703 / 1028 = 0.683852
+2018-06-12 18:49:22,179: __main__: INFO: - recall@5: 749 / 1028 = 0.728599
+2018-06-12 18:49:22,179: __main__: INFO: - recall@6: 823 / 1028 = 0.800584
+2018-06-12 18:49:22,179: __main__: INFO: - recall@7: 846 / 1028 = 0.822957
+2018-06-12 18:49:22,179: __main__: INFO: - recall@8: 1028 / 1028 = 1
+2018-06-12 18:49:22,179: __main__: INFO: - recall@9: 1028 / 1028 = 1
+2018-06-12 18:49:22,179: __main__: INFO: Predicted like human behavior with argmax selection:
+2018-06-12 18:49:22,179: __main__: INFO: - recall@1: 240 / 1028 = 0.233463
+2018-06-12 18:49:22,179: __main__: INFO: - recall@2: 396 / 1028 = 0.385214
+2018-06-12 18:49:22,179: __main__: INFO: - recall@3: 503 / 1028 = 0.4893
+2018-06-12 18:49:22,179: __main__: INFO: - recall@4: 594 / 1028 = 0.577821
+2018-06-12 18:49:22,179: __main__: INFO: - recall@5: 700 / 1028 = 0.680934
+2018-06-12 18:49:22,179: __main__: INFO: - recall@6: 823 / 1028 = 0.800584
+2018-06-12 18:49:22,179: __main__: INFO: - recall@7: 934 / 1028 = 0.90856
+2018-06-12 18:49:22,179: __main__: INFO: - recall@8: 1028 / 1028 = 1
+2018-06-12 18:49:22,179: __main__: INFO: - recall@9: 1028 / 1028 = 1
+2018-06-12 18:49:22,179: __main__: INFO: Predicted like human behavior with sampled selection:
+2018-06-12 18:49:22,179: __main__: INFO: - recall@1: 188 / 1028 = 0.182879
+2018-06-12 18:49:22,179: __main__: INFO: - recall@2: 377 / 1028 = 0.366732
+2018-06-12 18:49:22,179: __main__: INFO: - recall@3: 490 / 1028 = 0.476654
+2018-06-12 18:49:22,179: __main__: INFO: - recall@4: 608 / 1028 = 0.59144
+2018-06-12 18:49:22,179: __main__: INFO: - recall@5: 714 / 1028 = 0.694553
+2018-06-12 18:49:22,179: __main__: INFO: - recall@6: 815 / 1028 = 0.792802
+2018-06-12 18:49:22,179: __main__: INFO: - recall@7: 932 / 1028 = 0.906615
+2018-06-12 18:49:22,179: __main__: INFO: - recall@8: 1027 / 1028 = 0.999027
+2018-06-12 18:49:22,179: __main__: INFO: - recall@9: 1028 / 1028 = 1
+2018-06-12 18:49:22,299: __main__: INFO: 
+2018-06-12 18:49:22,300: __main__: INFO: Measuring recall@1 for each context length...
+2018-06-12 18:49:22,409: __main__: INFO: Predicted like human behavior with rulebased selection:
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 1: 94 / 177 = 0.531073446328
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 3: 30 / 177 = 0.169491525424
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 5: 30 / 177 = 0.169491525424
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 7: 29 / 177 = 0.16384180791
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 9: 37 / 177 = 0.209039548023
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 11: 20 / 75 = 0.266666666667
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 13: 8 / 28 = 0.285714285714
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 15: 4 / 17 = 0.235294117647
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 17: 2 / 12 = 0.166666666667
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 19: 2 / 7 = 0.285714285714
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 21: 1 / 4 = 0.25
+2018-06-12 18:49:22,409: __main__: INFO: Predicted like human behavior with argmax selection:
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 1: 107 / 177 = 0.604519774011
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 3: 27 / 177 = 0.152542372881
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 5: 29 / 177 = 0.16384180791
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 7: 30 / 177 = 0.169491525424
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 9: 25 / 177 = 0.141242937853
+2018-06-12 18:49:22,409: __main__: INFO: - recall@1 for context of size 11: 9 / 75 = 0.12
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 13: 7 / 28 = 0.25
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 15: 2 / 17 = 0.117647058824
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 17: 2 / 12 = 0.166666666667
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 19: 2 / 7 = 0.285714285714
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 21: 0 / 4 = 0.0
+2018-06-12 18:49:22,410: __main__: INFO: Predicted like human behavior with sampled selection:
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 1: 92 / 177 = 0.519774011299
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 3: 32 / 177 = 0.180790960452
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 5: 19 / 177 = 0.107344632768
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 7: 29 / 177 = 0.16384180791
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 9: 24 / 177 = 0.135593220339
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 11: 10 / 75 = 0.133333333333
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 13: 2 / 28 = 0.0714285714286
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 15: 2 / 17 = 0.117647058824
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 17: 2 / 12 = 0.166666666667
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 19: 2 / 7 = 0.285714285714
+2018-06-12 18:49:22,410: __main__: INFO: - recall@1 for context of size 21: 2 / 4 = 0.5
+2018-06-12 18:49:22,533: __main__: INFO: done.
