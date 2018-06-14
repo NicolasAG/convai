@@ -1272,7 +1272,10 @@ def get_rulebased_predictions(chats):
                 if len(bored_idx) > 0:
                     # assign model selection probability based on estimator confidence
                     for idx in bored_idx:
-                        c['rule-based'][idx] = c['predictions'][idx]
+                        if c['predictions'][idx] == 0.0:
+                            c['rule-based'][idx] = min([p for p in c['predictions'] if p > 0.0]) / 10.
+                        else:
+                            c['rule-based'][idx] = c['predictions'][idx]
 
                     c['rule-based'] = c['rule-based'] / np.sum(c['rule-based'])
                     c['rule-based'] = c['rule-based'].tolist()
@@ -1299,7 +1302,10 @@ def get_rulebased_predictions(chats):
             if len(available_idx) > 0:
                 # assign model selection probability based on estimator confidence
                 for idx in available_idx:
-                    c['rule-based'][idx] = c['predictions'][idx]
+                    if c['predictions'][idx] == 0.0:
+                        c['rule-based'][idx] = min([p for p in c['predictions'] if p > 0.0]) / 10.
+                    else:
+                        c['rule-based'][idx] = c['predictions'][idx]
 
                 c['rule-based'] = c['rule-based'] / np.sum(c['rule-based'])
                 c['rule-based'] = c['rule-based'].tolist()
@@ -1446,13 +1452,9 @@ def get_proportions(chats):
 def recallat1_contextlen(chats, policy):
     assert policy in ['RuleBased', 'Sample', 'Argmax']
     recalls = [0.0, 0.0, 0.0, 0.0, 0.0,
-               0.0, 0.0, 0.0, 0.0, 0.0,
-               0.0, 0.0, 0.0, 0.0, 0.0,
                0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     totals = [0.0, 0.0, 0.0, 0.0, 0.0,
-               0.0, 0.0, 0.0, 0.0, 0.0,
-               0.0, 0.0, 0.0, 0.0, 0.0,
-               0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+              0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
     for chat_id, contexts in chats.iteritems():
         for c in contexts:
@@ -1492,12 +1494,12 @@ def recallat1_contextlen(chats, policy):
             # Recall @ 1
             if idx in sorted_idx[:1]:
                 try:
-                    recalls[len(c['context']) - 1] += 1.
+                    recalls[(len(c['context']) - 1) / 2] += 1.
                 except IndexError:
                     recalls[-1] += 1.
 
             try:
-                totals[len(c['context']) - 1] += 1.
+                totals[(len(c['context']) - 1) / 2] += 1.
             except IndexError:
                 totals[-1] += 1.
 
@@ -1726,18 +1728,18 @@ def main():
     logger.info("Predicted like human behavior with rulebased selection:")
     for c_len, r in enumerate(recalls_rulebased):
         logger.info("- recall@1 for context of size %d: %d / %d = %s" % (
-            c_len + 1, r, totals_rulebased[c_len],
+            2*c_len + 1, r, totals_rulebased[c_len],
             (r / totals_rulebased[c_len] if totals_rulebased[c_len] > 0 else "inf")
         ))
     logger.info("Predicted like human behavior with argmax selection:")
     for c_len, r in enumerate(recalls_argmax):
         logger.info("- recall@1 for context of size %d: %d / %d = %s" % (
-            c_len + 1, r, totals_argmax[c_len], (r / totals_argmax[c_len] if totals_argmax[c_len] > 0 else "inf")
+            2*c_len + 1, r, totals_argmax[c_len], (r / totals_argmax[c_len] if totals_argmax[c_len] > 0 else "inf")
         ))
     logger.info("Predicted like human behavior with sampled selection:")
     for c_len, r in enumerate(recalls_sample):
         logger.info("- recall@1 for context of size %d: %d / %d = %s" % (
-            c_len + 1, r, totals_sample[c_len], (r / totals_sample[c_len] if totals_sample[c_len] > 0 else "inf")
+            2*c_len + 1, r, totals_sample[c_len], (r / totals_sample[c_len] if totals_sample[c_len] > 0 else "inf")
         ))
 
     # - plot recalls:
@@ -1761,7 +1763,7 @@ def main():
     plt.xlabel("#of messages")
     plt.xticks(
         [r + barwidth for r in range(len(recalls_rulebased))],
-        range(1, len(recalls_rulebased)) + ['>']
+        range(1, 2*len(recalls_rulebased), 2) + ['>']
     )
     plt.ylabel("recall")
     plt.savefig("%s_recall1_c-len.png" % args.model_prefix)
