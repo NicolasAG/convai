@@ -1,0 +1,1440 @@
+/home/ml/nangel3/.local/lib/python2.7/site-packages/h5py/__init__.py:36: FutureWarning: Conversion of the second argument of issubdtype from `float` to `np.floating` is deprecated. In future, it will be treated as `np.float64 == np.dtype(float).type`.
+  from ._conv import register_converters as _register_converters
+loading word2vec embeddings...
+
+Namespace(activation='relu', batch_size=128, data=['./data/supervised_ranker_db_voted_data_1520108818.78.json', './data/supervised_ranker_round1_voted_data_1520108828.2.json'], dropout_rate=0.7, explore=None, gpu=0, hidden_sizes=[789, 789, 394], learning_rate=0.001, mode='short_term', optimizer='rmsprop', patience=20, previous_model=None, threshold=0.63, verbose=True)
+
+Loading data...
+2018-06-09 23:39:40,107: features: INFO: loading nltk english stop words...
+2018-06-09 23:39:40,114: features: INFO: set([u'all', u'just', u'being', u'over', u'both', u'through', u'yourselves', u'its', u'before', u'o', u'hadn', u'herself', u'll', u'had', u'should', u'to', u'only', u'won', u'under', u'ours', u'has', u'do', u'them', u'his', u'very', u'they', u'not', u'during', u'now', u'him', u'nor', u'd', u'did', u'didn', u'this', u'she', u'each', u'further', u'where', u'few', u'because', u'doing', u'some', u'hasn', u'are', u'our', u'ourselves', u'out', u'what', u'for', u'while', u're', u'does', u'above', u'between', u'mustn', u't', u'be', u'we', u'who', u'were', u'here', u'shouldn', u'hers', u'by', u'on', u'about', u'couldn', u'of', u'against', u's', u'isn', u'or', u'own', u'into', u'yourself', u'down', u'mightn', u'wasn', u'your', u'from', u'her', u'their', u'aren', u'there', u'been', u'whom', u'too', u'wouldn', u'themselves', u'weren', u'was', u'until', u'more', u'himself', u'that', u'but', u'don', u'with', u'than', u'those', u'he', u'me', u'myself', u'ma', u'these', u'up', u'will', u'below', u'ain', u'can', u'theirs', u'my', u'and', u've', u'then', u'is', u'am', u'it', u'doesn', u'an', u'as', u'itself', u'at', u'have', u'in', u'any', u'if', u'again', u'no', u'when', u'same', u'how', u'other', u'which', u'you', u'shan', u'needn', u'haven', u'after', u'most', u'such', u'why', u'a', u'off', u'i', u'm', u'yours', u'so', u'y', u'the', u'having', u'once'])
+2018-06-09 23:39:40,114: features: INFO: got 8902 examples
+got 1750 unique articles
+avg turn length: 7.62289
+vocabulary size: 9110
+building data...
+train+valid examples: 8009 (3897 +1's & 4112 -1's)
+[fold 1] valid: (890, 1579)
+[fold 1] train: (7119, 1579)
+[fold 2] valid: (890, 1579)
+[fold 2] train: (7119, 1579)
+[fold 3] valid: (890, 1579)
+[fold 3] train: (7119, 1579)
+[fold 4] valid: (890, 1579)
+[fold 4] train: (7119, 1579)
+[fold 5] valid: (890, 1579)
+[fold 5] train: (7119, 1579)
+[fold 6] valid: (890, 1579)
+[fold 6] train: (7119, 1579)
+[fold 7] valid: (890, 1579)
+[fold 7] train: (7119, 1579)
+[fold 8] valid: (890, 1579)
+[fold 8] train: (7119, 1579)
+test: (893, 1579)
+Building the network...
+
+WARNING:tensorflow:From /home/ml/nangel3/.local/lib/python2.7/site-packages/tensorflow/python/ops/losses/losses_impl.py:731: softmax_cross_entropy_with_logits (from tensorflow.python.ops.nn_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+
+Future major versions of TensorFlow will allow gradients to flow
+into the labels input on backprop by default.
+
+See tf.nn.softmax_cross_entropy_with_logits_v2.
+
+2018-06-09 23:40:33,357: tensorflow: WARNING: From /home/ml/nangel3/.local/lib/python2.7/site-packages/tensorflow/python/ops/losses/losses_impl.py:731: softmax_cross_entropy_with_logits (from tensorflow.python.ops.nn_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+
+Future major versions of TensorFlow will allow gradients to flow
+into the labels input on backprop by default.
+
+See tf.nn.softmax_cross_entropy_with_logits_v2.
+
+2018-06-09 23:40:33.715564: I tensorflow/core/platform/cpu_feature_guard.cc:140] Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 FMA
+2018-06-09 23:40:33.855465: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:898] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2018-06-09 23:40:33.855714: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1212] Found device 0 with properties: 
+name: GeForce GTX 1080 Ti major: 6 minor: 1 memoryClockRate(GHz): 1.6325
+pciBusID: 0000:01:00.0
+totalMemory: 10.91GiB freeMemory: 5.09GiB
+2018-06-09 23:40:33.855725: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1312] Adding visible gpu devices: 0
+Training the network...
+begin fold 1 reset model to initial state
+2018-06-09 23:41:10.684749: I tensorflow/core/common_runtime/gpu/gpu_device.cc:993] Creating TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 4859 MB memory) -> physical GPU (device: 0, name: GeForce GTX 1080 Ti, pci bus id: 0000:01:00.0, compute capability: 6.1)
+[fold 1] epoch 1 - step 55 - training loss: 0.696704
+[fold 1] epoch 1: train accuracy: 0.514539
+[fold 1] epoch 1: valid accuracy: 0.511236
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 1] epoch 1: patience: 20
+[fold 1] epoch 2 - step 55 - training loss: 0.68847
+[fold 1] epoch 2: train accuracy: 0.511027
+[fold 1] epoch 2: valid accuracy: 0.48427
+[fold 1] epoch 2: patience: 19
+[fold 1] epoch 3 - step 55 - training loss: 0.683752
+[fold 1] epoch 3: train accuracy: 0.52381
+[fold 1] epoch 3: valid accuracy: 0.511236
+[fold 1] epoch 3: patience: 18
+[fold 1] epoch 4 - step 55 - training loss: 0.694731
+[fold 1] epoch 4: train accuracy: 0.5269
+[fold 1] epoch 4: valid accuracy: 0.517978
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 1] epoch 4: patience: 20
+[fold 1] epoch 5 - step 55 - training loss: 0.689702
+[fold 1] epoch 5: train accuracy: 0.542773
+[fold 1] epoch 5: valid accuracy: 0.542697
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 1] epoch 5: patience: 20
+[fold 1] epoch 6 - step 55 - training loss: 0.682923
+[fold 1] epoch 6: train accuracy: 0.555696
+[fold 1] epoch 6: valid accuracy: 0.550562
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 1] epoch 6: patience: 20
+[fold 1] epoch 7 - step 55 - training loss: 0.67208
+[fold 1] epoch 7: train accuracy: 0.593482
+[fold 1] epoch 7: valid accuracy: 0.564045
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 1] epoch 7: patience: 20
+[fold 1] epoch 8 - step 55 - training loss: 0.648974
+[fold 1] epoch 8: train accuracy: 0.629021
+[fold 1] epoch 8: valid accuracy: 0.588764
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 1] epoch 8: patience: 20
+[fold 1] epoch 9 - step 55 - training loss: 0.682417
+[fold 1] epoch 9: train accuracy: 0.558084
+[fold 1] epoch 9: valid accuracy: 0.534831
+[fold 1] epoch 9: patience: 19
+[fold 1] epoch 10 - step 55 - training loss: 0.59717
+[fold 1] epoch 10: train accuracy: 0.64981
+[fold 1] epoch 10: valid accuracy: 0.592135
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 1] epoch 10: patience: 20
+[fold 1] epoch 11 - step 55 - training loss: 0.538499
+[fold 1] epoch 11: train accuracy: 0.687316
+[fold 1] epoch 11: valid accuracy: 0.596629
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 1] epoch 11: patience: 20
+[fold 1] epoch 12 - step 55 - training loss: 0.514871
+[fold 1] epoch 12: train accuracy: 0.709369
+[fold 1] epoch 12: valid accuracy: 0.631461
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 1] epoch 12: patience: 20
+[fold 1] epoch 13 - step 55 - training loss: 0.502593
+[fold 1] epoch 13: train accuracy: 0.741958
+[fold 1] epoch 13: valid accuracy: 0.630337
+[fold 1] epoch 13: patience: 19
+[fold 1] epoch 14 - step 55 - training loss: 0.706861
+[fold 1] epoch 14: train accuracy: 0.607108
+[fold 1] epoch 14: valid accuracy: 0.547191
+[fold 1] epoch 14: patience: 18
+[fold 1] epoch 15 - step 55 - training loss: 0.424579
+[fold 1] epoch 15: train accuracy: 0.764995
+[fold 1] epoch 15: valid accuracy: 0.630337
+[fold 1] epoch 15: patience: 17
+[fold 1] epoch 16 - step 55 - training loss: 0.536352
+[fold 1] epoch 16: train accuracy: 0.707543
+[fold 1] epoch 16: valid accuracy: 0.583146
+[fold 1] epoch 16: patience: 16
+[fold 1] epoch 17 - step 55 - training loss: 0.34924
+[fold 1] epoch 17: train accuracy: 0.804326
+[fold 1] epoch 17: valid accuracy: 0.611236
+[fold 1] epoch 17: patience: 15
+[fold 1] epoch 18 - step 55 - training loss: 0.275944
+[fold 1] epoch 18: train accuracy: 0.818373
+[fold 1] epoch 18: valid accuracy: 0.611236
+[fold 1] epoch 18: patience: 14
+[fold 1] epoch 19 - step 55 - training loss: 0.214343
+[fold 1] epoch 19: train accuracy: 0.825678
+[fold 1] epoch 19: valid accuracy: 0.622472
+[fold 1] epoch 19: patience: 13
+[fold 1] epoch 20 - step 55 - training loss: 0.406281
+[fold 1] epoch 20: train accuracy: 0.591516
+[fold 1] epoch 20: valid accuracy: 0.547191
+[fold 1] epoch 20: patience: 12
+[fold 1] epoch 21 - step 55 - training loss: 0.246331
+[fold 1] epoch 21: train accuracy: 0.844501
+[fold 1] epoch 21: valid accuracy: 0.613483
+[fold 1] epoch 21: patience: 11
+[fold 1] epoch 22 - step 55 - training loss: 0.782224
+[fold 1] epoch 22: train accuracy: 0.852226
+[fold 1] epoch 22: valid accuracy: 0.621348
+[fold 1] epoch 22: patience: 10
+[fold 1] epoch 23 - step 55 - training loss: 0.320416
+[fold 1] epoch 23: train accuracy: 0.797022
+[fold 1] epoch 23: valid accuracy: 0.613483
+[fold 1] epoch 23: patience: 9
+[fold 1] epoch 24 - step 55 - training loss: 0.553259
+[fold 1] epoch 24: train accuracy: 0.842955
+[fold 1] epoch 24: valid accuracy: 0.626966
+[fold 1] epoch 24: patience: 8
+[fold 1] epoch 25 - step 55 - training loss: 0.181109
+[fold 1] epoch 25: train accuracy: 0.861638
+[fold 1] epoch 25: valid accuracy: 0.606742
+[fold 1] epoch 25: patience: 7
+[fold 1] epoch 26 - step 55 - training loss: 0.100781
+[fold 1] epoch 26: train accuracy: 0.893243
+[fold 1] epoch 26: valid accuracy: 0.623595
+[fold 1] epoch 26: patience: 6
+[fold 1] epoch 27 - step 55 - training loss: 0.137679
+[fold 1] epoch 27: train accuracy: 0.907431
+[fold 1] epoch 27: valid accuracy: 0.619101
+[fold 1] epoch 27: patience: 5
+[fold 1] epoch 28 - step 55 - training loss: 0.072252
+[fold 1] epoch 28: train accuracy: 0.921478
+[fold 1] epoch 28: valid accuracy: 0.622472
+[fold 1] epoch 28: patience: 4
+[fold 1] epoch 29 - step 55 - training loss: 0.054169
+[fold 1] epoch 29: train accuracy: 0.92218
+[fold 1] epoch 29: valid accuracy: 0.617977
+[fold 1] epoch 29: patience: 3
+[fold 1] epoch 30 - step 55 - training loss: 0.141403
+[fold 1] epoch 30: train accuracy: 0.928923
+[fold 1] epoch 30: valid accuracy: 0.632584
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 1] epoch 30: patience: 20
+[fold 1] epoch 31 - step 55 - training loss: 0.0893159
+[fold 1] epoch 31: train accuracy: 0.899565
+[fold 1] epoch 31: valid accuracy: 0.632584
+[fold 1] epoch 31: patience: 19
+[fold 1] epoch 32 - step 55 - training loss: 0.0738668
+[fold 1] epoch 32: train accuracy: 0.919371
+[fold 1] epoch 32: valid accuracy: 0.635955
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 1] epoch 32: patience: 20
+[fold 1] epoch 33 - step 55 - training loss: 0.201686
+[fold 1] epoch 33: train accuracy: 0.896896
+[fold 1] epoch 33: valid accuracy: 0.605618
+[fold 1] epoch 33: patience: 19
+[fold 1] epoch 34 - step 55 - training loss: 0.0167646
+[fold 1] epoch 34: train accuracy: 0.957859
+[fold 1] epoch 34: valid accuracy: 0.625843
+[fold 1] epoch 34: patience: 18
+[fold 1] epoch 35 - step 55 - training loss: 0.158516
+[fold 1] epoch 35: train accuracy: 0.932153
+[fold 1] epoch 35: valid accuracy: 0.631461
+[fold 1] epoch 35: patience: 17
+[fold 1] epoch 36 - step 55 - training loss: 0.125522
+[fold 1] epoch 36: train accuracy: 0.958702
+[fold 1] epoch 36: valid accuracy: 0.626966
+[fold 1] epoch 36: patience: 16
+[fold 1] epoch 37 - step 55 - training loss: 0.184404
+[fold 1] epoch 37: train accuracy: 0.972609
+[fold 1] epoch 37: valid accuracy: 0.613483
+[fold 1] epoch 37: patience: 15
+[fold 1] epoch 38 - step 55 - training loss: 0.0940328
+[fold 1] epoch 38: train accuracy: 0.96713
+[fold 1] epoch 38: valid accuracy: 0.617977
+[fold 1] epoch 38: patience: 14
+[fold 1] epoch 39 - step 55 - training loss: 0.124774
+[fold 1] epoch 39: train accuracy: 0.964602
+[fold 1] epoch 39: valid accuracy: 0.611236
+[fold 1] epoch 39: patience: 13
+[fold 1] epoch 40 - step 55 - training loss: 0.0567157
+[fold 1] epoch 40: train accuracy: 0.947324
+[fold 1] epoch 40: valid accuracy: 0.622472
+[fold 1] epoch 40: patience: 12
+[fold 1] epoch 41 - step 55 - training loss: 0.0178303
+[fold 1] epoch 41: train accuracy: 0.973592
+[fold 1] epoch 41: valid accuracy: 0.623595
+[fold 1] epoch 41: patience: 11
+[fold 1] epoch 42 - step 55 - training loss: 0.0349775
+[fold 1] epoch 42: train accuracy: 0.969659
+[fold 1] epoch 42: valid accuracy: 0.631461
+[fold 1] epoch 42: patience: 10
+[fold 1] epoch 43 - step 55 - training loss: 0.0408784
+[fold 1] epoch 43: train accuracy: 0.977525
+[fold 1] epoch 43: valid accuracy: 0.62809
+[fold 1] epoch 43: patience: 9
+[fold 1] epoch 44 - step 55 - training loss: 0.0432452
+[fold 1] epoch 44: train accuracy: 0.975418
+[fold 1] epoch 44: valid accuracy: 0.62809
+[fold 1] epoch 44: patience: 8
+[fold 1] epoch 45 - step 55 - training loss: 0.00840341
+[fold 1] epoch 45: train accuracy: 0.983565
+[fold 1] epoch 45: valid accuracy: 0.630337
+[fold 1] epoch 45: patience: 7
+[fold 1] epoch 46 - step 55 - training loss: 0.585526
+[fold 1] epoch 46: train accuracy: 0.717376
+[fold 1] epoch 46: valid accuracy: 0.555056
+[fold 1] epoch 46: patience: 6
+[fold 1] epoch 47 - step 55 - training loss: 0.0257536
+[fold 1] epoch 47: train accuracy: 0.984689
+[fold 1] epoch 47: valid accuracy: 0.62809
+[fold 1] epoch 47: patience: 5
+[fold 1] epoch 48 - step 55 - training loss: 0.0205243
+[fold 1] epoch 48: train accuracy: 0.983706
+[fold 1] epoch 48: valid accuracy: 0.611236
+[fold 1] epoch 48: patience: 4
+[fold 1] epoch 49 - step 55 - training loss: 0.00429145
+[fold 1] epoch 49: train accuracy: 0.987639
+[fold 1] epoch 49: valid accuracy: 0.629214
+[fold 1] epoch 49: patience: 3
+[fold 1] epoch 50 - step 55 - training loss: 0.00683048
+[fold 1] epoch 50: train accuracy: 0.988482
+[fold 1] epoch 50: valid accuracy: 0.616854
+[fold 1] epoch 50: patience: 2
+[fold 1] epoch 51 - step 55 - training loss: 0.0144658
+[fold 1] epoch 51: train accuracy: 0.986796
+[fold 1] epoch 51: valid accuracy: 0.620225
+[fold 1] epoch 51: patience: 1
+[fold 1] epoch 52 - step 55 - training loss: 1.60091
+[fold 1] epoch 52: train accuracy: 0.910662
+[fold 1] epoch 52: valid accuracy: 0.583146
+[fold 1] epoch 52: patience: 0
+Args (and data) saved.
+Timings saved.
+------------------------------
+begin fold 2 reset model to initial state
+[fold 2] epoch 1 - step 55 - training loss: 0.737972
+[fold 2] epoch 1: train accuracy: 0.487568
+[fold 2] epoch 1: valid accuracy: 0.482022
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 2] epoch 1: patience: 20
+[fold 2] epoch 2 - step 55 - training loss: 0.710747
+[fold 2] epoch 2: train accuracy: 0.486866
+[fold 2] epoch 2: valid accuracy: 0.48427
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 2] epoch 2: patience: 20
+[fold 2] epoch 3 - step 55 - training loss: 0.682326
+[fold 2] epoch 3: train accuracy: 0.489114
+[fold 2] epoch 3: valid accuracy: 0.483146
+[fold 2] epoch 3: patience: 19
+[fold 2] epoch 4 - step 55 - training loss: 0.684209
+[fold 2] epoch 4: train accuracy: 0.50288
+[fold 2] epoch 4: valid accuracy: 0.502247
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 2] epoch 4: patience: 20
+[fold 2] epoch 5 - step 55 - training loss: 0.687881
+[fold 2] epoch 5: train accuracy: 0.560191
+[fold 2] epoch 5: valid accuracy: 0.533708
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 2] epoch 5: patience: 20
+[fold 2] epoch 6 - step 55 - training loss: 0.696282
+[fold 2] epoch 6: train accuracy: 0.594465
+[fold 2] epoch 6: valid accuracy: 0.557303
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 2] epoch 6: patience: 20
+[fold 2] epoch 7 - step 55 - training loss: 0.785916
+[fold 2] epoch 7: train accuracy: 0.651496
+[fold 2] epoch 7: valid accuracy: 0.595506
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 2] epoch 7: patience: 20
+[fold 2] epoch 8 - step 55 - training loss: 0.827658
+[fold 2] epoch 8: train accuracy: 0.574378
+[fold 2] epoch 8: valid accuracy: 0.567416
+[fold 2] epoch 8: patience: 19
+[fold 2] epoch 9 - step 55 - training loss: 0.663758
+[fold 2] epoch 9: train accuracy: 0.674673
+[fold 2] epoch 9: valid accuracy: 0.589888
+[fold 2] epoch 9: patience: 18
+[fold 2] epoch 10 - step 55 - training loss: 0.559803
+[fold 2] epoch 10: train accuracy: 0.630847
+[fold 2] epoch 10: valid accuracy: 0.575281
+[fold 2] epoch 10: patience: 17
+[fold 2] epoch 11 - step 55 - training loss: 0.541245
+[fold 2] epoch 11: train accuracy: 0.721731
+[fold 2] epoch 11: valid accuracy: 0.638202
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 2] epoch 11: patience: 20
+[fold 2] epoch 12 - step 55 - training loss: 0.741852
+[fold 2] epoch 12: train accuracy: 0.680573
+[fold 2] epoch 12: valid accuracy: 0.613483
+[fold 2] epoch 12: patience: 19
+[fold 2] epoch 13 - step 55 - training loss: 0.480724
+[fold 2] epoch 13: train accuracy: 0.734935
+[fold 2] epoch 13: valid accuracy: 0.644944
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 2] epoch 13: patience: 20
+[fold 2] epoch 14 - step 55 - training loss: 0.46356
+[fold 2] epoch 14: train accuracy: 0.753758
+[fold 2] epoch 14: valid accuracy: 0.621348
+[fold 2] epoch 14: patience: 19
+[fold 2] epoch 15 - step 55 - training loss: 0.502687
+[fold 2] epoch 15: train accuracy: 0.765838
+[fold 2] epoch 15: valid accuracy: 0.6
+[fold 2] epoch 15: patience: 18
+[fold 2] epoch 16 - step 55 - training loss: 0.524678
+[fold 2] epoch 16: train accuracy: 0.783256
+[fold 2] epoch 16: valid accuracy: 0.619101
+[fold 2] epoch 16: patience: 17
+[fold 2] epoch 17 - step 55 - training loss: 0.505199
+[fold 2] epoch 17: train accuracy: 0.66779
+[fold 2] epoch 17: valid accuracy: 0.548315
+[fold 2] epoch 17: patience: 16
+[fold 2] epoch 18 - step 55 - training loss: 0.410897
+[fold 2] epoch 18: train accuracy: 0.79941
+[fold 2] epoch 18: valid accuracy: 0.626966
+[fold 2] epoch 18: patience: 15
+[fold 2] epoch 19 - step 55 - training loss: 0.605349
+[fold 2] epoch 19: train accuracy: 0.646439
+[fold 2] epoch 19: valid accuracy: 0.566292
+[fold 2] epoch 19: patience: 14
+[fold 2] epoch 20 - step 55 - training loss: 0.35209
+[fold 2] epoch 20: train accuracy: 0.826521
+[fold 2] epoch 20: valid accuracy: 0.629214
+[fold 2] epoch 20: patience: 13
+[fold 2] epoch 21 - step 55 - training loss: 0.274619
+[fold 2] epoch 21: train accuracy: 0.857002
+[fold 2] epoch 21: valid accuracy: 0.62809
+[fold 2] epoch 21: patience: 12
+[fold 2] epoch 22 - step 55 - training loss: 0.274985
+[fold 2] epoch 22: train accuracy: 0.756286
+[fold 2] epoch 22: valid accuracy: 0.603371
+[fold 2] epoch 22: patience: 11
+[fold 2] epoch 23 - step 55 - training loss: 0.306012
+[fold 2] epoch 23: train accuracy: 0.811209
+[fold 2] epoch 23: valid accuracy: 0.604494
+[fold 2] epoch 23: patience: 10
+[fold 2] epoch 24 - step 55 - training loss: 0.236095
+[fold 2] epoch 24: train accuracy: 0.864728
+[fold 2] epoch 24: valid accuracy: 0.620225
+[fold 2] epoch 24: patience: 9
+[fold 2] epoch 25 - step 55 - training loss: 0.477216
+[fold 2] epoch 25: train accuracy: 0.711476
+[fold 2] epoch 25: valid accuracy: 0.574157
+[fold 2] epoch 25: patience: 8
+[fold 2] epoch 26 - step 55 - training loss: 0.850562
+[fold 2] epoch 26: train accuracy: 0.617502
+[fold 2] epoch 26: valid accuracy: 0.502247
+[fold 2] epoch 26: patience: 7
+[fold 2] epoch 27 - step 55 - training loss: 0.125641
+[fold 2] epoch 27: train accuracy: 0.867959
+[fold 2] epoch 27: valid accuracy: 0.601124
+[fold 2] epoch 27: patience: 6
+[fold 2] epoch 28 - step 55 - training loss: 0.168036
+[fold 2] epoch 28: train accuracy: 0.897598
+[fold 2] epoch 28: valid accuracy: 0.625843
+[fold 2] epoch 28: patience: 5
+[fold 2] epoch 29 - step 55 - training loss: 1.55863
+[fold 2] epoch 29: train accuracy: 0.787751
+[fold 2] epoch 29: valid accuracy: 0.585393
+[fold 2] epoch 29: patience: 4
+[fold 2] epoch 30 - step 55 - training loss: 0.208658
+[fold 2] epoch 30: train accuracy: 0.882989
+[fold 2] epoch 30: valid accuracy: 0.607865
+[fold 2] epoch 30: patience: 3
+[fold 2] epoch 31 - step 55 - training loss: 0.178089
+[fold 2] epoch 31: train accuracy: 0.880742
+[fold 2] epoch 31: valid accuracy: 0.585393
+[fold 2] epoch 31: patience: 2
+[fold 2] epoch 32 - step 55 - training loss: 0.102164
+[fold 2] epoch 32: train accuracy: 0.926816
+[fold 2] epoch 32: valid accuracy: 0.61573
+[fold 2] epoch 32: patience: 1
+[fold 2] epoch 33 - step 55 - training loss: 0.0598384
+[fold 2] epoch 33: train accuracy: 0.926394
+[fold 2] epoch 33: valid accuracy: 0.614607
+[fold 2] epoch 33: patience: 0
+Args (and data) saved.
+Timings saved.
+------------------------------
+begin fold 3 reset model to initial state
+[fold 3] epoch 1 - step 55 - training loss: 0.700975
+[fold 3] epoch 1: train accuracy: 0.523107
+[fold 3] epoch 1: valid accuracy: 0.495506
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 3] epoch 1: patience: 20
+[fold 3] epoch 2 - step 55 - training loss: 0.705588
+[fold 3] epoch 2: train accuracy: 0.516927
+[fold 3] epoch 2: valid accuracy: 0.492135
+[fold 3] epoch 2: patience: 19
+[fold 3] epoch 3 - step 55 - training loss: 0.701947
+[fold 3] epoch 3: train accuracy: 0.526478
+[fold 3] epoch 3: valid accuracy: 0.505618
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 3] epoch 3: patience: 20
+[fold 3] epoch 4 - step 55 - training loss: 0.681576
+[fold 3] epoch 4: train accuracy: 0.536311
+[fold 3] epoch 4: valid accuracy: 0.510112
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 3] epoch 4: patience: 20
+[fold 3] epoch 5 - step 55 - training loss: 0.662686
+[fold 3] epoch 5: train accuracy: 0.579857
+[fold 3] epoch 5: valid accuracy: 0.55618
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 3] epoch 5: patience: 20
+[fold 3] epoch 6 - step 55 - training loss: 0.672633
+[fold 3] epoch 6: train accuracy: 0.635623
+[fold 3] epoch 6: valid accuracy: 0.626966
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 3] epoch 6: patience: 20
+[fold 3] epoch 7 - step 55 - training loss: 0.635286
+[fold 3] epoch 7: train accuracy: 0.625369
+[fold 3] epoch 7: valid accuracy: 0.6
+[fold 3] epoch 7: patience: 19
+[fold 3] epoch 8 - step 55 - training loss: 0.614819
+[fold 3] epoch 8: train accuracy: 0.673128
+[fold 3] epoch 8: valid accuracy: 0.61236
+[fold 3] epoch 8: patience: 18
+[fold 3] epoch 9 - step 55 - training loss: 0.671413
+[fold 3] epoch 9: train accuracy: 0.679871
+[fold 3] epoch 9: valid accuracy: 0.61573
+[fold 3] epoch 9: patience: 17
+[fold 3] epoch 10 - step 55 - training loss: 0.661901
+[fold 3] epoch 10: train accuracy: 0.681135
+[fold 3] epoch 10: valid accuracy: 0.607865
+[fold 3] epoch 10: patience: 16
+[fold 3] epoch 11 - step 55 - training loss: 0.587368
+[fold 3] epoch 11: train accuracy: 0.693075
+[fold 3] epoch 11: valid accuracy: 0.610112
+[fold 3] epoch 11: patience: 15
+[fold 3] epoch 12 - step 55 - training loss: 1.10446
+[fold 3] epoch 12: train accuracy: 0.70656
+[fold 3] epoch 12: valid accuracy: 0.603371
+[fold 3] epoch 12: patience: 14
+[fold 3] epoch 13 - step 55 - training loss: 0.648468
+[fold 3] epoch 13: train accuracy: 0.714426
+[fold 3] epoch 13: valid accuracy: 0.598876
+[fold 3] epoch 13: patience: 13
+[fold 3] epoch 14 - step 55 - training loss: 0.508414
+[fold 3] epoch 14: train accuracy: 0.729456
+[fold 3] epoch 14: valid accuracy: 0.598876
+[fold 3] epoch 14: patience: 12
+[fold 3] epoch 15 - step 55 - training loss: 0.51997
+[fold 3] epoch 15: train accuracy: 0.77553
+[fold 3] epoch 15: valid accuracy: 0.611236
+[fold 3] epoch 15: patience: 11
+[fold 3] epoch 16 - step 55 - training loss: 0.827687
+[fold 3] epoch 16: train accuracy: 0.770614
+[fold 3] epoch 16: valid accuracy: 0.585393
+[fold 3] epoch 16: patience: 10
+[fold 3] epoch 17 - step 55 - training loss: 0.365554
+[fold 3] epoch 17: train accuracy: 0.799129
+[fold 3] epoch 17: valid accuracy: 0.598876
+[fold 3] epoch 17: patience: 9
+[fold 3] epoch 18 - step 55 - training loss: 0.518828
+[fold 3] epoch 18: train accuracy: 0.778902
+[fold 3] epoch 18: valid accuracy: 0.605618
+[fold 3] epoch 18: patience: 8
+[fold 3] epoch 19 - step 55 - training loss: 0.382161
+[fold 3] epoch 19: train accuracy: 0.807698
+[fold 3] epoch 19: valid accuracy: 0.598876
+[fold 3] epoch 19: patience: 7
+[fold 3] epoch 20 - step 55 - training loss: 0.379501
+[fold 3] epoch 20: train accuracy: 0.849979
+[fold 3] epoch 20: valid accuracy: 0.608989
+[fold 3] epoch 20: patience: 6
+[fold 3] epoch 21 - step 55 - training loss: 0.244314
+[fold 3] epoch 21: train accuracy: 0.807417
+[fold 3] epoch 21: valid accuracy: 0.596629
+[fold 3] epoch 21: patience: 5
+[fold 3] epoch 22 - step 55 - training loss: 0.262593
+[fold 3] epoch 22: train accuracy: 0.844641
+[fold 3] epoch 22: valid accuracy: 0.626966
+[fold 3] epoch 22: patience: 4
+[fold 3] epoch 23 - step 55 - training loss: 0.154631
+[fold 3] epoch 23: train accuracy: 0.868661
+[fold 3] epoch 23: valid accuracy: 0.61236
+[fold 3] epoch 23: patience: 3
+[fold 3] epoch 24 - step 55 - training loss: 0.294978
+[fold 3] epoch 24: train accuracy: 0.714848
+[fold 3] epoch 24: valid accuracy: 0.564045
+[fold 3] epoch 24: patience: 2
+[fold 3] epoch 25 - step 55 - training loss: 0.544922
+[fold 3] epoch 25: train accuracy: 0.701082
+[fold 3] epoch 25: valid accuracy: 0.541573
+[fold 3] epoch 25: patience: 1
+[fold 3] epoch 26 - step 55 - training loss: 0.804568
+[fold 3] epoch 26: train accuracy: 0.866554
+[fold 3] epoch 26: valid accuracy: 0.603371
+[fold 3] epoch 26: patience: 0
+Args (and data) saved.
+Timings saved.
+------------------------------
+begin fold 4 reset model to initial state
+[fold 4] epoch 1 - step 55 - training loss: 0.663594
+[fold 4] epoch 1: train accuracy: 0.487568
+[fold 4] epoch 1: valid accuracy: 0.562921
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 4] epoch 1: patience: 20
+[fold 4] epoch 2 - step 55 - training loss: 0.723495
+[fold 4] epoch 2: train accuracy: 0.483635
+[fold 4] epoch 2: valid accuracy: 0.562921
+[fold 4] epoch 2: patience: 19
+[fold 4] epoch 3 - step 55 - training loss: 0.725348
+[fold 4] epoch 3: train accuracy: 0.479
+[fold 4] epoch 3: valid accuracy: 0.55618
+[fold 4] epoch 3: patience: 18
+[fold 4] epoch 4 - step 55 - training loss: 0.696704
+[fold 4] epoch 4: train accuracy: 0.516365
+[fold 4] epoch 4: valid accuracy: 0.596629
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 4] epoch 4: patience: 20
+[fold 4] epoch 5 - step 55 - training loss: 0.639224
+[fold 4] epoch 5: train accuracy: 0.531395
+[fold 4] epoch 5: valid accuracy: 0.602247
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 4] epoch 5: patience: 20
+[fold 4] epoch 6 - step 55 - training loss: 0.594406
+[fold 4] epoch 6: train accuracy: 0.55696
+[fold 4] epoch 6: valid accuracy: 0.610112
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 4] epoch 6: patience: 20
+[fold 4] epoch 7 - step 55 - training loss: 0.679756
+[fold 4] epoch 7: train accuracy: 0.637168
+[fold 4] epoch 7: valid accuracy: 0.6
+[fold 4] epoch 7: patience: 19
+[fold 4] epoch 8 - step 55 - training loss: 0.573741
+[fold 4] epoch 8: train accuracy: 0.659222
+[fold 4] epoch 8: valid accuracy: 0.632584
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 4] epoch 8: patience: 20
+[fold 4] epoch 9 - step 55 - training loss: 0.597763
+[fold 4] epoch 9: train accuracy: 0.682399
+[fold 4] epoch 9: valid accuracy: 0.635955
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 4] epoch 9: patience: 20
+[fold 4] epoch 10 - step 55 - training loss: 0.589007
+[fold 4] epoch 10: train accuracy: 0.693777
+[fold 4] epoch 10: valid accuracy: 0.638202
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 4] epoch 10: patience: 20
+[fold 4] epoch 11 - step 55 - training loss: 0.495709
+[fold 4] epoch 11: train accuracy: 0.714286
+[fold 4] epoch 11: valid accuracy: 0.638202
+[fold 4] epoch 11: patience: 19
+[fold 4] epoch 12 - step 55 - training loss: 0.484686
+[fold 4] epoch 12: train accuracy: 0.727068
+[fold 4] epoch 12: valid accuracy: 0.631461
+[fold 4] epoch 12: patience: 18
+[fold 4] epoch 13 - step 55 - training loss: 0.421602
+[fold 4] epoch 13: train accuracy: 0.603315
+[fold 4] epoch 13: valid accuracy: 0.62809
+[fold 4] epoch 13: patience: 17
+[fold 4] epoch 14 - step 55 - training loss: 0.411482
+[fold 4] epoch 14: train accuracy: 0.762748
+[fold 4] epoch 14: valid accuracy: 0.651685
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 4] epoch 14: patience: 20
+[fold 4] epoch 15 - step 55 - training loss: 0.374828
+[fold 4] epoch 15: train accuracy: 0.768226
+[fold 4] epoch 15: valid accuracy: 0.652809
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 4] epoch 15: patience: 20
+[fold 4] epoch 16 - step 55 - training loss: 0.349631
+[fold 4] epoch 16: train accuracy: 0.773564
+[fold 4] epoch 16: valid accuracy: 0.65618
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 4] epoch 16: patience: 20
+[fold 4] epoch 17 - step 55 - training loss: 0.313621
+[fold 4] epoch 17: train accuracy: 0.780306
+[fold 4] epoch 17: valid accuracy: 0.613483
+[fold 4] epoch 17: patience: 19
+[fold 4] epoch 18 - step 55 - training loss: 0.2142
+[fold 4] epoch 18: train accuracy: 0.752634
+[fold 4] epoch 18: valid accuracy: 0.649438
+[fold 4] epoch 18: patience: 18
+[fold 4] epoch 19 - step 55 - training loss: 0.390255
+[fold 4] epoch 19: train accuracy: 0.658519
+[fold 4] epoch 19: valid accuracy: 0.611236
+[fold 4] epoch 19: patience: 17
+[fold 4] epoch 20 - step 55 - training loss: 0.319809
+[fold 4] epoch 20: train accuracy: 0.743644
+[fold 4] epoch 20: valid accuracy: 0.641573
+[fold 4] epoch 20: patience: 16
+[fold 4] epoch 21 - step 55 - training loss: 0.298764
+[fold 4] epoch 21: train accuracy: 0.848012
+[fold 4] epoch 21: valid accuracy: 0.650562
+[fold 4] epoch 21: patience: 15
+[fold 4] epoch 22 - step 55 - training loss: 0.202535
+[fold 4] epoch 22: train accuracy: 0.849838
+[fold 4] epoch 22: valid accuracy: 0.65618
+[fold 4] epoch 22: patience: 14
+[fold 4] epoch 23 - step 55 - training loss: 0.194448
+[fold 4] epoch 23: train accuracy: 0.854614
+[fold 4] epoch 23: valid accuracy: 0.650562
+[fold 4] epoch 23: patience: 13
+[fold 4] epoch 24 - step 55 - training loss: 0.150855
+[fold 4] epoch 24: train accuracy: 0.875123
+[fold 4] epoch 24: valid accuracy: 0.655056
+[fold 4] epoch 24: patience: 12
+[fold 4] epoch 25 - step 55 - training loss: 0.202862
+[fold 4] epoch 25: train accuracy: 0.873156
+[fold 4] epoch 25: valid accuracy: 0.605618
+[fold 4] epoch 25: patience: 11
+[fold 4] epoch 26 - step 55 - training loss: 0.185766
+[fold 4] epoch 26: train accuracy: 0.852507
+[fold 4] epoch 26: valid accuracy: 0.661798
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 4] epoch 26: patience: 20
+[fold 4] epoch 27 - step 55 - training loss: 0.142832
+[fold 4] epoch 27: train accuracy: 0.872735
+[fold 4] epoch 27: valid accuracy: 0.649438
+[fold 4] epoch 27: patience: 19
+[fold 4] epoch 28 - step 55 - training loss: 0.141412
+[fold 4] epoch 28: train accuracy: 0.858407
+[fold 4] epoch 28: valid accuracy: 0.638202
+[fold 4] epoch 28: patience: 18
+[fold 4] epoch 29 - step 55 - training loss: 0.191147
+[fold 4] epoch 29: train accuracy: 0.890294
+[fold 4] epoch 29: valid accuracy: 0.64382
+[fold 4] epoch 29: patience: 17
+[fold 4] epoch 30 - step 55 - training loss: 0.26751
+[fold 4] epoch 30: train accuracy: 0.847731
+[fold 4] epoch 30: valid accuracy: 0.639326
+[fold 4] epoch 30: patience: 16
+[fold 4] epoch 31 - step 55 - training loss: 0.125269
+[fold 4] epoch 31: train accuracy: 0.854474
+[fold 4] epoch 31: valid accuracy: 0.631461
+[fold 4] epoch 31: patience: 15
+[fold 4] epoch 32 - step 55 - training loss: 0.112697
+[fold 4] epoch 32: train accuracy: 0.805872
+[fold 4] epoch 32: valid accuracy: 0.634831
+[fold 4] epoch 32: patience: 14
+[fold 4] epoch 33 - step 55 - training loss: 0.0802359
+[fold 4] epoch 33: train accuracy: 0.847731
+[fold 4] epoch 33: valid accuracy: 0.640449
+[fold 4] epoch 33: patience: 13
+[fold 4] epoch 34 - step 55 - training loss: 0.0487456
+[fold 4] epoch 34: train accuracy: 0.949853
+[fold 4] epoch 34: valid accuracy: 0.633708
+[fold 4] epoch 34: patience: 12
+[fold 4] epoch 35 - step 55 - training loss: 0.109101
+[fold 4] epoch 35: train accuracy: 0.903498
+[fold 4] epoch 35: valid accuracy: 0.644944
+[fold 4] epoch 35: patience: 11
+[fold 4] epoch 36 - step 55 - training loss: 0.160171
+[fold 4] epoch 36: train accuracy: 0.946341
+[fold 4] epoch 36: valid accuracy: 0.613483
+[fold 4] epoch 36: patience: 10
+[fold 4] epoch 37 - step 55 - training loss: 0.0378626
+[fold 4] epoch 37: train accuracy: 0.938474
+[fold 4] epoch 37: valid accuracy: 0.635955
+[fold 4] epoch 37: patience: 9
+[fold 4] epoch 38 - step 55 - training loss: 0.170145
+[fold 4] epoch 38: train accuracy: 0.938334
+[fold 4] epoch 38: valid accuracy: 0.633708
+[fold 4] epoch 38: patience: 8
+[fold 4] epoch 39 - step 55 - training loss: 1.08008
+[fold 4] epoch 39: train accuracy: 0.714707
+[fold 4] epoch 39: valid accuracy: 0.605618
+[fold 4] epoch 39: patience: 7
+[fold 4] epoch 40 - step 55 - training loss: 0.0349563
+[fold 4] epoch 40: train accuracy: 0.938615
+[fold 4] epoch 40: valid accuracy: 0.640449
+[fold 4] epoch 40: patience: 6
+[fold 4] epoch 41 - step 55 - training loss: 0.0322004
+[fold 4] epoch 41: train accuracy: 0.965866
+[fold 4] epoch 41: valid accuracy: 0.646067
+[fold 4] epoch 41: patience: 5
+[fold 4] epoch 42 - step 55 - training loss: 0.0344652
+[fold 4] epoch 42: train accuracy: 0.95814
+[fold 4] epoch 42: valid accuracy: 0.632584
+[fold 4] epoch 42: patience: 4
+[fold 4] epoch 43 - step 55 - training loss: 0.0271516
+[fold 4] epoch 43: train accuracy: 0.94002
+[fold 4] epoch 43: valid accuracy: 0.62809
+[fold 4] epoch 43: patience: 3
+[fold 4] epoch 44 - step 55 - training loss: 0.023127
+[fold 4] epoch 44: train accuracy: 0.957438
+[fold 4] epoch 44: valid accuracy: 0.641573
+[fold 4] epoch 44: patience: 2
+[fold 4] epoch 45 - step 55 - training loss: 0.101199
+[fold 4] epoch 45: train accuracy: 0.948448
+[fold 4] epoch 45: valid accuracy: 0.633708
+[fold 4] epoch 45: patience: 1
+[fold 4] epoch 46 - step 55 - training loss: 0.206973
+[fold 4] epoch 46: train accuracy: 0.84745
+[fold 4] epoch 46: valid accuracy: 0.624719
+[fold 4] epoch 46: patience: 0
+Args (and data) saved.
+Timings saved.
+------------------------------
+begin fold 5 reset model to initial state
+[fold 5] epoch 1 - step 55 - training loss: 0.782566
+[fold 5] epoch 1: train accuracy: 0.528585
+[fold 5] epoch 1: valid accuracy: 0.537079
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 5] epoch 1: patience: 20
+[fold 5] epoch 2 - step 55 - training loss: 0.774028
+[fold 5] epoch 2: train accuracy: 0.526057
+[fold 5] epoch 2: valid accuracy: 0.553933
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 5] epoch 2: patience: 20
+[fold 5] epoch 3 - step 55 - training loss: 0.720538
+[fold 5] epoch 3: train accuracy: 0.543616
+[fold 5] epoch 3: valid accuracy: 0.551685
+[fold 5] epoch 3: patience: 19
+[fold 5] epoch 4 - step 55 - training loss: 0.722466
+[fold 5] epoch 4: train accuracy: 0.555134
+[fold 5] epoch 4: valid accuracy: 0.583146
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 5] epoch 4: patience: 20
+[fold 5] epoch 5 - step 55 - training loss: 0.732335
+[fold 5] epoch 5: train accuracy: 0.598258
+[fold 5] epoch 5: valid accuracy: 0.604494
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 5] epoch 5: patience: 20
+[fold 5] epoch 6 - step 55 - training loss: 0.842291
+[fold 5] epoch 6: train accuracy: 0.588144
+[fold 5] epoch 6: valid accuracy: 0.579775
+[fold 5] epoch 6: patience: 19
+[fold 5] epoch 7 - step 55 - training loss: 0.829859
+[fold 5] epoch 7: train accuracy: 0.592499
+[fold 5] epoch 7: valid accuracy: 0.580899
+[fold 5] epoch 7: patience: 18
+[fold 5] epoch 8 - step 55 - training loss: 0.665509
+[fold 5] epoch 8: train accuracy: 0.64377
+[fold 5] epoch 8: valid accuracy: 0.611236
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 5] epoch 8: patience: 20
+[fold 5] epoch 9 - step 55 - training loss: 0.684624
+[fold 5] epoch 9: train accuracy: 0.628178
+[fold 5] epoch 9: valid accuracy: 0.594382
+[fold 5] epoch 9: patience: 19
+[fold 5] epoch 10 - step 55 - training loss: 0.611286
+[fold 5] epoch 10: train accuracy: 0.629864
+[fold 5] epoch 10: valid accuracy: 0.58427
+[fold 5] epoch 10: patience: 18
+[fold 5] epoch 11 - step 55 - training loss: 0.529177
+[fold 5] epoch 11: train accuracy: 0.647844
+[fold 5] epoch 11: valid accuracy: 0.601124
+[fold 5] epoch 11: patience: 17
+[fold 5] epoch 12 - step 55 - training loss: 0.444574
+[fold 5] epoch 12: train accuracy: 0.696306
+[fold 5] epoch 12: valid accuracy: 0.626966
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 5] epoch 12: patience: 20
+[fold 5] epoch 13 - step 55 - training loss: 0.399704
+[fold 5] epoch 13: train accuracy: 0.687035
+[fold 5] epoch 13: valid accuracy: 0.629214
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 5] epoch 13: patience: 20
+[fold 5] epoch 14 - step 55 - training loss: 0.680986
+[fold 5] epoch 14: train accuracy: 0.744206
+[fold 5] epoch 14: valid accuracy: 0.647191
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 5] epoch 14: patience: 20
+[fold 5] epoch 15 - step 55 - training loss: 0.334218
+[fold 5] epoch 15: train accuracy: 0.754039
+[fold 5] epoch 15: valid accuracy: 0.650562
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 5] epoch 15: patience: 20
+[fold 5] epoch 16 - step 55 - training loss: 0.753059
+[fold 5] epoch 16: train accuracy: 0.690125
+[fold 5] epoch 16: valid accuracy: 0.608989
+[fold 5] epoch 16: patience: 19
+[fold 5] epoch 17 - step 55 - training loss: 0.432624
+[fold 5] epoch 17: train accuracy: 0.720888
+[fold 5] epoch 17: valid accuracy: 0.576405
+[fold 5] epoch 17: patience: 18
+[fold 5] epoch 18 - step 55 - training loss: 0.265882
+[fold 5] epoch 18: train accuracy: 0.795758
+[fold 5] epoch 18: valid accuracy: 0.650562
+[fold 5] epoch 18: patience: 17
+[fold 5] epoch 19 - step 55 - training loss: 0.411513
+[fold 5] epoch 19: train accuracy: 0.789999
+[fold 5] epoch 19: valid accuracy: 0.646067
+[fold 5] epoch 19: patience: 16
+[fold 5] epoch 20 - step 55 - training loss: 0.454896
+[fold 5] epoch 20: train accuracy: 0.772721
+[fold 5] epoch 20: valid accuracy: 0.631461
+[fold 5] epoch 20: patience: 15
+[fold 5] epoch 21 - step 55 - training loss: 0.226352
+[fold 5] epoch 21: train accuracy: 0.842534
+[fold 5] epoch 21: valid accuracy: 0.664045
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 5] epoch 21: patience: 20
+[fold 5] epoch 22 - step 55 - training loss: 0.261625
+[fold 5] epoch 22: train accuracy: 0.786206
+[fold 5] epoch 22: valid accuracy: 0.632584
+[fold 5] epoch 22: patience: 19
+[fold 5] epoch 23 - step 55 - training loss: 0.220072
+[fold 5] epoch 23: train accuracy: 0.843236
+[fold 5] epoch 23: valid accuracy: 0.64382
+[fold 5] epoch 23: patience: 18
+[fold 5] epoch 24 - step 55 - training loss: 0.110671
+[fold 5] epoch 24: train accuracy: 0.833263
+[fold 5] epoch 24: valid accuracy: 0.625843
+[fold 5] epoch 24: patience: 17
+[fold 5] epoch 25 - step 55 - training loss: 0.129621
+[fold 5] epoch 25: train accuracy: 0.857845
+[fold 5] epoch 25: valid accuracy: 0.641573
+[fold 5] epoch 25: patience: 16
+[fold 5] epoch 26 - step 55 - training loss: 0.0960546
+[fold 5] epoch 26: train accuracy: 0.824273
+[fold 5] epoch 26: valid accuracy: 0.633708
+[fold 5] epoch 26: patience: 15
+[fold 5] epoch 27 - step 55 - training loss: 0.0827808
+[fold 5] epoch 27: train accuracy: 0.90125
+[fold 5] epoch 27: valid accuracy: 0.665169
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 5] epoch 27: patience: 20
+[fold 5] epoch 28 - step 55 - training loss: 0.101342
+[fold 5] epoch 28: train accuracy: 0.914876
+[fold 5] epoch 28: valid accuracy: 0.64382
+[fold 5] epoch 28: patience: 19
+[fold 5] epoch 29 - step 55 - training loss: 0.208332
+[fold 5] epoch 29: train accuracy: 0.919511
+[fold 5] epoch 29: valid accuracy: 0.639326
+[fold 5] epoch 29: patience: 18
+[fold 5] epoch 30 - step 55 - training loss: 0.0401971
+[fold 5] epoch 30: train accuracy: 0.933699
+[fold 5] epoch 30: valid accuracy: 0.65618
+[fold 5] epoch 30: patience: 17
+[fold 5] epoch 31 - step 55 - training loss: 0.0636848
+[fold 5] epoch 31: train accuracy: 0.93412
+[fold 5] epoch 31: valid accuracy: 0.649438
+[fold 5] epoch 31: patience: 16
+[fold 5] epoch 32 - step 55 - training loss: 0.0507132
+[fold 5] epoch 32: train accuracy: 0.926535
+[fold 5] epoch 32: valid accuracy: 0.658427
+[fold 5] epoch 32: patience: 15
+[fold 5] epoch 33 - step 55 - training loss: 0.0472094
+[fold 5] epoch 33: train accuracy: 0.944374
+[fold 5] epoch 33: valid accuracy: 0.652809
+[fold 5] epoch 33: patience: 14
+[fold 5] epoch 34 - step 55 - training loss: 0.0287925
+[fold 5] epoch 34: train accuracy: 0.958702
+[fold 5] epoch 34: valid accuracy: 0.648315
+[fold 5] epoch 34: patience: 13
+[fold 5] epoch 35 - step 55 - training loss: 0.0411484
+[fold 5] epoch 35: train accuracy: 0.935806
+[fold 5] epoch 35: valid accuracy: 0.638202
+[fold 5] epoch 35: patience: 12
+[fold 5] epoch 36 - step 55 - training loss: 0.0360198
+[fold 5] epoch 36: train accuracy: 0.958983
+[fold 5] epoch 36: valid accuracy: 0.647191
+[fold 5] epoch 36: patience: 11
+[fold 5] epoch 37 - step 55 - training loss: 0.022436
+[fold 5] epoch 37: train accuracy: 0.960388
+[fold 5] epoch 37: valid accuracy: 0.638202
+[fold 5] epoch 37: patience: 10
+[fold 5] epoch 38 - step 55 - training loss: 0.799359
+[fold 5] epoch 38: train accuracy: 0.750527
+[fold 5] epoch 38: valid accuracy: 0.582022
+[fold 5] epoch 38: patience: 9
+[fold 5] epoch 39 - step 55 - training loss: 0.0308422
+[fold 5] epoch 39: train accuracy: 0.972047
+[fold 5] epoch 39: valid accuracy: 0.657303
+[fold 5] epoch 39: patience: 8
+[fold 5] epoch 40 - step 55 - training loss: 0.0144035
+[fold 5] epoch 40: train accuracy: 0.984267
+[fold 5] epoch 40: valid accuracy: 0.650562
+[fold 5] epoch 40: patience: 7
+[fold 5] epoch 41 - step 55 - training loss: 0.0123673
+[fold 5] epoch 41: train accuracy: 0.977806
+[fold 5] epoch 41: valid accuracy: 0.651685
+[fold 5] epoch 41: patience: 6
+[fold 5] epoch 42 - step 55 - training loss: 0.0320545
+[fold 5] epoch 42: train accuracy: 0.963478
+[fold 5] epoch 42: valid accuracy: 0.641573
+[fold 5] epoch 42: patience: 5
+[fold 5] epoch 43 - step 55 - training loss: 0.0109992
+[fold 5] epoch 43: train accuracy: 0.985672
+[fold 5] epoch 43: valid accuracy: 0.653933
+[fold 5] epoch 43: patience: 4
+[fold 5] epoch 44 - step 55 - training loss: 0.0276032
+[fold 5] epoch 44: train accuracy: 0.968254
+[fold 5] epoch 44: valid accuracy: 0.647191
+[fold 5] epoch 44: patience: 3
+[fold 5] epoch 45 - step 55 - training loss: 0.0131679
+[fold 5] epoch 45: train accuracy: 0.980194
+[fold 5] epoch 45: valid accuracy: 0.646067
+[fold 5] epoch 45: patience: 2
+[fold 5] epoch 46 - step 55 - training loss: 0.00495489
+[fold 5] epoch 46: train accuracy: 0.986234
+[fold 5] epoch 46: valid accuracy: 0.64382
+[fold 5] epoch 46: patience: 1
+[fold 5] epoch 47 - step 55 - training loss: 0.0195877
+[fold 5] epoch 47: train accuracy: 0.981458
+[fold 5] epoch 47: valid accuracy: 0.65618
+[fold 5] epoch 47: patience: 0
+Args (and data) saved.
+Timings saved.
+------------------------------
+begin fold 6 reset model to initial state
+[fold 6] epoch 1 - step 55 - training loss: 0.677071
+[fold 6] epoch 1: train accuracy: 0.515522
+[fold 6] epoch 1: valid accuracy: 0.496629
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 6] epoch 1: patience: 20
+[fold 6] epoch 2 - step 55 - training loss: 0.62531
+[fold 6] epoch 2: train accuracy: 0.515522
+[fold 6] epoch 2: valid accuracy: 0.496629
+[fold 6] epoch 2: patience: 19
+[fold 6] epoch 3 - step 55 - training loss: 0.608995
+[fold 6] epoch 3: train accuracy: 0.52409
+[fold 6] epoch 3: valid accuracy: 0.51236
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 6] epoch 3: patience: 20
+[fold 6] epoch 4 - step 55 - training loss: 0.61066
+[fold 6] epoch 4: train accuracy: 0.530833
+[fold 6] epoch 4: valid accuracy: 0.514607
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 6] epoch 4: patience: 20
+[fold 6] epoch 5 - step 55 - training loss: 0.599302
+[fold 6] epoch 5: train accuracy: 0.533642
+[fold 6] epoch 5: valid accuracy: 0.516854
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 6] epoch 5: patience: 20
+[fold 6] epoch 6 - step 55 - training loss: 0.557148
+[fold 6] epoch 6: train accuracy: 0.55682
+[fold 6] epoch 6: valid accuracy: 0.547191
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 6] epoch 6: patience: 20
+[fold 6] epoch 7 - step 55 - training loss: 0.500916
+[fold 6] epoch 7: train accuracy: 0.582245
+[fold 6] epoch 7: valid accuracy: 0.573034
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 6] epoch 7: patience: 20
+[fold 6] epoch 8 - step 55 - training loss: 0.474095
+[fold 6] epoch 8: train accuracy: 0.601349
+[fold 6] epoch 8: valid accuracy: 0.586517
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 6] epoch 8: patience: 20
+[fold 6] epoch 9 - step 55 - training loss: 0.443222
+[fold 6] epoch 9: train accuracy: 0.633516
+[fold 6] epoch 9: valid accuracy: 0.614607
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 6] epoch 9: patience: 20
+[fold 6] epoch 10 - step 55 - training loss: 0.391554
+[fold 6] epoch 10: train accuracy: 0.622138
+[fold 6] epoch 10: valid accuracy: 0.591011
+[fold 6] epoch 10: patience: 19
+[fold 6] epoch 11 - step 55 - training loss: 0.462203
+[fold 6] epoch 11: train accuracy: 0.632111
+[fold 6] epoch 11: valid accuracy: 0.582022
+[fold 6] epoch 11: patience: 18
+[fold 6] epoch 12 - step 55 - training loss: 0.34344
+[fold 6] epoch 12: train accuracy: 0.689423
+[fold 6] epoch 12: valid accuracy: 0.626966
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 6] epoch 12: patience: 20
+[fold 6] epoch 13 - step 55 - training loss: 0.325578
+[fold 6] epoch 13: train accuracy: 0.757972
+[fold 6] epoch 13: valid accuracy: 0.666292
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 6] epoch 13: patience: 20
+[fold 6] epoch 14 - step 55 - training loss: 0.278589
+[fold 6] epoch 14: train accuracy: 0.712179
+[fold 6] epoch 14: valid accuracy: 0.638202
+[fold 6] epoch 14: patience: 19
+[fold 6] epoch 15 - step 55 - training loss: 0.267436
+[fold 6] epoch 15: train accuracy: 0.689704
+[fold 6] epoch 15: valid accuracy: 0.619101
+[fold 6] epoch 15: patience: 18
+[fold 6] epoch 16 - step 55 - training loss: 0.263921
+[fold 6] epoch 16: train accuracy: 0.740975
+[fold 6] epoch 16: valid accuracy: 0.622472
+[fold 6] epoch 16: patience: 17
+[fold 6] epoch 17 - step 55 - training loss: 0.24461
+[fold 6] epoch 17: train accuracy: 0.674954
+[fold 6] epoch 17: valid accuracy: 0.573034
+[fold 6] epoch 17: patience: 16
+[fold 6] epoch 18 - step 55 - training loss: 0.304025
+[fold 6] epoch 18: train accuracy: 0.738868
+[fold 6] epoch 18: valid accuracy: 0.61236
+[fold 6] epoch 18: patience: 15
+[fold 6] epoch 19 - step 55 - training loss: 0.223491
+[fold 6] epoch 19: train accuracy: 0.804607
+[fold 6] epoch 19: valid accuracy: 0.629214
+[fold 6] epoch 19: patience: 14
+[fold 6] epoch 20 - step 55 - training loss: 0.22056
+[fold 6] epoch 20: train accuracy: 0.799972
+[fold 6] epoch 20: valid accuracy: 0.625843
+[fold 6] epoch 20: patience: 13
+[fold 6] epoch 21 - step 55 - training loss: 0.167074
+[fold 6] epoch 21: train accuracy: 0.821464
+[fold 6] epoch 21: valid accuracy: 0.617977
+[fold 6] epoch 21: patience: 12
+[fold 6] epoch 22 - step 55 - training loss: 0.304865
+[fold 6] epoch 22: train accuracy: 0.797163
+[fold 6] epoch 22: valid accuracy: 0.625843
+[fold 6] epoch 22: patience: 11
+[fold 6] epoch 23 - step 55 - training loss: 0.161489
+[fold 6] epoch 23: train accuracy: 0.84717
+[fold 6] epoch 23: valid accuracy: 0.617977
+[fold 6] epoch 23: patience: 10
+[fold 6] epoch 24 - step 55 - training loss: 0.177724
+[fold 6] epoch 24: train accuracy: 0.841972
+[fold 6] epoch 24: valid accuracy: 0.623595
+[fold 6] epoch 24: patience: 9
+[fold 6] epoch 25 - step 55 - training loss: 0.135912
+[fold 6] epoch 25: train accuracy: 0.882427
+[fold 6] epoch 25: valid accuracy: 0.631461
+[fold 6] epoch 25: patience: 8
+[fold 6] epoch 26 - step 55 - training loss: 0.141077
+[fold 6] epoch 26: train accuracy: 0.879197
+[fold 6] epoch 26: valid accuracy: 0.622472
+[fold 6] epoch 26: patience: 7
+[fold 6] epoch 27 - step 55 - training loss: 0.195911
+[fold 6] epoch 27: train accuracy: 0.837758
+[fold 6] epoch 27: valid accuracy: 0.605618
+[fold 6] epoch 27: patience: 6
+[fold 6] epoch 28 - step 55 - training loss: 0.200329
+[fold 6] epoch 28: train accuracy: 0.899003
+[fold 6] epoch 28: valid accuracy: 0.634831
+[fold 6] epoch 28: patience: 5
+[fold 6] epoch 29 - step 55 - training loss: 0.166003
+[fold 6] epoch 29: train accuracy: 0.889872
+[fold 6] epoch 29: valid accuracy: 0.617977
+[fold 6] epoch 29: patience: 4
+[fold 6] epoch 30 - step 55 - training loss: 0.111045
+[fold 6] epoch 30: train accuracy: 0.924428
+[fold 6] epoch 30: valid accuracy: 0.611236
+[fold 6] epoch 30: patience: 3
+[fold 6] epoch 31 - step 55 - training loss: 0.229661
+[fold 6] epoch 31: train accuracy: 0.88622
+[fold 6] epoch 31: valid accuracy: 0.608989
+[fold 6] epoch 31: patience: 2
+[fold 6] epoch 32 - step 55 - training loss: 0.263345
+[fold 6] epoch 32: train accuracy: 0.874701
+[fold 6] epoch 32: valid accuracy: 0.606742
+[fold 6] epoch 32: patience: 1
+[fold 6] epoch 33 - step 55 - training loss: 0.155888
+[fold 6] epoch 33: train accuracy: 0.896053
+[fold 6] epoch 33: valid accuracy: 0.603371
+[fold 6] epoch 33: patience: 0
+Args (and data) saved.
+Timings saved.
+------------------------------
+begin fold 7 reset model to initial state
+[fold 7] epoch 1 - step 55 - training loss: 0.684863
+[fold 7] epoch 1: train accuracy: 0.537014
+[fold 7] epoch 1: valid accuracy: 0.535955
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 7] epoch 1: patience: 20
+[fold 7] epoch 2 - step 55 - training loss: 0.691381
+[fold 7] epoch 2: train accuracy: 0.531535
+[fold 7] epoch 2: valid accuracy: 0.55618
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 7] epoch 2: patience: 20
+[fold 7] epoch 3 - step 55 - training loss: 0.705953
+[fold 7] epoch 3: train accuracy: 0.54783
+[fold 7] epoch 3: valid accuracy: 0.579775
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 7] epoch 3: patience: 20
+[fold 7] epoch 4 - step 55 - training loss: 0.664647
+[fold 7] epoch 4: train accuracy: 0.561596
+[fold 7] epoch 4: valid accuracy: 0.588764
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 7] epoch 4: patience: 20
+[fold 7] epoch 5 - step 55 - training loss: 0.632726
+[fold 7] epoch 5: train accuracy: 0.601489
+[fold 7] epoch 5: valid accuracy: 0.625843
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 7] epoch 5: patience: 20
+[fold 7] epoch 6 - step 55 - training loss: 0.620817
+[fold 7] epoch 6: train accuracy: 0.569462
+[fold 7] epoch 6: valid accuracy: 0.577528
+[fold 7] epoch 6: patience: 19
+[fold 7] epoch 7 - step 55 - training loss: 0.63509
+[fold 7] epoch 7: train accuracy: 0.578733
+[fold 7] epoch 7: valid accuracy: 0.573034
+[fold 7] epoch 7: patience: 18
+[fold 7] epoch 8 - step 55 - training loss: 0.579237
+[fold 7] epoch 8: train accuracy: 0.64082
+[fold 7] epoch 8: valid accuracy: 0.614607
+[fold 7] epoch 8: patience: 17
+[fold 7] epoch 9 - step 55 - training loss: 0.629827
+[fold 7] epoch 9: train accuracy: 0.612727
+[fold 7] epoch 9: valid accuracy: 0.570787
+[fold 7] epoch 9: patience: 16
+[fold 7] epoch 10 - step 55 - training loss: 0.551816
+[fold 7] epoch 10: train accuracy: 0.695041
+[fold 7] epoch 10: valid accuracy: 0.644944
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 7] epoch 10: patience: 20
+[fold 7] epoch 11 - step 55 - training loss: 0.556147
+[fold 7] epoch 11: train accuracy: 0.711898
+[fold 7] epoch 11: valid accuracy: 0.655056
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 7] epoch 11: patience: 20
+[fold 7] epoch 12 - step 55 - training loss: 0.537551
+[fold 7] epoch 12: train accuracy: 0.722854
+[fold 7] epoch 12: valid accuracy: 0.640449
+[fold 7] epoch 12: patience: 19
+[fold 7] epoch 13 - step 55 - training loss: 0.462926
+[fold 7] epoch 13: train accuracy: 0.664981
+[fold 7] epoch 13: valid accuracy: 0.585393
+[fold 7] epoch 13: patience: 18
+[fold 7] epoch 14 - step 55 - training loss: 0.384254
+[fold 7] epoch 14: train accuracy: 0.740694
+[fold 7] epoch 14: valid accuracy: 0.638202
+[fold 7] epoch 14: patience: 17
+[fold 7] epoch 15 - step 55 - training loss: 0.327367
+[fold 7] epoch 15: train accuracy: 0.750105
+[fold 7] epoch 15: valid accuracy: 0.642697
+[fold 7] epoch 15: patience: 16
+[fold 7] epoch 16 - step 55 - training loss: 0.284527
+[fold 7] epoch 16: train accuracy: 0.780587
+[fold 7] epoch 16: valid accuracy: 0.655056
+[fold 7] epoch 16: patience: 15
+[fold 7] epoch 17 - step 55 - training loss: 0.536529
+[fold 7] epoch 17: train accuracy: 0.803484
+[fold 7] epoch 17: valid accuracy: 0.646067
+[fold 7] epoch 17: patience: 14
+[fold 7] epoch 18 - step 55 - training loss: 0.390614
+[fold 7] epoch 18: train accuracy: 0.634218
+[fold 7] epoch 18: valid accuracy: 0.565169
+[fold 7] epoch 18: patience: 13
+[fold 7] epoch 19 - step 55 - training loss: 0.248369
+[fold 7] epoch 19: train accuracy: 0.826802
+[fold 7] epoch 19: valid accuracy: 0.652809
+[fold 7] epoch 19: patience: 12
+[fold 7] epoch 20 - step 55 - training loss: 0.165445
+[fold 7] epoch 20: train accuracy: 0.816828
+[fold 7] epoch 20: valid accuracy: 0.61236
+[fold 7] epoch 20: patience: 11
+[fold 7] epoch 21 - step 55 - training loss: 0.912036
+[fold 7] epoch 21: train accuracy: 0.61989
+[fold 7] epoch 21: valid accuracy: 0.552809
+[fold 7] epoch 21: patience: 10
+[fold 7] epoch 22 - step 55 - training loss: 0.778087
+[fold 7] epoch 22: train accuracy: 0.708526
+[fold 7] epoch 22: valid accuracy: 0.567416
+[fold 7] epoch 22: patience: 9
+[fold 7] epoch 23 - step 55 - training loss: 0.176734
+[fold 7] epoch 23: train accuracy: 0.851103
+[fold 7] epoch 23: valid accuracy: 0.613483
+[fold 7] epoch 23: patience: 8
+[fold 7] epoch 24 - step 55 - training loss: 0.32098
+[fold 7] epoch 24: train accuracy: 0.804186
+[fold 7] epoch 24: valid accuracy: 0.630337
+[fold 7] epoch 24: patience: 7
+[fold 7] epoch 25 - step 55 - training loss: 0.0949942
+[fold 7] epoch 25: train accuracy: 0.882006
+[fold 7] epoch 25: valid accuracy: 0.617977
+[fold 7] epoch 25: patience: 6
+[fold 7] epoch 26 - step 55 - training loss: 0.230827
+[fold 7] epoch 26: train accuracy: 0.877511
+[fold 7] epoch 26: valid accuracy: 0.646067
+[fold 7] epoch 26: patience: 5
+[fold 7] epoch 27 - step 55 - training loss: 0.0987319
+[fold 7] epoch 27: train accuracy: 0.885237
+[fold 7] epoch 27: valid accuracy: 0.638202
+[fold 7] epoch 27: patience: 4
+[fold 7] epoch 28 - step 55 - training loss: 0.117275
+[fold 7] epoch 28: train accuracy: 0.870768
+[fold 7] epoch 28: valid accuracy: 0.621348
+[fold 7] epoch 28: patience: 3
+[fold 7] epoch 29 - step 55 - training loss: 0.111706
+[fold 7] epoch 29: train accuracy: 0.910521
+[fold 7] epoch 29: valid accuracy: 0.623595
+[fold 7] epoch 29: patience: 2
+[fold 7] epoch 30 - step 55 - training loss: 0.0889068
+[fold 7] epoch 30: train accuracy: 0.91628
+[fold 7] epoch 30: valid accuracy: 0.642697
+[fold 7] epoch 30: patience: 1
+[fold 7] epoch 31 - step 55 - training loss: 0.0693195
+[fold 7] epoch 31: train accuracy: 0.931732
+[fold 7] epoch 31: valid accuracy: 0.61236
+[fold 7] epoch 31: patience: 0
+Args (and data) saved.
+Timings saved.
+------------------------------
+begin fold 8 reset model to initial state
+[fold 8] epoch 1 - step 55 - training loss: 0.688175
+[fold 8] epoch 1: train accuracy: 0.528866
+[fold 8] epoch 1: valid accuracy: 0.544944
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 8] epoch 1: patience: 20
+[fold 8] epoch 2 - step 55 - training loss: 0.699106
+[fold 8] epoch 2: train accuracy: 0.516505
+[fold 8] epoch 2: valid accuracy: 0.546067
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 8] epoch 2: patience: 20
+[fold 8] epoch 3 - step 55 - training loss: 0.679582
+[fold 8] epoch 3: train accuracy: 0.536452
+[fold 8] epoch 3: valid accuracy: 0.547191
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 8] epoch 3: patience: 20
+[fold 8] epoch 4 - step 55 - training loss: 0.691548
+[fold 8] epoch 4: train accuracy: 0.56581
+[fold 8] epoch 4: valid accuracy: 0.547191
+[fold 8] epoch 4: patience: 19
+[fold 8] epoch 5 - step 55 - training loss: 0.661377
+[fold 8] epoch 5: train accuracy: 0.572974
+[fold 8] epoch 5: valid accuracy: 0.558427
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 8] epoch 5: patience: 20
+[fold 8] epoch 6 - step 55 - training loss: 0.654798
+[fold 8] epoch 6: train accuracy: 0.635482
+[fold 8] epoch 6: valid accuracy: 0.539326
+[fold 8] epoch 6: patience: 19
+[fold 8] epoch 7 - step 55 - training loss: 0.651021
+[fold 8] epoch 7: train accuracy: 0.643349
+[fold 8] epoch 7: valid accuracy: 0.504494
+[fold 8] epoch 7: patience: 18
+[fold 8] epoch 8 - step 55 - training loss: 0.624966
+[fold 8] epoch 8: train accuracy: 0.59882
+[fold 8] epoch 8: valid accuracy: 0.485393
+[fold 8] epoch 8: patience: 17
+[fold 8] epoch 9 - step 55 - training loss: 0.531708
+[fold 8] epoch 9: train accuracy: 0.657115
+[fold 8] epoch 9: valid accuracy: 0.497753
+[fold 8] epoch 9: patience: 16
+[fold 8] epoch 10 - step 55 - training loss: 0.570794
+[fold 8] epoch 10: train accuracy: 0.706138
+[fold 8] epoch 10: valid accuracy: 0.552809
+[fold 8] epoch 10: patience: 15
+[fold 8] epoch 11 - step 55 - training loss: 0.561793
+[fold 8] epoch 11: train accuracy: 0.713302
+[fold 8] epoch 11: valid accuracy: 0.559551
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 8] epoch 11: patience: 20
+[fold 8] epoch 12 - step 55 - training loss: 0.511801
+[fold 8] epoch 12: train accuracy: 0.736199
+[fold 8] epoch 12: valid accuracy: 0.559551
+[fold 8] epoch 12: patience: 19
+[fold 8] epoch 13 - step 55 - training loss: 0.40316
+[fold 8] epoch 13: train accuracy: 0.733249
+[fold 8] epoch 13: valid accuracy: 0.569663
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 8] epoch 13: patience: 20
+[fold 8] epoch 14 - step 55 - training loss: 0.406456
+[fold 8] epoch 14: train accuracy: 0.765276
+[fold 8] epoch 14: valid accuracy: 0.539326
+[fold 8] epoch 14: patience: 19
+[fold 8] epoch 15 - step 55 - training loss: 0.381352
+[fold 8] epoch 15: train accuracy: 0.735497
+[fold 8] epoch 15: valid accuracy: 0.575281
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 8] epoch 15: patience: 20
+[fold 8] epoch 16 - step 55 - training loss: 0.399533
+[fold 8] epoch 16: train accuracy: 0.749684
+[fold 8] epoch 16: valid accuracy: 0.551685
+[fold 8] epoch 16: patience: 19
+[fold 8] epoch 17 - step 55 - training loss: 0.600657
+[fold 8] epoch 17: train accuracy: 0.800534
+[fold 8] epoch 17: valid accuracy: 0.542697
+[fold 8] epoch 17: patience: 18
+[fold 8] epoch 18 - step 55 - training loss: 0.437521
+[fold 8] epoch 18: train accuracy: 0.768085
+[fold 8] epoch 18: valid accuracy: 0.501124
+[fold 8] epoch 18: patience: 17
+[fold 8] epoch 19 - step 55 - training loss: 0.335963
+[fold 8] epoch 19: train accuracy: 0.837196
+[fold 8] epoch 19: valid accuracy: 0.51573
+[fold 8] epoch 19: patience: 16
+[fold 8] epoch 20 - step 55 - training loss: 0.303139
+[fold 8] epoch 20: train accuracy: 0.646861
+[fold 8] epoch 20: valid accuracy: 0.552809
+[fold 8] epoch 20: patience: 15
+[fold 8] epoch 21 - step 55 - training loss: 0.372383
+[fold 8] epoch 21: train accuracy: 0.80236
+[fold 8] epoch 21: valid accuracy: 0.557303
+[fold 8] epoch 21: patience: 14
+[fold 8] epoch 22 - step 55 - training loss: 0.189239
+[fold 8] epoch 22: train accuracy: 0.779604
+[fold 8] epoch 22: valid accuracy: 0.559551
+[fold 8] epoch 22: patience: 13
+[fold 8] epoch 23 - step 55 - training loss: 0.360387
+[fold 8] epoch 23: train accuracy: 0.64658
+[fold 8] epoch 23: valid accuracy: 0.552809
+[fold 8] epoch 23: patience: 12
+[fold 8] epoch 24 - step 55 - training loss: 0.239201
+[fold 8] epoch 24: train accuracy: 0.807557
+[fold 8] epoch 24: valid accuracy: 0.567416
+[fold 8] epoch 24: patience: 11
+[fold 8] epoch 25 - step 55 - training loss: 0.297959
+[fold 8] epoch 25: train accuracy: 0.855036
+[fold 8] epoch 25: valid accuracy: 0.567416
+[fold 8] epoch 25: patience: 10
+[fold 8] epoch 26 - step 55 - training loss: 0.381836
+[fold 8] epoch 26: train accuracy: 0.823149
+[fold 8] epoch 26: valid accuracy: 0.538202
+[fold 8] epoch 26: patience: 9
+[fold 8] epoch 27 - step 55 - training loss: 0.218312
+[fold 8] epoch 27: train accuracy: 0.862762
+[fold 8] epoch 27: valid accuracy: 0.561798
+[fold 8] epoch 27: patience: 8
+[fold 8] epoch 28 - step 55 - training loss: 0.187075
+[fold 8] epoch 28: train accuracy: 0.894929
+[fold 8] epoch 28: valid accuracy: 0.559551
+[fold 8] epoch 28: patience: 7
+[fold 8] epoch 29 - step 55 - training loss: 0.169118
+[fold 8] epoch 29: train accuracy: 0.8983
+[fold 8] epoch 29: valid accuracy: 0.574157
+[fold 8] epoch 29: patience: 6
+[fold 8] epoch 30 - step 55 - training loss: 0.161021
+[fold 8] epoch 30: train accuracy: 0.88636
+[fold 8] epoch 30: valid accuracy: 0.582022
+Model saved in file: models/short_term/1528602033.04_Estimator_model.ckpt
+[fold 8] epoch 30: patience: 20
+[fold 8] epoch 31 - step 55 - training loss: 0.150868
+[fold 8] epoch 31: train accuracy: 0.899003
+[fold 8] epoch 31: valid accuracy: 0.562921
+[fold 8] epoch 31: patience: 19
+[fold 8] epoch 32 - step 55 - training loss: 0.130811
+[fold 8] epoch 32: train accuracy: 0.920354
+[fold 8] epoch 32: valid accuracy: 0.564045
+[fold 8] epoch 32: patience: 18
+[fold 8] epoch 33 - step 55 - training loss: 0.068407
+[fold 8] epoch 33: train accuracy: 0.88018
+[fold 8] epoch 33: valid accuracy: 0.578652
+[fold 8] epoch 33: patience: 17
+[fold 8] epoch 34 - step 55 - training loss: 0.178057
+[fold 8] epoch 34: train accuracy: 0.934963
+[fold 8] epoch 34: valid accuracy: 0.565169
+[fold 8] epoch 34: patience: 16
+[fold 8] epoch 35 - step 55 - training loss: 0.0995833
+[fold 8] epoch 35: train accuracy: 0.945638
+[fold 8] epoch 35: valid accuracy: 0.564045
+[fold 8] epoch 35: patience: 15
+[fold 8] epoch 36 - step 55 - training loss: 0.19316
+[fold 8] epoch 36: train accuracy: 0.940582
+[fold 8] epoch 36: valid accuracy: 0.567416
+[fold 8] epoch 36: patience: 14
+[fold 8] epoch 37 - step 55 - training loss: 0.41093
+[fold 8] epoch 37: train accuracy: 0.912066
+[fold 8] epoch 37: valid accuracy: 0.513483
+[fold 8] epoch 37: patience: 13
+[fold 8] epoch 38 - step 55 - training loss: 0.138938
+[fold 8] epoch 38: train accuracy: 0.803343
+[fold 8] epoch 38: valid accuracy: 0.557303
+[fold 8] epoch 38: patience: 12
+[fold 8] epoch 39 - step 55 - training loss: 0.0699709
+[fold 8] epoch 39: train accuracy: 0.958562
+[fold 8] epoch 39: valid accuracy: 0.559551
+[fold 8] epoch 39: patience: 11
+[fold 8] epoch 40 - step 55 - training loss: 0.048608
+[fold 8] epoch 40: train accuracy: 0.963338
+[fold 8] epoch 40: valid accuracy: 0.565169
+[fold 8] epoch 40: patience: 10
+[fold 8] epoch 41 - step 55 - training loss: 0.0267691
+[fold 8] epoch 41: train accuracy: 0.97303
+[fold 8] epoch 41: valid accuracy: 0.570787
+[fold 8] epoch 41: patience: 9
+[fold 8] epoch 42 - step 55 - training loss: 0.518294
+[fold 8] epoch 42: train accuracy: 0.934682
+[fold 8] epoch 42: valid accuracy: 0.510112
+[fold 8] epoch 42: patience: 8
+[fold 8] epoch 43 - step 55 - training loss: 0.073009
+[fold 8] epoch 43: train accuracy: 0.975699
+[fold 8] epoch 43: valid accuracy: 0.553933
+[fold 8] epoch 43: patience: 7
+[fold 8] epoch 44 - step 55 - training loss: 0.0841189
+[fold 8] epoch 44: train accuracy: 0.966147
+[fold 8] epoch 44: valid accuracy: 0.569663
+[fold 8] epoch 44: patience: 6
+[fold 8] epoch 45 - step 55 - training loss: 0.0242288
+[fold 8] epoch 45: train accuracy: 0.983144
+[fold 8] epoch 45: valid accuracy: 0.574157
+[fold 8] epoch 45: patience: 5
+[fold 8] epoch 46 - step 55 - training loss: 0.107202
+[fold 8] epoch 46: train accuracy: 0.969097
+[fold 8] epoch 46: valid accuracy: 0.565169
+[fold 8] epoch 46: patience: 4
+[fold 8] epoch 47 - step 55 - training loss: 0.0157139
+[fold 8] epoch 47: train accuracy: 0.980475
+[fold 8] epoch 47: valid accuracy: 0.555056
+[fold 8] epoch 47: patience: 3
+[fold 8] epoch 48 - step 55 - training loss: 0.0333553
+[fold 8] epoch 48: train accuracy: 0.985953
+[fold 8] epoch 48: valid accuracy: 0.575281
+[fold 8] epoch 48: patience: 2
+[fold 8] epoch 49 - step 55 - training loss: 0.0459129
+[fold 8] epoch 49: train accuracy: 0.971485
+[fold 8] epoch 49: valid accuracy: 0.568539
+[fold 8] epoch 49: patience: 1
+[fold 8] epoch 50 - step 55 - training loss: 0.0246638
+[fold 8] epoch 50: train accuracy: 0.989465
+[fold 8] epoch 50: valid accuracy: 0.580899
+[fold 8] epoch 50: patience: 0
+Args (and data) saved.
+Timings saved.
+------------------------------
+max train accuracies: [0.9884815, 0.92681557, 0.86866134, 0.96586597, 0.986234, 0.92442757, 0.931732, 0.9894648]
+max valid accuracies: [0.63595504, 0.64494383, 0.6269663, 0.66179776, 0.6651685, 0.66629213, 0.6550562, 0.5820225]
+best avg. train accuracy: 0.94771
+best avg. valid accuracy: 0.642275
+done.
+This run of train TF mlp supervised ranker ran for 0:16:05 and logs are available locally at: /home/ml/nangel3/.hyperdash/logs/train-tf-mlp-supervised-ranker/train-tf-mlp-supervised-ranker_2018-06-09t23-38-46-907332.log
