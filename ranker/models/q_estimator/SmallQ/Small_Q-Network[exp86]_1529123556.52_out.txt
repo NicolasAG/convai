@@ -1,0 +1,391 @@
+loading word2vec embeddings...
+2018-06-16 00:31:45,013: features: INFO: loading nltk english stop words...
+2018-06-16 00:31:45,022: features: INFO: set([u'all', u'just', u'being', u'over', u'both', u'through', u'yourselves', u'its', u'before', u'o', u'hadn', u'herself', u'll', u'had', u'should', u'to', u'only', u'won', u'under', u'ours', u'has', u'do', u'them', u'his', u'very', u'they', u'not', u'during', u'now', u'him', u'nor', u'd', u'did', u'didn', u'this', u'she', u'each', u'further', u'where', u'few', u'because', u'doing', u'some', u'hasn', u'are', u'our', u'ourselves', u'out', u'what', u'for', u'while', u're', u'does', u'above', u'between', u'mustn', u't', u'be', u'we', u'who', u'were', u'here', u'shouldn', u'hers', u'by', u'on', u'about', u'couldn', u'of', u'against', u's', u'isn', u'or', u'own', u'into', u'yourself', u'down', u'mightn', u'wasn', u'your', u'from', u'her', u'their', u'aren', u'there', u'been', u'whom', u'too', u'wouldn', u'themselves', u'weren', u'was', u'until', u'more', u'himself', u'that', u'but', u'don', u'with', u'than', u'those', u'he', u'me', u'myself', u'ma', u'these', u'up', u'will', u'below', u'ain', u'can', u'theirs', u'my', u'and', u've', u'then', u'is', u'am', u'it', u'doesn', u'an', u'as', u'itself', u'at', u'have', u'in', u'any', u'if', u'again', u'no', u'when', u'same', u'how', u'other', u'which', u'you', u'shan', u'needn', u'haven', u'after', u'most', u'such', u'why', u'a', u'off', u'i', u'm', u'yours', u'so', u'y', u'the', u'having', u'once'])
+2018-06-16 00:31:45,022: features: INFO: 
+2018-06-16 00:31:45,148: extract_amt_for_q_ranker: INFO: using ALL features: ['ArticleLength', 'AverageWordEmbedding_Article', 'AverageWordEmbedding_Candidate', 'AverageWordEmbedding_LastK', 'AverageWordEmbedding_User', 'AverageWordEmbedding_kUser', 'BigramOverlap', 'CandidateLength', 'ConfusionWords', 'DialogActCandidate', 'DialogActLastUser', 'DialogLength', 'EntityOverlap', 'GenericTurns', 'IntensifierWords', 'LastUserLength', 'Negation', 'NonStopWordOverlap', 'ProfanityWords', 'SentimentScoreCandidate', 'SentimentScoreLastUser', 'Similarity_CandidateArticle', 'Similarity_CandidateArticle_noStop', 'Similarity_CandidateKUser', 'Similarity_CandidateKUser_noStop', 'Similarity_CandidateLastK', 'Similarity_CandidateLastK_noStop', 'Similarity_CandidateUser', 'TrigramOverlap', 'WhWords']
+2018-06-16 00:31:45,155: __main__: INFO: 
+2018-06-16 00:31:45,155: __main__: INFO: Namespace(article_bidir=False, article_dropout=0.2, article_hs=300, batch_size=128, context_bidir=False, context_dropout=0.2, context_hs=300, data_f='./data/q_ranker_amt_data_1524939554.0.json', debug=False, epochs=100000, experiment=None, fix_embeddings=False, gamma=0.99, gpu=0, learning_rate=0.001, mlp_activation='prelu', mlp_dropout=0.2, mode='mlp', model_name='SmallQ/Small_Q-Network[exp86]', optimizer='adadelta', patience=20, predict_rewards=False, rnn_gate='gru', sentence_bidir=False, sentence_dropout=0.2, sentence_hs=300, update_frequence=2000, use_custom_encs=True, utterance_bidir=False, utterance_dropout=0.2, utterance_hs=300, verbose=False, vocab_f='./data/q_ranker_amt_vocab_1524939554.0.pkl')
+2018-06-16 00:31:45,155: __main__: INFO: 
+2018-06-16 00:31:45,156: __main__: INFO: {'article_dropout': 0.2, 'sentence_hs': 300, 'optimizer': 'adadelta', 'verbose': False, 'utterance_hs': 300, 'update_frequence': 2000, 'article_hs': 300, 'learning_rate': 0.001, 'use_custom_encs': True, 'batch_size': 128, 'sentence_dropout': 0.2, 'epochs': 100000, 'patience': 20, 'mlp_dropout': 0.2, 'article_bidir': False, 'utterance_dropout': 0.2, 'context_hs': 300, 'predict_rewards': False, 'fix_embeddings': False, 'data_f': './data/q_ranker_amt_data_1524939554.0.json', 'context_dropout': 0.2, 'rnn_gate': 'gru', 'mlp_activation': 'prelu', 'utterance_bidir': False, 'context_bidir': False, 'vocab_f': './data/q_ranker_amt_vocab_1524939554.0.pkl', 'experiment': None, 'sentence_bidir': False, 'mode': 'mlp', 'debug': False, 'gpu': 0, 'model_name': 'SmallQ/Small_Q-Network[exp86]', 'gamma': 0.99}
+2018-06-16 00:31:45,156: __main__: INFO: 
+2018-06-16 00:31:45,156: __main__: INFO: 
+2018-06-16 00:31:45,156: __main__: INFO: Loading data from ./data/q_ranker_amt_data_1524939554.0.json...
+2018-06-16 00:32:35,236: __main__: INFO: got 56564 train examples
+2018-06-16 00:32:35,236: __main__: INFO: got 7114 valid examples
+2018-06-16 00:32:35,236: __main__: INFO: got 7083 test examples
+2018-06-16 00:32:35,236: __main__: INFO: 
+2018-06-16 00:32:35,236: __main__: INFO: Loading vocabulary...
+2018-06-16 00:32:35,325: __main__: INFO: number of unique tokens: 24448
+2018-06-16 00:32:35,325: __main__: INFO: 
+2018-06-16 00:32:35,325: __main__: INFO: Get data loaders...
+2018-06-16 00:32:35,502: __main__: INFO: done.
+2018-06-16 00:32:35,502: __main__: INFO: 
+2018-06-16 00:32:35,502: __main__: INFO: Building word embeddings...
+2018-06-16 00:32:35,797: __main__: INFO: Got 16787/24448 = 0.686641 pretrained embeddings
+2018-06-16 00:32:35,797: __main__: INFO: 
+2018-06-16 00:32:35,797: __main__: INFO: Building Q-Network...
+2018-06-16 00:32:36,523: __main__: INFO: QNetwork(
+  (fc_1): Linear(in_features=1579, out_features=789, bias=True)
+  (fc_2): Linear(in_features=789, out_features=789, bias=True)
+  (fc_3): Linear(in_features=789, out_features=394, bias=True)
+  (fc_4): Linear(in_features=394, out_features=1, bias=True)
+  (dropout): Dropout(p=0.2)
+)
+2018-06-16 00:32:36,535: __main__: INFO: 
+2018-06-16 00:32:36,536: __main__: INFO: cuda available! Moving variables to cuda 0...
+2018-06-16 00:32:40,194: __main__: INFO: 
+2018-06-16 00:32:40,194: __main__: INFO: Training model...
+2018-06-16 00:32:40,195: __main__: INFO: ***********************************
+2018-06-16 00:32:41,471: __main__: INFO: iteration 0: updating target DQN.
+2018-06-16 00:39:18,922: __main__: INFO: Epoch: 1 - train loss: 157.909
+2018-06-16 00:39:18,923: __main__: INFO: computing validation losses...
+2018-06-16 00:40:08,003: __main__: INFO: Valid loss: 66.83 - best valid loss: 100000
+2018-06-16 00:40:08,781: __main__: INFO: Saved new model.
+2018-06-16 00:40:08,781: __main__: INFO: ***********************************
+2018-06-16 00:46:39,800: __main__: INFO: Epoch: 2 - train loss: 62.1555
+2018-06-16 00:46:39,801: __main__: INFO: computing validation losses...
+2018-06-16 00:47:27,130: __main__: INFO: Valid loss: 55.8992 - best valid loss: 66.83
+2018-06-16 00:47:27,903: __main__: INFO: Saved new model.
+2018-06-16 00:47:27,903: __main__: INFO: ***********************************
+2018-06-16 00:54:10,691: __main__: INFO: Epoch: 3 - train loss: 57.8142
+2018-06-16 00:54:10,692: __main__: INFO: computing validation losses...
+2018-06-16 00:54:58,842: __main__: INFO: Valid loss: 53.2131 - best valid loss: 55.8992
+2018-06-16 00:54:59,616: __main__: INFO: Saved new model.
+2018-06-16 00:54:59,616: __main__: INFO: ***********************************
+2018-06-16 01:01:36,363: __main__: INFO: Epoch: 4 - train loss: 55.0707
+2018-06-16 01:01:36,364: __main__: INFO: computing validation losses...
+2018-06-16 01:02:34,284: __main__: INFO: Valid loss: 51.2559 - best valid loss: 53.2131
+2018-06-16 01:02:35,059: __main__: INFO: Saved new model.
+2018-06-16 01:02:35,059: __main__: INFO: ***********************************
+2018-06-16 01:06:07,868: __main__: INFO: iteration 2000: updating target DQN.
+2018-06-16 01:09:11,529: __main__: INFO: Epoch: 5 - train loss: 30.031
+2018-06-16 01:09:11,530: __main__: INFO: computing validation losses...
+2018-06-16 01:09:58,384: __main__: INFO: Valid loss: 0.625764 - best valid loss: 51.2559
+2018-06-16 01:09:59,153: __main__: INFO: Saved new model.
+2018-06-16 01:09:59,153: __main__: INFO: ***********************************
+2018-06-16 01:16:33,615: __main__: INFO: Epoch: 6 - train loss: 2.79345
+2018-06-16 01:16:33,616: __main__: INFO: computing validation losses...
+2018-06-16 01:17:20,980: __main__: INFO: Valid loss: 0.436152 - best valid loss: 0.625764
+2018-06-16 01:17:21,745: __main__: INFO: Saved new model.
+2018-06-16 01:17:21,746: __main__: INFO: ***********************************
+2018-06-16 01:23:51,450: __main__: INFO: Epoch: 7 - train loss: 1.74037
+2018-06-16 01:23:51,451: __main__: INFO: computing validation losses...
+2018-06-16 01:24:37,634: __main__: INFO: Valid loss: 0.415889 - best valid loss: 0.436152
+2018-06-16 01:24:38,409: __main__: INFO: Saved new model.
+2018-06-16 01:24:38,409: __main__: INFO: ***********************************
+2018-06-16 01:31:11,507: __main__: INFO: Epoch: 8 - train loss: 1.32594
+2018-06-16 01:31:11,508: __main__: INFO: computing validation losses...
+2018-06-16 01:31:59,255: __main__: INFO: Valid loss: 0.399419 - best valid loss: 0.415889
+2018-06-16 01:32:00,030: __main__: INFO: Saved new model.
+2018-06-16 01:32:00,030: __main__: INFO: ***********************************
+2018-06-16 01:38:30,709: __main__: INFO: Epoch: 9 - train loss: 1.16893
+2018-06-16 01:38:30,710: __main__: INFO: computing validation losses...
+2018-06-16 01:39:18,629: __main__: INFO: Valid loss: 0.331032 - best valid loss: 0.399419
+2018-06-16 01:39:19,405: __main__: INFO: Saved new model.
+2018-06-16 01:39:19,405: __main__: INFO: ***********************************
+2018-06-16 01:39:40,000: __main__: INFO: iteration 4000: updating target DQN.
+2018-06-16 01:45:43,158: __main__: INFO: Epoch: 10 - train loss: 0.349951
+2018-06-16 01:45:43,159: __main__: INFO: computing validation losses...
+2018-06-16 01:46:39,030: __main__: INFO: Valid loss: 0.0771867 - best valid loss: 0.331032
+2018-06-16 01:46:39,804: __main__: INFO: Saved new model.
+2018-06-16 01:46:39,805: __main__: INFO: ***********************************
+2018-06-16 01:53:06,294: __main__: INFO: Epoch: 11 - train loss: 0.253839
+2018-06-16 01:53:06,295: __main__: INFO: computing validation losses...
+2018-06-16 01:53:53,468: __main__: INFO: Valid loss: 0.0624918 - best valid loss: 0.0771867
+2018-06-16 01:53:54,248: __main__: INFO: Saved new model.
+2018-06-16 01:53:54,248: __main__: INFO: ***********************************
+2018-06-16 02:00:28,357: __main__: INFO: Epoch: 12 - train loss: 0.227285
+2018-06-16 02:00:28,358: __main__: INFO: computing validation losses...
+2018-06-16 02:01:16,074: __main__: INFO: Valid loss: 0.0595108 - best valid loss: 0.0624918
+2018-06-16 02:01:16,847: __main__: INFO: Saved new model.
+2018-06-16 02:01:16,848: __main__: INFO: ***********************************
+2018-06-16 02:07:50,203: __main__: INFO: Epoch: 13 - train loss: 0.211007
+2018-06-16 02:07:50,204: __main__: INFO: computing validation losses...
+2018-06-16 02:08:34,427: __main__: INFO: Valid loss: 0.0578588 - best valid loss: 0.0595108
+2018-06-16 02:08:35,201: __main__: INFO: Saved new model.
+2018-06-16 02:08:35,201: __main__: INFO: ***********************************
+2018-06-16 02:12:10,941: __main__: INFO: iteration 6000: updating target DQN.
+2018-06-16 02:14:45,784: __main__: INFO: Epoch: 14 - train loss: 0.191349
+2018-06-16 02:14:45,784: __main__: INFO: computing validation losses...
+2018-06-16 02:15:28,787: __main__: INFO: Valid loss: 0.0518377 - best valid loss: 0.0578588
+2018-06-16 02:15:29,559: __main__: INFO: Saved new model.
+2018-06-16 02:15:29,559: __main__: INFO: ***********************************
+2018-06-16 02:21:43,833: __main__: INFO: Epoch: 15 - train loss: 0.168526
+2018-06-16 02:21:43,834: __main__: INFO: computing validation losses...
+2018-06-16 02:22:30,168: __main__: INFO: Valid loss: 0.0498352 - best valid loss: 0.0518377
+2018-06-16 02:22:31,706: __main__: INFO: Saved new model.
+2018-06-16 02:22:31,706: __main__: INFO: ***********************************
+2018-06-16 02:28:58,590: __main__: INFO: Epoch: 16 - train loss: 0.165492
+2018-06-16 02:28:58,591: __main__: INFO: computing validation losses...
+2018-06-16 02:29:45,520: __main__: INFO: Valid loss: 0.0479819 - best valid loss: 0.0498352
+2018-06-16 02:29:46,346: __main__: INFO: Saved new model.
+2018-06-16 02:29:46,346: __main__: INFO: ***********************************
+2018-06-16 02:36:10,401: __main__: INFO: Epoch: 17 - train loss: 0.160015
+2018-06-16 02:36:10,407: __main__: INFO: computing validation losses...
+2018-06-16 02:36:57,313: __main__: INFO: Valid loss: 0.0466732 - best valid loss: 0.0479819
+2018-06-16 02:36:58,085: __main__: INFO: Saved new model.
+2018-06-16 02:36:58,085: __main__: INFO: ***********************************
+2018-06-16 02:43:16,087: __main__: INFO: Epoch: 18 - train loss: 0.152519
+2018-06-16 02:43:16,088: __main__: INFO: computing validation losses...
+2018-06-16 02:44:02,287: __main__: INFO: Valid loss: 0.047747 - best valid loss: 0.0466732
+2018-06-16 02:44:02,288: __main__: INFO: No improvement. patience: 19
+2018-06-16 02:44:02,288: __main__: INFO: ***********************************
+2018-06-16 02:44:39,642: __main__: INFO: iteration 8000: updating target DQN.
+2018-06-16 02:50:23,702: __main__: INFO: Epoch: 19 - train loss: 0.1435
+2018-06-16 02:50:23,703: __main__: INFO: computing validation losses...
+2018-06-16 02:51:09,320: __main__: INFO: Valid loss: 0.0483174 - best valid loss: 0.0466732
+2018-06-16 02:51:09,320: __main__: INFO: No improvement. patience: 18
+2018-06-16 02:51:09,320: __main__: INFO: ***********************************
+2018-06-16 02:57:28,672: __main__: INFO: Epoch: 20 - train loss: 0.138194
+2018-06-16 02:57:28,673: __main__: INFO: computing validation losses...
+2018-06-16 02:58:15,165: __main__: INFO: Valid loss: 0.0501889 - best valid loss: 0.0466732
+2018-06-16 02:58:15,166: __main__: INFO: No improvement. patience: 17
+2018-06-16 02:58:15,166: __main__: INFO: ***********************************
+2018-06-16 03:04:41,036: __main__: INFO: Epoch: 21 - train loss: 0.13444
+2018-06-16 03:04:41,037: __main__: INFO: computing validation losses...
+2018-06-16 03:05:29,248: __main__: INFO: Valid loss: 0.0474897 - best valid loss: 0.0466732
+2018-06-16 03:05:29,249: __main__: INFO: No improvement. patience: 16
+2018-06-16 03:05:29,249: __main__: INFO: ***********************************
+2018-06-16 03:12:10,151: __main__: INFO: Epoch: 22 - train loss: 0.133182
+2018-06-16 03:12:10,151: __main__: INFO: computing validation losses...
+2018-06-16 03:12:58,660: __main__: INFO: Valid loss: 0.0472896 - best valid loss: 0.0466732
+2018-06-16 03:12:58,661: __main__: INFO: No improvement. patience: 15
+2018-06-16 03:12:58,661: __main__: INFO: ***********************************
+2018-06-16 03:17:01,900: __main__: INFO: iteration 10000: updating target DQN.
+2018-06-16 03:19:26,702: __main__: INFO: Epoch: 23 - train loss: 0.124705
+2018-06-16 03:19:26,703: __main__: INFO: computing validation losses...
+2018-06-16 03:20:21,375: __main__: INFO: Valid loss: 0.0485239 - best valid loss: 0.0466732
+2018-06-16 03:20:21,376: __main__: INFO: No improvement. patience: 14
+2018-06-16 03:20:21,376: __main__: INFO: ***********************************
+2018-06-16 03:26:44,781: __main__: INFO: Epoch: 24 - train loss: 0.120314
+2018-06-16 03:26:44,782: __main__: INFO: computing validation losses...
+2018-06-16 03:27:32,244: __main__: INFO: Valid loss: 0.0492108 - best valid loss: 0.0466732
+2018-06-16 03:27:32,245: __main__: INFO: No improvement. patience: 13
+2018-06-16 03:27:32,245: __main__: INFO: ***********************************
+2018-06-16 03:34:02,060: __main__: INFO: Epoch: 25 - train loss: 0.118578
+2018-06-16 03:34:02,061: __main__: INFO: computing validation losses...
+2018-06-16 03:34:51,636: __main__: INFO: Valid loss: 0.0508035 - best valid loss: 0.0466732
+2018-06-16 03:34:51,636: __main__: INFO: No improvement. patience: 12
+2018-06-16 03:34:51,636: __main__: INFO: ***********************************
+2018-06-16 03:41:09,700: __main__: INFO: Epoch: 26 - train loss: 0.114812
+2018-06-16 03:41:09,701: __main__: INFO: computing validation losses...
+2018-06-16 03:41:53,615: __main__: INFO: Valid loss: 0.047084 - best valid loss: 0.0466732
+2018-06-16 03:41:53,616: __main__: INFO: No improvement. patience: 11
+2018-06-16 03:41:53,616: __main__: INFO: ***********************************
+2018-06-16 03:48:20,016: __main__: INFO: Epoch: 27 - train loss: 0.111616
+2018-06-16 03:48:20,017: __main__: INFO: computing validation losses...
+2018-06-16 03:49:06,848: __main__: INFO: Valid loss: 0.0478273 - best valid loss: 0.0466732
+2018-06-16 03:49:06,849: __main__: INFO: No improvement. patience: 10
+2018-06-16 03:49:06,849: __main__: INFO: ***********************************
+2018-06-16 03:50:04,006: __main__: INFO: iteration 12000: updating target DQN.
+2018-06-16 03:55:33,758: __main__: INFO: Epoch: 28 - train loss: 0.10783
+2018-06-16 03:55:33,759: __main__: INFO: computing validation losses...
+2018-06-16 03:56:19,336: __main__: INFO: Valid loss: 0.0451261 - best valid loss: 0.0466732
+2018-06-16 03:56:20,111: __main__: INFO: Saved new model.
+2018-06-16 03:56:20,111: __main__: INFO: ***********************************
+2018-06-16 04:02:41,581: __main__: INFO: Epoch: 29 - train loss: 0.104089
+2018-06-16 04:02:41,582: __main__: INFO: computing validation losses...
+2018-06-16 04:03:37,488: __main__: INFO: Valid loss: 0.0468493 - best valid loss: 0.0451261
+2018-06-16 04:03:37,489: __main__: INFO: No improvement. patience: 19
+2018-06-16 04:03:37,489: __main__: INFO: ***********************************
+2018-06-16 04:10:07,165: __main__: INFO: Epoch: 30 - train loss: 0.0999757
+2018-06-16 04:10:07,166: __main__: INFO: computing validation losses...
+2018-06-16 04:10:56,684: __main__: INFO: Valid loss: 0.0472836 - best valid loss: 0.0451261
+2018-06-16 04:10:56,685: __main__: INFO: No improvement. patience: 18
+2018-06-16 04:10:56,685: __main__: INFO: ***********************************
+2018-06-16 04:17:32,583: __main__: INFO: Epoch: 31 - train loss: 0.0983736
+2018-06-16 04:17:32,584: __main__: INFO: computing validation losses...
+2018-06-16 04:18:19,200: __main__: INFO: Valid loss: 0.0458011 - best valid loss: 0.0451261
+2018-06-16 04:18:19,200: __main__: INFO: No improvement. patience: 17
+2018-06-16 04:18:19,200: __main__: INFO: ***********************************
+2018-06-16 04:22:41,639: __main__: INFO: iteration 14000: updating target DQN.
+2018-06-16 04:24:50,955: __main__: INFO: Epoch: 32 - train loss: 0.0975883
+2018-06-16 04:24:50,955: __main__: INFO: computing validation losses...
+2018-06-16 04:25:36,870: __main__: INFO: Valid loss: 0.0442306 - best valid loss: 0.0451261
+2018-06-16 04:25:37,645: __main__: INFO: Saved new model.
+2018-06-16 04:25:37,645: __main__: INFO: ***********************************
+2018-06-16 04:32:08,754: __main__: INFO: Epoch: 33 - train loss: 0.0923178
+2018-06-16 04:32:08,755: __main__: INFO: computing validation losses...
+2018-06-16 04:32:59,628: __main__: INFO: Valid loss: 0.0447991 - best valid loss: 0.0442306
+2018-06-16 04:32:59,628: __main__: INFO: No improvement. patience: 19
+2018-06-16 04:32:59,628: __main__: INFO: ***********************************
+2018-06-16 04:39:31,945: __main__: INFO: Epoch: 34 - train loss: 0.0918852
+2018-06-16 04:39:31,946: __main__: INFO: computing validation losses...
+2018-06-16 04:40:21,646: __main__: INFO: Valid loss: 0.0444098 - best valid loss: 0.0442306
+2018-06-16 04:40:21,647: __main__: INFO: No improvement. patience: 18
+2018-06-16 04:40:21,647: __main__: INFO: ***********************************
+2018-06-16 04:46:58,830: __main__: INFO: Epoch: 35 - train loss: 0.0901948
+2018-06-16 04:46:58,831: __main__: INFO: computing validation losses...
+2018-06-16 04:47:45,971: __main__: INFO: Valid loss: 0.043713 - best valid loss: 0.0442306
+2018-06-16 04:47:46,746: __main__: INFO: Saved new model.
+2018-06-16 04:47:46,746: __main__: INFO: ***********************************
+2018-06-16 04:54:08,168: __main__: INFO: Epoch: 36 - train loss: 0.0874385
+2018-06-16 04:54:08,169: __main__: INFO: computing validation losses...
+2018-06-16 04:54:52,349: __main__: INFO: Valid loss: 0.0437279 - best valid loss: 0.043713
+2018-06-16 04:54:52,349: __main__: INFO: No improvement. patience: 19
+2018-06-16 04:54:52,349: __main__: INFO: ***********************************
+2018-06-16 04:56:13,341: __main__: INFO: iteration 16000: updating target DQN.
+2018-06-16 05:01:20,173: __main__: INFO: Epoch: 37 - train loss: 0.0861449
+2018-06-16 05:01:20,174: __main__: INFO: computing validation losses...
+2018-06-16 05:02:08,528: __main__: INFO: Valid loss: 0.0447639 - best valid loss: 0.043713
+2018-06-16 05:02:08,529: __main__: INFO: No improvement. patience: 18
+2018-06-16 05:02:08,529: __main__: INFO: ***********************************
+2018-06-16 05:08:46,873: __main__: INFO: Epoch: 38 - train loss: 0.0832136
+2018-06-16 05:08:46,874: __main__: INFO: computing validation losses...
+2018-06-16 05:09:33,879: __main__: INFO: Valid loss: 0.0448328 - best valid loss: 0.043713
+2018-06-16 05:09:33,880: __main__: INFO: No improvement. patience: 17
+2018-06-16 05:09:33,880: __main__: INFO: ***********************************
+2018-06-16 05:16:14,262: __main__: INFO: Epoch: 39 - train loss: 0.0820975
+2018-06-16 05:16:14,263: __main__: INFO: computing validation losses...
+2018-06-16 05:17:03,252: __main__: INFO: Valid loss: 0.0452101 - best valid loss: 0.043713
+2018-06-16 05:17:03,253: __main__: INFO: No improvement. patience: 16
+2018-06-16 05:17:03,253: __main__: INFO: ***********************************
+2018-06-16 05:23:36,484: __main__: INFO: Epoch: 40 - train loss: 0.0801466
+2018-06-16 05:23:36,484: __main__: INFO: computing validation losses...
+2018-06-16 05:24:22,845: __main__: INFO: Valid loss: 0.0444339 - best valid loss: 0.043713
+2018-06-16 05:24:22,846: __main__: INFO: No improvement. patience: 15
+2018-06-16 05:24:22,846: __main__: INFO: ***********************************
+2018-06-16 05:29:05,943: __main__: INFO: iteration 18000: updating target DQN.
+2018-06-16 05:30:49,437: __main__: INFO: Epoch: 41 - train loss: 0.0794114
+2018-06-16 05:30:49,438: __main__: INFO: computing validation losses...
+2018-06-16 05:31:37,772: __main__: INFO: Valid loss: 0.0445304 - best valid loss: 0.043713
+2018-06-16 05:31:37,773: __main__: INFO: No improvement. patience: 14
+2018-06-16 05:31:37,773: __main__: INFO: ***********************************
+2018-06-16 05:38:04,721: __main__: INFO: Epoch: 42 - train loss: 0.0779733
+2018-06-16 05:38:04,722: __main__: INFO: computing validation losses...
+2018-06-16 05:38:49,684: __main__: INFO: Valid loss: 0.0446627 - best valid loss: 0.043713
+2018-06-16 05:38:49,685: __main__: INFO: No improvement. patience: 13
+2018-06-16 05:38:49,685: __main__: INFO: ***********************************
+2018-06-16 05:45:12,396: __main__: INFO: Epoch: 43 - train loss: 0.0765238
+2018-06-16 05:45:12,397: __main__: INFO: computing validation losses...
+2018-06-16 05:46:00,214: __main__: INFO: Valid loss: 0.0443678 - best valid loss: 0.043713
+2018-06-16 05:46:00,215: __main__: INFO: No improvement. patience: 12
+2018-06-16 05:46:00,215: __main__: INFO: ***********************************
+2018-06-16 05:52:17,994: __main__: INFO: Epoch: 44 - train loss: 0.0768142
+2018-06-16 05:52:17,995: __main__: INFO: computing validation losses...
+2018-06-16 05:53:07,566: __main__: INFO: Valid loss: 0.0444416 - best valid loss: 0.043713
+2018-06-16 05:53:07,567: __main__: INFO: No improvement. patience: 11
+2018-06-16 05:53:07,567: __main__: INFO: ***********************************
+2018-06-16 06:00:05,430: __main__: INFO: Epoch: 45 - train loss: 0.0754744
+2018-06-16 06:00:05,431: __main__: INFO: computing validation losses...
+2018-06-16 06:01:00,477: __main__: INFO: Valid loss: 0.0447269 - best valid loss: 0.043713
+2018-06-16 06:01:00,478: __main__: INFO: No improvement. patience: 10
+2018-06-16 06:01:00,478: __main__: INFO: ***********************************
+2018-06-16 06:02:49,705: __main__: INFO: iteration 20000: updating target DQN.
+2018-06-16 06:08:12,987: __main__: INFO: Epoch: 46 - train loss: 0.07246
+2018-06-16 06:08:12,990: __main__: INFO: computing validation losses...
+2018-06-16 06:09:09,188: __main__: INFO: Valid loss: 0.044067 - best valid loss: 0.043713
+2018-06-16 06:09:09,189: __main__: INFO: No improvement. patience: 9
+2018-06-16 06:09:09,189: __main__: INFO: ***********************************
+2018-06-16 06:16:50,552: __main__: INFO: Epoch: 47 - train loss: 0.0707958
+2018-06-16 06:16:50,554: __main__: INFO: computing validation losses...
+2018-06-16 06:17:47,205: __main__: INFO: Valid loss: 0.0431262 - best valid loss: 0.043713
+2018-06-16 06:17:47,983: __main__: INFO: Saved new model.
+2018-06-16 06:17:47,983: __main__: INFO: ***********************************
+2018-06-16 06:24:59,951: __main__: INFO: Epoch: 48 - train loss: 0.0710159
+2018-06-16 06:24:59,952: __main__: INFO: computing validation losses...
+2018-06-16 06:25:54,683: __main__: INFO: Valid loss: 0.0437348 - best valid loss: 0.0431262
+2018-06-16 06:25:54,684: __main__: INFO: No improvement. patience: 19
+2018-06-16 06:25:54,684: __main__: INFO: ***********************************
+2018-06-16 06:33:44,028: __main__: INFO: Epoch: 49 - train loss: 0.0702345
+2018-06-16 06:33:44,029: __main__: INFO: computing validation losses...
+2018-06-16 06:34:40,017: __main__: INFO: Valid loss: 0.0432205 - best valid loss: 0.0431262
+2018-06-16 06:34:40,018: __main__: INFO: No improvement. patience: 18
+2018-06-16 06:34:40,018: __main__: INFO: ***********************************
+2018-06-16 06:40:36,032: __main__: INFO: iteration 22000: updating target DQN.
+2018-06-16 06:42:10,654: __main__: INFO: Epoch: 50 - train loss: 0.0694327
+2018-06-16 06:42:10,655: __main__: INFO: computing validation losses...
+2018-06-16 06:43:03,670: __main__: INFO: Valid loss: 0.044235 - best valid loss: 0.0431262
+2018-06-16 06:43:03,671: __main__: INFO: No improvement. patience: 17
+2018-06-16 06:43:03,671: __main__: INFO: ***********************************
+2018-06-16 06:50:37,335: __main__: INFO: Epoch: 51 - train loss: 0.0689521
+2018-06-16 06:50:37,337: __main__: INFO: computing validation losses...
+2018-06-16 06:51:35,974: __main__: INFO: Valid loss: 0.0444714 - best valid loss: 0.0431262
+2018-06-16 06:51:35,975: __main__: INFO: No improvement. patience: 16
+2018-06-16 06:51:35,975: __main__: INFO: ***********************************
+2018-06-16 06:59:28,565: __main__: INFO: Epoch: 52 - train loss: 0.0678585
+2018-06-16 06:59:28,565: __main__: INFO: computing validation losses...
+2018-06-16 07:00:25,761: __main__: INFO: Valid loss: 0.0442675 - best valid loss: 0.0431262
+2018-06-16 07:00:25,762: __main__: INFO: No improvement. patience: 15
+2018-06-16 07:00:25,762: __main__: INFO: ***********************************
+2018-06-16 07:07:35,679: __main__: INFO: Epoch: 53 - train loss: 0.0672171
+2018-06-16 07:07:35,679: __main__: INFO: computing validation losses...
+2018-06-16 07:08:24,432: __main__: INFO: Valid loss: 0.0442857 - best valid loss: 0.0431262
+2018-06-16 07:08:24,433: __main__: INFO: No improvement. patience: 14
+2018-06-16 07:08:24,433: __main__: INFO: ***********************************
+2018-06-16 07:15:11,527: __main__: INFO: Epoch: 54 - train loss: 0.06575
+2018-06-16 07:15:11,528: __main__: INFO: computing validation losses...
+2018-06-16 07:16:01,199: __main__: INFO: Valid loss: 0.0440389 - best valid loss: 0.0431262
+2018-06-16 07:16:01,200: __main__: INFO: No improvement. patience: 13
+2018-06-16 07:16:01,200: __main__: INFO: ***********************************
+2018-06-16 07:17:59,052: __main__: INFO: iteration 24000: updating target DQN.
+2018-06-16 07:22:42,809: __main__: INFO: Epoch: 55 - train loss: 0.0661471
+2018-06-16 07:22:42,810: __main__: INFO: computing validation losses...
+2018-06-16 07:23:45,557: __main__: INFO: Valid loss: 0.044603 - best valid loss: 0.0431262
+2018-06-16 07:23:45,558: __main__: INFO: No improvement. patience: 12
+2018-06-16 07:23:45,558: __main__: INFO: ***********************************
+2018-06-16 07:30:52,338: __main__: INFO: Epoch: 56 - train loss: 0.0647833
+2018-06-16 07:30:52,339: __main__: INFO: computing validation losses...
+2018-06-16 07:31:36,177: __main__: INFO: Valid loss: 0.0447033 - best valid loss: 0.0431262
+2018-06-16 07:31:36,178: __main__: INFO: No improvement. patience: 11
+2018-06-16 07:31:36,178: __main__: INFO: ***********************************
+2018-06-16 07:38:32,925: __main__: INFO: Epoch: 57 - train loss: 0.0646957
+2018-06-16 07:38:32,926: __main__: INFO: computing validation losses...
+2018-06-16 07:39:26,497: __main__: INFO: Valid loss: 0.044627 - best valid loss: 0.0431262
+2018-06-16 07:39:26,498: __main__: INFO: No improvement. patience: 10
+2018-06-16 07:39:26,498: __main__: INFO: ***********************************
+2018-06-16 07:46:35,062: __main__: INFO: Epoch: 58 - train loss: 0.0648748
+2018-06-16 07:46:35,064: __main__: INFO: computing validation losses...
+2018-06-16 07:47:27,801: __main__: INFO: Valid loss: 0.0446537 - best valid loss: 0.0431262
+2018-06-16 07:47:27,802: __main__: INFO: No improvement. patience: 9
+2018-06-16 07:47:27,802: __main__: INFO: ***********************************
+2018-06-16 07:52:30,270: __main__: INFO: iteration 26000: updating target DQN.
+2018-06-16 07:53:32,393: __main__: INFO: Epoch: 59 - train loss: 0.0633889
+2018-06-16 07:53:32,394: __main__: INFO: computing validation losses...
+2018-06-16 07:54:33,496: __main__: INFO: Valid loss: 0.0438872 - best valid loss: 0.0431262
+2018-06-16 07:54:33,497: __main__: INFO: No improvement. patience: 8
+2018-06-16 07:54:33,497: __main__: INFO: ***********************************
+2018-06-16 08:01:40,884: __main__: INFO: Epoch: 60 - train loss: 0.0621845
+2018-06-16 08:01:40,885: __main__: INFO: computing validation losses...
+2018-06-16 08:02:38,929: __main__: INFO: Valid loss: 0.0438938 - best valid loss: 0.0431262
+2018-06-16 08:02:38,930: __main__: INFO: No improvement. patience: 7
+2018-06-16 08:02:38,930: __main__: INFO: ***********************************
+2018-06-16 08:10:42,336: __main__: INFO: Epoch: 61 - train loss: 0.0622047
+2018-06-16 08:10:42,338: __main__: INFO: computing validation losses...
+2018-06-16 08:11:41,643: __main__: INFO: Valid loss: 0.0441755 - best valid loss: 0.0431262
+2018-06-16 08:11:41,644: __main__: INFO: No improvement. patience: 6
+2018-06-16 08:11:41,645: __main__: INFO: ***********************************
+2018-06-16 08:19:50,363: __main__: INFO: Epoch: 62 - train loss: 0.0616924
+2018-06-16 08:19:50,364: __main__: INFO: computing validation losses...
+2018-06-16 08:20:49,908: __main__: INFO: Valid loss: 0.0439835 - best valid loss: 0.0431262
+2018-06-16 08:20:49,909: __main__: INFO: No improvement. patience: 5
+2018-06-16 08:20:49,909: __main__: INFO: ***********************************
+2018-06-16 08:28:49,241: __main__: INFO: Epoch: 63 - train loss: 0.0622596
+2018-06-16 08:28:49,242: __main__: INFO: computing validation losses...
+2018-06-16 08:29:48,814: __main__: INFO: Valid loss: 0.0441619 - best valid loss: 0.0431262
+2018-06-16 08:29:48,815: __main__: INFO: No improvement. patience: 4
+2018-06-16 08:29:48,815: __main__: INFO: ***********************************
+2018-06-16 08:32:37,539: __main__: INFO: iteration 28000: updating target DQN.
+2018-06-16 08:37:58,595: __main__: INFO: Epoch: 64 - train loss: 0.0600404
+2018-06-16 08:37:58,598: __main__: INFO: computing validation losses...
+2018-06-16 08:38:58,073: __main__: INFO: Valid loss: 0.043746 - best valid loss: 0.0431262
+2018-06-16 08:38:58,074: __main__: INFO: No improvement. patience: 3
+2018-06-16 08:38:58,074: __main__: INFO: ***********************************
+2018-06-16 08:46:05,336: __main__: INFO: Epoch: 65 - train loss: 0.0603009
+2018-06-16 08:46:05,337: __main__: INFO: computing validation losses...
+2018-06-16 08:46:56,656: __main__: INFO: Valid loss: 0.043956 - best valid loss: 0.0431262
+2018-06-16 08:46:56,656: __main__: INFO: No improvement. patience: 2
+2018-06-16 08:46:56,657: __main__: INFO: ***********************************
+2018-06-16 08:54:12,963: __main__: INFO: Epoch: 66 - train loss: 0.0598757
+2018-06-16 08:54:12,964: __main__: INFO: computing validation losses...
+2018-06-16 08:55:07,620: __main__: INFO: Valid loss: 0.0437348 - best valid loss: 0.0431262
+2018-06-16 08:55:07,621: __main__: INFO: No improvement. patience: 1
+2018-06-16 08:55:07,621: __main__: INFO: ***********************************
+2018-06-16 09:02:33,743: __main__: INFO: Epoch: 67 - train loss: 0.059823
+2018-06-16 09:02:33,744: __main__: INFO: computing validation losses...
+2018-06-16 09:03:26,992: __main__: INFO: Valid loss: 0.043615 - best valid loss: 0.0431262
+2018-06-16 09:03:26,993: __main__: INFO: No improvement. patience: 0
+2018-06-16 09:03:26,997: __main__: INFO: Finished training. Time elapsed: 30646.8 seconds
+2018-06-16 09:03:26,998: __main__: INFO: Saving timings...
+2018-06-16 09:03:27,032: __main__: INFO: done.
+This run of train PT mlp Q ranker exp86 ran for 8:33:31 and logs are available locally at: /home/ml/nangel3/.hyperdash/logs/train-pt-mlp-q-ranker-exp86/train-pt-mlp-q-ranker-exp86_2018-06-16t00-30-09-019922.log

@@ -1,0 +1,556 @@
+loading word2vec embeddings...
+2018-06-21 05:25:30,992: features: INFO: loading nltk english stop words...
+2018-06-21 05:25:31,000: features: INFO: set([u'all', u'just', u'being', u'over', u'both', u'through', u'yourselves', u'its', u'before', u'o', u'hadn', u'herself', u'll', u'had', u'should', u'to', u'only', u'won', u'under', u'ours', u'has', u'do', u'them', u'his', u'very', u'they', u'not', u'during', u'now', u'him', u'nor', u'd', u'did', u'didn', u'this', u'she', u'each', u'further', u'where', u'few', u'because', u'doing', u'some', u'hasn', u'are', u'our', u'ourselves', u'out', u'what', u'for', u'while', u're', u'does', u'above', u'between', u'mustn', u't', u'be', u'we', u'who', u'were', u'here', u'shouldn', u'hers', u'by', u'on', u'about', u'couldn', u'of', u'against', u's', u'isn', u'or', u'own', u'into', u'yourself', u'down', u'mightn', u'wasn', u'your', u'from', u'her', u'their', u'aren', u'there', u'been', u'whom', u'too', u'wouldn', u'themselves', u'weren', u'was', u'until', u'more', u'himself', u'that', u'but', u'don', u'with', u'than', u'those', u'he', u'me', u'myself', u'ma', u'these', u'up', u'will', u'below', u'ain', u'can', u'theirs', u'my', u'and', u've', u'then', u'is', u'am', u'it', u'doesn', u'an', u'as', u'itself', u'at', u'have', u'in', u'any', u'if', u'again', u'no', u'when', u'same', u'how', u'other', u'which', u'you', u'shan', u'needn', u'haven', u'after', u'most', u'such', u'why', u'a', u'off', u'i', u'm', u'yours', u'so', u'y', u'the', u'having', u'once'])
+2018-06-21 05:25:31,000: features: INFO: 
+2018-06-21 05:25:31,108: extract_amt_for_q_ranker: INFO: using ALL features: ['ArticleLength', 'AverageWordEmbedding_Article', 'AverageWordEmbedding_Candidate', 'AverageWordEmbedding_LastK', 'AverageWordEmbedding_User', 'AverageWordEmbedding_kUser', 'BigramOverlap', 'CandidateLength', 'ConfusionWords', 'DialogActCandidate', 'DialogActLastUser', 'DialogLength', 'EntityOverlap', 'GenericTurns', 'IntensifierWords', 'LastUserLength', 'Negation', 'NonStopWordOverlap', 'ProfanityWords', 'SentimentScoreCandidate', 'SentimentScoreLastUser', 'Similarity_CandidateArticle', 'Similarity_CandidateArticle_noStop', 'Similarity_CandidateKUser', 'Similarity_CandidateKUser_noStop', 'Similarity_CandidateLastK', 'Similarity_CandidateLastK_noStop', 'Similarity_CandidateUser', 'TrigramOverlap', 'WhWords']
+2018-06-21 05:25:31,112: __main__: INFO: 
+2018-06-21 05:25:31,112: __main__: INFO: Namespace(article_bidir=False, article_dropout=0.8, article_hs=300, batch_size=128, context_bidir=False, context_dropout=0.8, context_hs=300, data_f='./data/q_ranker_amt_data++_1525301962.86.json', debug=False, epochs=100000, experiment=None, fix_embeddings=False, gamma=0.99, gpu=0, learning_rate=0.001, mlp_activation='sigmoid', mlp_dropout=0.8, mode='rnn+mlp', model_name='DeepR/Deep_R-Network[exp83]os+noe+F1', optimizer='adadelta', patience=20, predict_rewards=True, rnn_gate='gru', sentence_bidir=False, sentence_dropout=0.8, sentence_hs=300, update_frequence=2000, use_custom_encs=False, utterance_bidir=False, utterance_dropout=0.8, utterance_hs=300, verbose=False, vocab_f='./data/q_ranker_amt_vocab_1525301962.86.pkl')
+2018-06-21 05:25:31,112: __main__: INFO: 
+2018-06-21 05:25:31,112: __main__: INFO: {'article_dropout': 0.8, 'sentence_hs': 300, 'optimizer': 'adadelta', 'verbose': False, 'utterance_hs': 300, 'update_frequence': 2000, 'article_hs': 300, 'learning_rate': 0.001, 'use_custom_encs': False, 'batch_size': 128, 'sentence_dropout': 0.8, 'epochs': 100000, 'patience': 20, 'mlp_dropout': 0.8, 'article_bidir': False, 'utterance_dropout': 0.8, 'context_hs': 300, 'predict_rewards': True, 'fix_embeddings': False, 'data_f': './data/q_ranker_amt_data++_1525301962.86.json', 'context_dropout': 0.8, 'rnn_gate': 'gru', 'mlp_activation': 'sigmoid', 'utterance_bidir': False, 'context_bidir': False, 'vocab_f': './data/q_ranker_amt_vocab_1525301962.86.pkl', 'experiment': None, 'sentence_bidir': False, 'mode': 'rnn+mlp', 'debug': False, 'gpu': 0, 'model_name': 'DeepR/Deep_R-Network[exp83]os+noe+F1', 'gamma': 0.99}
+2018-06-21 05:25:31,112: __main__: INFO: 
+2018-06-21 05:25:31,112: __main__: INFO: 
+2018-06-21 05:25:31,112: __main__: INFO: Loading data from ./data/q_ranker_amt_data++_1525301962.86.json...
+2018-06-21 05:27:49,844: __main__: INFO: got 96659 train examples
+2018-06-21 05:27:49,844: __main__: INFO: got 7114 valid examples
+2018-06-21 05:27:49,844: __main__: INFO: got 7083 test examples
+2018-06-21 05:27:49,844: __main__: INFO: 
+2018-06-21 05:27:49,844: __main__: INFO: Loading vocabulary...
+2018-06-21 05:27:49,905: __main__: INFO: number of unique tokens: 24448
+2018-06-21 05:27:49,905: __main__: INFO: 
+2018-06-21 05:27:49,905: __main__: INFO: Get data loaders...
+2018-06-21 05:27:50,075: __main__: INFO: done.
+2018-06-21 05:27:50,075: __main__: INFO: 
+2018-06-21 05:27:50,075: __main__: INFO: Building word embeddings...
+2018-06-21 05:27:50,265: __main__: INFO: Got 16787/24448 = 0.686641 pretrained embeddings
+2018-06-21 05:27:50,265: __main__: INFO: 
+2018-06-21 05:27:50,265: __main__: INFO: Building Q-Network...
+2018-06-21 05:27:52,659: __main__: INFO: DeepQNetwork(
+  (embed): Embedding(24448, 300)
+  (sentence_rnn): GRU(300, 300, batch_first=True, dropout=0.8)
+  (article_rnn): GRU(300, 300, batch_first=True, dropout=0.8)
+  (utterance_rnn): GRU(300, 300, batch_first=True, dropout=0.8)
+  (context_rnn): GRU(300, 300, batch_first=True, dropout=0.8)
+  (fc_1): Linear(in_features=600, out_features=300, bias=True)
+  (fc_2): Linear(in_features=300, out_features=150, bias=True)
+  (fc_3): Linear(in_features=150, out_features=150, bias=True)
+  (fc_value_1): Linear(in_features=150, out_features=75, bias=True)
+  (fc_value_2): Linear(in_features=75, out_features=2, bias=True)
+  (fc_adv_1): Linear(in_features=450, out_features=225, bias=True)
+  (fc_adv_2): Linear(in_features=225, out_features=112, bias=True)
+  (fc_adv_3): Linear(in_features=112, out_features=2, bias=True)
+  (dropout): Dropout(p=0.8)
+)
+2018-06-21 05:27:52,672: __main__: INFO: 
+2018-06-21 05:27:52,672: __main__: INFO: cuda available! Moving variables to cuda 0...
+2018-06-21 05:27:56,987: __main__: INFO: 
+2018-06-21 05:27:56,987: __main__: INFO: Training model...
+2018-06-21 05:27:56,990: __main__: INFO: ***********************************
+2018-06-21 05:51:06,420: __main__: INFO: Epoch: 1 - train loss: 1.42277 - train acc: 0.496274 - train F1: 0.490354
+2018-06-21 05:51:06,421: __main__: INFO: computing validation losses...
+2018-06-21 05:51:47,208: __main__: INFO: Valid loss: 0.682518 - Valid acc: 0.855046 - Valid F1: 0 - best valid F1: -1
+2018-06-21 05:51:50,297: __main__: INFO: Saved new model.
+2018-06-21 05:51:50,297: __main__: INFO: ***********************************
+2018-06-21 06:14:42,081: __main__: INFO: Epoch: 2 - train loss: 1.36345 - train acc: 0.497281 - train F1: 0.493949
+2018-06-21 06:14:42,082: __main__: INFO: computing validation losses...
+2018-06-21 06:15:22,978: __main__: INFO: Valid loss: 0.681147 - Valid acc: 0.855046 - Valid F1: 0 - best valid F1: 0
+2018-06-21 06:15:22,979: __main__: INFO: No improvement. patience: 19
+2018-06-21 06:15:22,979: __main__: INFO: ***********************************
+2018-06-21 06:38:32,545: __main__: INFO: Epoch: 3 - train loss: 1.30448 - train acc: 0.499309 - train F1: 0.495038
+2018-06-21 06:38:32,546: __main__: INFO: computing validation losses...
+2018-06-21 06:39:12,905: __main__: INFO: Valid loss: 0.685688 - Valid acc: 0.855046 - Valid F1: 0 - best valid F1: 0
+2018-06-21 06:39:12,907: __main__: INFO: No improvement. patience: 18
+2018-06-21 06:39:12,907: __main__: INFO: ***********************************
+2018-06-21 07:02:00,296: __main__: INFO: Epoch: 4 - train loss: 1.24451 - train acc: 0.500741 - train F1: 0.496904
+2018-06-21 07:02:00,297: __main__: INFO: computing validation losses...
+2018-06-21 07:02:58,453: __main__: INFO: Valid loss: 0.691408 - Valid acc: 0.758174 - Valid F1: 0.177485 - best valid F1: 0
+2018-06-21 07:03:01,512: __main__: INFO: Saved new model.
+2018-06-21 07:03:01,512: __main__: INFO: ***********************************
+2018-06-21 07:25:58,072: __main__: INFO: Epoch: 5 - train loss: 1.18785 - train acc: 0.502543 - train F1: 0.500036
+2018-06-21 07:25:58,072: __main__: INFO: computing validation losses...
+2018-06-21 07:26:38,431: __main__: INFO: Valid loss: 0.683197 - Valid acc: 0.855046 - Valid F1: 0 - best valid F1: 0.177485
+2018-06-21 07:26:38,431: __main__: INFO: No improvement. patience: 19
+2018-06-21 07:26:38,432: __main__: INFO: ***********************************
+2018-06-21 07:49:24,989: __main__: INFO: Epoch: 6 - train loss: 1.14807 - train acc: 0.501034 - train F1: 0.497557
+2018-06-21 07:49:24,990: __main__: INFO: computing validation losses...
+2018-06-21 07:50:20,856: __main__: INFO: Valid loss: 0.690314 - Valid acc: 0.843264 - Valid F1: 0.0371592 - best valid F1: 0.177485
+2018-06-21 07:50:20,857: __main__: INFO: No improvement. patience: 18
+2018-06-21 07:50:20,857: __main__: INFO: ***********************************
+2018-06-21 08:12:44,570: __main__: INFO: Epoch: 7 - train loss: 1.10333 - train acc: 0.502264 - train F1: 0.499448
+2018-06-21 08:12:44,571: __main__: INFO: computing validation losses...
+2018-06-21 08:13:24,410: __main__: INFO: Valid loss: 0.693066 - Valid acc: 0.540424 - Valid F1: 0.259619 - best valid F1: 0.177485
+2018-06-21 08:13:27,458: __main__: INFO: Saved new model.
+2018-06-21 08:13:27,458: __main__: INFO: ***********************************
+2018-06-21 08:35:08,094: __main__: INFO: Epoch: 8 - train loss: 1.06846 - train acc: 0.500107 - train F1: 0.497742
+2018-06-21 08:35:08,094: __main__: INFO: computing validation losses...
+2018-06-21 08:35:47,716: __main__: INFO: Valid loss: 0.69108 - Valid acc: 0.807233 - Valid F1: 0.134547 - best valid F1: 0.259619
+2018-06-21 08:35:47,719: __main__: INFO: No improvement. patience: 19
+2018-06-21 08:35:47,719: __main__: INFO: ***********************************
+2018-06-21 08:57:06,873: __main__: INFO: Epoch: 9 - train loss: 1.02795 - train acc: 0.502673 - train F1: 0.501101
+2018-06-21 08:57:06,874: __main__: INFO: computing validation losses...
+2018-06-21 08:57:46,314: __main__: INFO: Valid loss: 0.691964 - Valid acc: 0.731287 - Valid F1: 0.211908 - best valid F1: 0.259619
+2018-06-21 08:57:46,316: __main__: INFO: No improvement. patience: 18
+2018-06-21 08:57:46,316: __main__: INFO: ***********************************
+2018-06-21 09:19:32,145: __main__: INFO: Epoch: 10 - train loss: 0.99885 - train acc: 0.500683 - train F1: 0.497857
+2018-06-21 09:19:32,146: __main__: INFO: computing validation losses...
+2018-06-21 09:20:12,556: __main__: INFO: Valid loss: 0.692062 - Valid acc: 0.723855 - Valid F1: 0.218146 - best valid F1: 0.259619
+2018-06-21 09:20:12,557: __main__: INFO: No improvement. patience: 17
+2018-06-21 09:20:12,558: __main__: INFO: ***********************************
+2018-06-21 09:41:36,249: __main__: INFO: Epoch: 11 - train loss: 0.970484 - train acc: 0.50082 - train F1: 0.499128
+2018-06-21 09:41:36,249: __main__: INFO: computing validation losses...
+2018-06-21 09:42:36,749: __main__: INFO: Valid loss: 0.691619 - Valid acc: 0.772672 - Valid F1: 0.181112 - best valid F1: 0.259619
+2018-06-21 09:42:36,751: __main__: INFO: No improvement. patience: 16
+2018-06-21 09:42:36,751: __main__: INFO: ***********************************
+2018-06-21 10:04:04,317: __main__: INFO: Epoch: 12 - train loss: 0.947123 - train acc: 0.499529 - train F1: 0.496414
+2018-06-21 10:04:04,318: __main__: INFO: computing validation losses...
+2018-06-21 10:04:44,772: __main__: INFO: Valid loss: 0.695159 - Valid acc: 0.171524 - Valid F1: 0.253163 - best valid F1: 0.259619
+2018-06-21 10:04:44,774: __main__: INFO: No improvement. patience: 15
+2018-06-21 10:04:44,774: __main__: INFO: ***********************************
+2018-06-21 10:26:30,695: __main__: INFO: Epoch: 13 - train loss: 0.920448 - train acc: 0.502401 - train F1: 0.500683
+2018-06-21 10:26:30,696: __main__: INFO: computing validation losses...
+2018-06-21 10:27:10,686: __main__: INFO: Valid loss: 0.694702 - Valid acc: 0.192933 - Valid F1: 0.253315 - best valid F1: 0.259619
+2018-06-21 10:27:10,687: __main__: INFO: No improvement. patience: 14
+2018-06-21 10:27:10,687: __main__: INFO: ***********************************
+2018-06-21 10:48:48,656: __main__: INFO: Epoch: 14 - train loss: 0.903466 - train acc: 0.501285 - train F1: 0.499431
+2018-06-21 10:48:48,657: __main__: INFO: computing validation losses...
+2018-06-21 10:49:29,645: __main__: INFO: Valid loss: 0.691267 - Valid acc: 0.822793 - Valid F1: 0.0673108 - best valid F1: 0.259619
+2018-06-21 10:49:29,646: __main__: INFO: No improvement. patience: 13
+2018-06-21 10:49:29,646: __main__: INFO: ***********************************
+2018-06-21 11:11:39,878: __main__: INFO: Epoch: 15 - train loss: 0.883362 - train acc: 0.500562 - train F1: 0.498103
+2018-06-21 11:11:39,879: __main__: INFO: computing validation losses...
+2018-06-21 11:12:21,075: __main__: INFO: Valid loss: 0.69161 - Valid acc: 0.792064 - Valid F1: 0.167118 - best valid F1: 0.259619
+2018-06-21 11:12:21,078: __main__: INFO: No improvement. patience: 12
+2018-06-21 11:12:21,078: __main__: INFO: ***********************************
+2018-06-21 11:34:17,186: __main__: INFO: Epoch: 16 - train loss: 0.867535 - train acc: 0.501655 - train F1: 0.498785
+2018-06-21 11:34:17,187: __main__: INFO: computing validation losses...
+2018-06-21 11:35:18,843: __main__: INFO: Valid loss: 0.693944 - Valid acc: 0.280217 - Valid F1: 0.257056 - best valid F1: 0.259619
+2018-06-21 11:35:18,845: __main__: INFO: No improvement. patience: 11
+2018-06-21 11:35:18,845: __main__: INFO: ***********************************
+2018-06-21 11:57:27,983: __main__: INFO: Epoch: 17 - train loss: 0.851412 - train acc: 0.50205 - train F1: 0.501039
+2018-06-21 11:57:27,983: __main__: INFO: computing validation losses...
+2018-06-21 11:58:09,686: __main__: INFO: Valid loss: 0.690847 - Valid acc: 0.849085 - Valid F1: 0.0273275 - best valid F1: 0.259619
+2018-06-21 11:58:09,687: __main__: INFO: No improvement. patience: 10
+2018-06-21 11:58:09,688: __main__: INFO: ***********************************
+2018-06-21 12:20:26,933: __main__: INFO: Epoch: 18 - train loss: 0.841039 - train acc: 0.501424 - train F1: 0.498251
+2018-06-21 12:20:26,934: __main__: INFO: computing validation losses...
+2018-06-21 12:21:10,186: __main__: INFO: Valid loss: 0.693849 - Valid acc: 0.296883 - Valid F1: 0.259096 - best valid F1: 0.259619
+2018-06-21 12:21:10,187: __main__: INFO: No improvement. patience: 9
+2018-06-21 12:21:10,187: __main__: INFO: ***********************************
+2018-06-21 12:43:23,612: __main__: INFO: Epoch: 19 - train loss: 0.830914 - train acc: 0.498728 - train F1: 0.497524
+2018-06-21 12:43:23,613: __main__: INFO: computing validation losses...
+2018-06-21 12:44:06,983: __main__: INFO: Valid loss: 0.693194 - Valid acc: 0.506862 - Valid F1: 0.26495 - best valid F1: 0.259619
+2018-06-21 12:44:10,079: __main__: INFO: Saved new model.
+2018-06-21 12:44:10,079: __main__: INFO: ***********************************
+2018-06-21 13:06:47,132: __main__: INFO: Epoch: 20 - train loss: 0.820413 - train acc: 0.49739 - train F1: 0.49596
+2018-06-21 13:06:47,134: __main__: INFO: computing validation losses...
+2018-06-21 13:07:27,752: __main__: INFO: Valid loss: 0.690638 - Valid acc: 0.852573 - Valid F1: 0.00527211 - best valid F1: 0.26495
+2018-06-21 13:07:27,754: __main__: INFO: No improvement. patience: 19
+2018-06-21 13:07:27,754: __main__: INFO: ***********************************
+2018-06-21 13:28:48,825: __main__: INFO: Epoch: 21 - train loss: 0.810759 - train acc: 0.501647 - train F1: 0.498219
+2018-06-21 13:28:48,827: __main__: INFO: computing validation losses...
+2018-06-21 13:29:47,462: __main__: INFO: Valid loss: 0.692458 - Valid acc: 0.711986 - Valid F1: 0.23663 - best valid F1: 0.26495
+2018-06-21 13:29:47,464: __main__: INFO: No improvement. patience: 18
+2018-06-21 13:29:47,464: __main__: INFO: ***********************************
+2018-06-21 13:51:14,214: __main__: INFO: Epoch: 22 - train loss: 0.799669 - train acc: 0.501645 - train F1: 0.49963
+2018-06-21 13:51:14,215: __main__: INFO: computing validation losses...
+2018-06-21 13:51:54,578: __main__: INFO: Valid loss: 0.692644 - Valid acc: 0.66752 - Valid F1: 0.251973 - best valid F1: 0.26495
+2018-06-21 13:51:54,579: __main__: INFO: No improvement. patience: 17
+2018-06-21 13:51:54,579: __main__: INFO: ***********************************
+2018-06-21 14:13:28,710: __main__: INFO: Epoch: 23 - train loss: 0.79215 - train acc: 0.50004 - train F1: 0.498617
+2018-06-21 14:13:28,711: __main__: INFO: computing validation losses...
+2018-06-21 14:14:09,062: __main__: INFO: Valid loss: 0.691857 - Valid acc: 0.798342 - Valid F1: 0.151201 - best valid F1: 0.26495
+2018-06-21 14:14:09,064: __main__: INFO: No improvement. patience: 16
+2018-06-21 14:14:09,064: __main__: INFO: ***********************************
+2018-06-21 14:35:32,087: __main__: INFO: Epoch: 24 - train loss: 0.787926 - train acc: 0.498118 - train F1: 0.49486
+2018-06-21 14:35:32,088: __main__: INFO: computing validation losses...
+2018-06-21 14:36:13,248: __main__: INFO: Valid loss: 0.693874 - Valid acc: 0.261002 - Valid F1: 0.258388 - best valid F1: 0.26495
+2018-06-21 14:36:13,250: __main__: INFO: No improvement. patience: 15
+2018-06-21 14:36:13,250: __main__: INFO: ***********************************
+2018-06-21 14:57:46,633: __main__: INFO: Epoch: 25 - train loss: 0.779672 - train acc: 0.500707 - train F1: 0.497159
+2018-06-21 14:57:46,634: __main__: INFO: computing validation losses...
+2018-06-21 14:58:26,711: __main__: INFO: Valid loss: 0.695495 - Valid acc: 0.148162 - Valid F1: 0.25294 - best valid F1: 0.26495
+2018-06-21 14:58:26,712: __main__: INFO: No improvement. patience: 14
+2018-06-21 14:58:26,712: __main__: INFO: ***********************************
+2018-06-21 15:19:36,373: __main__: INFO: Epoch: 26 - train loss: 0.773174 - train acc: 0.502024 - train F1: 0.500053
+2018-06-21 15:19:36,374: __main__: INFO: computing validation losses...
+2018-06-21 15:20:33,864: __main__: INFO: Valid loss: 0.693431 - Valid acc: 0.393679 - Valid F1: 0.269622 - best valid F1: 0.26495
+2018-06-21 15:20:36,951: __main__: INFO: Saved new model.
+2018-06-21 15:20:36,952: __main__: INFO: ***********************************
+2018-06-21 15:41:45,267: __main__: INFO: Epoch: 27 - train loss: 0.768805 - train acc: 0.502127 - train F1: 0.499807
+2018-06-21 15:41:45,268: __main__: INFO: computing validation losses...
+2018-06-21 15:42:25,598: __main__: INFO: Valid loss: 0.693796 - Valid acc: 0.267001 - Valid F1: 0.258935 - best valid F1: 0.269622
+2018-06-21 15:42:25,600: __main__: INFO: No improvement. patience: 19
+2018-06-21 15:42:25,601: __main__: INFO: ***********************************
+2018-06-21 16:03:31,030: __main__: INFO: Epoch: 28 - train loss: 0.76401 - train acc: 0.499888 - train F1: 0.498024
+2018-06-21 16:03:31,031: __main__: INFO: computing validation losses...
+2018-06-21 16:04:26,174: __main__: INFO: Valid loss: 0.692167 - Valid acc: 0.782958 - Valid F1: 0.182708 - best valid F1: 0.269622
+2018-06-21 16:04:26,175: __main__: INFO: No improvement. patience: 18
+2018-06-21 16:04:26,175: __main__: INFO: ***********************************
+2018-06-21 16:25:28,673: __main__: INFO: Epoch: 29 - train loss: 0.759923 - train acc: 0.499911 - train F1: 0.497993
+2018-06-21 16:25:28,673: __main__: INFO: computing validation losses...
+2018-06-21 16:26:08,909: __main__: INFO: Valid loss: 0.691819 - Valid acc: 0.8336 - Valid F1: 0.0507171 - best valid F1: 0.269622
+2018-06-21 16:26:08,910: __main__: INFO: No improvement. patience: 17
+2018-06-21 16:26:08,910: __main__: INFO: ***********************************
+2018-06-21 16:47:36,280: __main__: INFO: Epoch: 30 - train loss: 0.757143 - train acc: 0.500255 - train F1: 0.498197
+2018-06-21 16:47:36,281: __main__: INFO: computing validation losses...
+2018-06-21 16:48:17,067: __main__: INFO: Valid loss: 0.690331 - Valid acc: 0.855046 - Valid F1: 0 - best valid F1: 0.269622
+2018-06-21 16:48:17,068: __main__: INFO: No improvement. patience: 16
+2018-06-21 16:48:17,068: __main__: INFO: ***********************************
+2018-06-21 17:09:30,210: __main__: INFO: Epoch: 31 - train loss: 0.755432 - train acc: 0.49991 - train F1: 0.496763
+2018-06-21 17:09:30,210: __main__: INFO: computing validation losses...
+2018-06-21 17:10:26,847: __main__: INFO: Valid loss: 0.691569 - Valid acc: 0.850759 - Valid F1: 0.0207255 - best valid F1: 0.269622
+2018-06-21 17:10:26,848: __main__: INFO: No improvement. patience: 15
+2018-06-21 17:10:26,848: __main__: INFO: ***********************************
+2018-06-21 17:31:47,648: __main__: INFO: Epoch: 32 - train loss: 0.74749 - train acc: 0.503055 - train F1: 0.500721
+2018-06-21 17:31:47,649: __main__: INFO: computing validation losses...
+2018-06-21 17:32:28,323: __main__: INFO: Valid loss: 0.692808 - Valid acc: 0.646073 - Valid F1: 0.262338 - best valid F1: 0.269622
+2018-06-21 17:32:28,323: __main__: INFO: No improvement. patience: 14
+2018-06-21 17:32:28,323: __main__: INFO: ***********************************
+2018-06-21 17:53:18,497: __main__: INFO: Epoch: 33 - train loss: 0.745632 - train acc: 0.499208 - train F1: 0.496528
+2018-06-21 17:53:18,498: __main__: INFO: computing validation losses...
+2018-06-21 17:54:12,273: __main__: INFO: Valid loss: 0.69239 - Valid acc: 0.760599 - Valid F1: 0.204569 - best valid F1: 0.269622
+2018-06-21 17:54:12,276: __main__: INFO: No improvement. patience: 13
+2018-06-21 17:54:12,276: __main__: INFO: ***********************************
+Unable to send heartbeat message
+2018-06-21 18:15:15,081: __main__: INFO: Epoch: 34 - train loss: 0.741629 - train acc: 0.503396 - train F1: 0.5022
+2018-06-21 18:15:15,082: __main__: INFO: computing validation losses...
+2018-06-21 18:15:55,237: __main__: INFO: Valid loss: 0.692443 - Valid acc: 0.752824 - Valid F1: 0.20671 - best valid F1: 0.269622
+2018-06-21 18:15:55,238: __main__: INFO: No improvement. patience: 12
+2018-06-21 18:15:55,238: __main__: INFO: ***********************************
+2018-06-21 18:37:04,453: __main__: INFO: Epoch: 35 - train loss: 0.741012 - train acc: 0.50035 - train F1: 0.498777
+2018-06-21 18:37:04,454: __main__: INFO: computing validation losses...
+2018-06-21 18:37:45,460: __main__: INFO: Valid loss: 0.692167 - Valid acc: 0.798583 - Valid F1: 0.154991 - best valid F1: 0.269622
+2018-06-21 18:37:45,462: __main__: INFO: No improvement. patience: 11
+2018-06-21 18:37:45,462: __main__: INFO: ***********************************
+2018-06-21 18:58:37,052: __main__: INFO: Epoch: 36 - train loss: 0.740094 - train acc: 0.497622 - train F1: 0.495725
+2018-06-21 18:58:37,053: __main__: INFO: computing validation losses...
+2018-06-21 18:59:16,183: __main__: INFO: Valid loss: 0.691046 - Valid acc: 0.854907 - Valid F1: 0 - best valid F1: 0.269622
+2018-06-21 18:59:16,184: __main__: INFO: No improvement. patience: 10
+2018-06-21 18:59:16,184: __main__: INFO: ***********************************
+2018-06-21 19:20:04,655: __main__: INFO: Epoch: 37 - train loss: 0.737265 - train acc: 0.498652 - train F1: 0.496221
+2018-06-21 19:20:04,656: __main__: INFO: computing validation losses...
+2018-06-21 19:20:44,312: __main__: INFO: Valid loss: 0.691123 - Valid acc: 0.854907 - Valid F1: 0 - best valid F1: 0.269622
+2018-06-21 19:20:44,313: __main__: INFO: No improvement. patience: 9
+2018-06-21 19:20:44,313: __main__: INFO: ***********************************
+2018-06-21 19:43:16,995: __main__: INFO: Epoch: 38 - train loss: 0.731746 - train acc: 0.505574 - train F1: 0.502627
+2018-06-21 19:43:16,995: __main__: INFO: computing validation losses...
+2018-06-21 19:44:24,166: __main__: INFO: Valid loss: 0.691117 - Valid acc: 0.854907 - Valid F1: 0 - best valid F1: 0.269622
+2018-06-21 19:44:24,167: __main__: INFO: No improvement. patience: 8
+2018-06-21 19:44:24,167: __main__: INFO: ***********************************
+2018-06-21 20:07:39,136: __main__: INFO: Epoch: 39 - train loss: 0.732095 - train acc: 0.500223 - train F1: 0.497022
+2018-06-21 20:07:39,137: __main__: INFO: computing validation losses...
+2018-06-21 20:08:20,790: __main__: INFO: Valid loss: 0.691959 - Valid acc: 0.842807 - Valid F1: 0.0389357 - best valid F1: 0.269622
+2018-06-21 20:08:20,791: __main__: INFO: No improvement. patience: 7
+2018-06-21 20:08:20,791: __main__: INFO: ***********************************
+2018-06-21 20:29:15,561: __main__: INFO: Epoch: 40 - train loss: 0.729617 - train acc: 0.500259 - train F1: 0.498179
+2018-06-21 20:29:15,561: __main__: INFO: computing validation losses...
+2018-06-21 20:29:56,217: __main__: INFO: Valid loss: 0.691497 - Valid acc: 0.852992 - Valid F1: 0.00527211 - best valid F1: 0.269622
+2018-06-21 20:29:56,217: __main__: INFO: No improvement. patience: 6
+2018-06-21 20:29:56,217: __main__: INFO: ***********************************
+2018-06-21 20:50:37,460: __main__: INFO: Epoch: 41 - train loss: 0.728713 - train acc: 0.500351 - train F1: 0.497368
+2018-06-21 20:50:37,460: __main__: INFO: computing validation losses...
+2018-06-21 20:51:15,082: __main__: INFO: Valid loss: 0.690955 - Valid acc: 0.855046 - Valid F1: 0 - best valid F1: 0.269622
+2018-06-21 20:51:15,083: __main__: INFO: No improvement. patience: 5
+2018-06-21 20:51:15,083: __main__: INFO: ***********************************
+2018-06-21 21:12:04,352: __main__: INFO: Epoch: 42 - train loss: 0.726266 - train acc: 0.501862 - train F1: 0.498192
+2018-06-21 21:12:04,353: __main__: INFO: computing validation losses...
+2018-06-21 21:12:45,204: __main__: INFO: Valid loss: 0.691793 - Valid acc: 0.851596 - Valid F1: 0.0173803 - best valid F1: 0.269622
+2018-06-21 21:12:45,205: __main__: INFO: No improvement. patience: 4
+2018-06-21 21:12:45,205: __main__: INFO: ***********************************
+2018-06-21 21:33:09,493: __main__: INFO: Epoch: 43 - train loss: 0.725537 - train acc: 0.498707 - train F1: 0.495193
+2018-06-21 21:33:09,493: __main__: INFO: computing validation losses...
+2018-06-21 21:34:01,352: __main__: INFO: Valid loss: 0.691248 - Valid acc: 0.854907 - Valid F1: 0 - best valid F1: 0.269622
+2018-06-21 21:34:01,353: __main__: INFO: No improvement. patience: 3
+2018-06-21 21:34:01,353: __main__: INFO: ***********************************
+2018-06-21 21:54:44,783: __main__: INFO: Epoch: 44 - train loss: 0.724859 - train acc: 0.50022 - train F1: 0.496223
+2018-06-21 21:54:44,783: __main__: INFO: computing validation losses...
+2018-06-21 21:55:24,875: __main__: INFO: Valid loss: 0.692433 - Valid acc: 0.779991 - Valid F1: 0.19177 - best valid F1: 0.269622
+2018-06-21 21:55:24,876: __main__: INFO: No improvement. patience: 2
+2018-06-21 21:55:24,876: __main__: INFO: ***********************************
+2018-06-21 22:15:45,689: __main__: INFO: Epoch: 45 - train loss: 0.723577 - train acc: 0.501027 - train F1: 0.497285
+2018-06-21 22:15:45,689: __main__: INFO: computing validation losses...
+2018-06-21 22:16:35,537: __main__: INFO: Valid loss: 0.693034 - Valid acc: 0.575934 - Valid F1: 0.272407 - best valid F1: 0.269622
+2018-06-21 22:16:38,627: __main__: INFO: Saved new model.
+2018-06-21 22:16:38,627: __main__: INFO: ***********************************
+2018-06-21 22:37:24,340: __main__: INFO: Epoch: 46 - train loss: 0.722222 - train acc: 0.500467 - train F1: 0.498692
+2018-06-21 22:37:24,341: __main__: INFO: computing validation losses...
+2018-06-21 22:38:05,933: __main__: INFO: Valid loss: 0.692682 - Valid acc: 0.714497 - Valid F1: 0.23415 - best valid F1: 0.272407
+2018-06-21 22:38:05,934: __main__: INFO: No improvement. patience: 19
+2018-06-21 22:38:05,934: __main__: INFO: ***********************************
+2018-06-21 22:59:05,219: __main__: INFO: Epoch: 47 - train loss: 0.721277 - train acc: 0.500766 - train F1: 0.498563
+2018-06-21 22:59:05,220: __main__: INFO: computing validation losses...
+2018-06-21 22:59:42,798: __main__: INFO: Valid loss: 0.692333 - Valid acc: 0.799978 - Valid F1: 0.150956 - best valid F1: 0.272407
+2018-06-21 22:59:42,799: __main__: INFO: No improvement. patience: 18
+2018-06-21 22:59:42,799: __main__: INFO: ***********************************
+2018-06-21 23:20:06,442: __main__: INFO: Epoch: 48 - train loss: 0.71869 - train acc: 0.502466 - train F1: 0.499557
+2018-06-21 23:20:06,443: __main__: INFO: computing validation losses...
+2018-06-21 23:20:58,636: __main__: INFO: Valid loss: 0.692606 - Valid acc: 0.744593 - Valid F1: 0.211027 - best valid F1: 0.272407
+2018-06-21 23:20:58,637: __main__: INFO: No improvement. patience: 17
+2018-06-21 23:20:58,637: __main__: INFO: ***********************************
+2018-06-21 23:41:54,190: __main__: INFO: Epoch: 49 - train loss: 0.718642 - train acc: 0.500283 - train F1: 0.496737
+2018-06-21 23:41:54,190: __main__: INFO: computing validation losses...
+2018-06-21 23:42:34,315: __main__: INFO: Valid loss: 0.693462 - Valid acc: 0.345205 - Valid F1: 0.271777 - best valid F1: 0.272407
+2018-06-21 23:42:34,316: __main__: INFO: No improvement. patience: 16
+2018-06-21 23:42:34,316: __main__: INFO: ***********************************
+2018-06-22 00:03:12,802: __main__: INFO: Epoch: 50 - train loss: 0.717595 - train acc: 0.501038 - train F1: 0.499405
+2018-06-22 00:03:12,803: __main__: INFO: computing validation losses...
+2018-06-22 00:03:50,635: __main__: INFO: Valid loss: 0.693195 - Valid acc: 0.468573 - Valid F1: 0.271289 - best valid F1: 0.272407
+2018-06-22 00:03:50,636: __main__: INFO: No improvement. patience: 15
+2018-06-22 00:03:50,636: __main__: INFO: ***********************************
+2018-06-22 00:24:26,039: __main__: INFO: Epoch: 51 - train loss: 0.717354 - train acc: 0.500479 - train F1: 0.497275
+2018-06-22 00:24:26,040: __main__: INFO: computing validation losses...
+2018-06-22 00:25:07,001: __main__: INFO: Valid loss: 0.693579 - Valid acc: 0.287814 - Valid F1: 0.268817 - best valid F1: 0.272407
+2018-06-22 00:25:07,002: __main__: INFO: No improvement. patience: 14
+2018-06-22 00:25:07,002: __main__: INFO: ***********************************
+2018-06-22 00:46:06,807: __main__: INFO: Epoch: 52 - train loss: 0.71641 - train acc: 0.499958 - train F1: 0.497027
+2018-06-22 00:46:06,807: __main__: INFO: computing validation losses...
+2018-06-22 00:46:46,767: __main__: INFO: Valid loss: 0.693789 - Valid acc: 0.217755 - Valid F1: 0.260833 - best valid F1: 0.272407
+2018-06-22 00:46:46,767: __main__: INFO: No improvement. patience: 13
+2018-06-22 00:46:46,768: __main__: INFO: ***********************************
+2018-06-22 01:07:11,905: __main__: INFO: Epoch: 53 - train loss: 0.715821 - train acc: 0.499598 - train F1: 0.498251
+2018-06-22 01:07:11,906: __main__: INFO: computing validation losses...
+2018-06-22 01:08:01,741: __main__: INFO: Valid loss: 0.693241 - Valid acc: 0.431577 - Valid F1: 0.273075 - best valid F1: 0.272407
+2018-06-22 01:08:04,840: __main__: INFO: Saved new model.
+2018-06-22 01:08:04,840: __main__: INFO: ***********************************
+2018-06-22 01:28:34,706: __main__: INFO: Epoch: 54 - train loss: 0.714601 - train acc: 0.499112 - train F1: 0.497126
+2018-06-22 01:28:34,707: __main__: INFO: computing validation losses...
+2018-06-22 01:29:14,512: __main__: INFO: Valid loss: 0.69281 - Valid acc: 0.686772 - Valid F1: 0.257244 - best valid F1: 0.273075
+2018-06-22 01:29:14,513: __main__: INFO: No improvement. patience: 19
+2018-06-22 01:29:14,513: __main__: INFO: ***********************************
+2018-06-22 01:49:56,050: __main__: INFO: Epoch: 55 - train loss: 0.714462 - train acc: 0.499541 - train F1: 0.498369
+2018-06-22 01:49:56,050: __main__: INFO: computing validation losses...
+2018-06-22 01:50:48,390: __main__: INFO: Valid loss: 0.692763 - Valid acc: 0.701662 - Valid F1: 0.237498 - best valid F1: 0.273075
+2018-06-22 01:50:48,391: __main__: INFO: No improvement. patience: 18
+2018-06-22 01:50:48,391: __main__: INFO: ***********************************
+2018-06-22 02:11:24,533: __main__: INFO: Epoch: 56 - train loss: 0.712897 - train acc: 0.500844 - train F1: 0.499251
+2018-06-22 02:11:24,533: __main__: INFO: computing validation losses...
+2018-06-22 02:12:02,341: __main__: INFO: Valid loss: 0.692269 - Valid acc: 0.822224 - Valid F1: 0.0901525 - best valid F1: 0.273075
+2018-06-22 02:12:02,342: __main__: INFO: No improvement. patience: 17
+2018-06-22 02:12:02,342: __main__: INFO: ***********************************
+2018-06-22 02:32:23,673: __main__: INFO: Epoch: 57 - train loss: 0.714669 - train acc: 0.492626 - train F1: 0.490915
+2018-06-22 02:32:23,674: __main__: INFO: computing validation losses...
+2018-06-22 02:33:03,545: __main__: INFO: Valid loss: 0.691775 - Valid acc: 0.854805 - Valid F1: 0.00178571 - best valid F1: 0.273075
+2018-06-22 02:33:03,546: __main__: INFO: No improvement. patience: 16
+2018-06-22 02:33:03,546: __main__: INFO: ***********************************
+2018-06-22 02:53:46,334: __main__: INFO: Epoch: 58 - train loss: 0.711733 - train acc: 0.49888 - train F1: 0.495898
+2018-06-22 02:53:46,335: __main__: INFO: computing validation losses...
+2018-06-22 02:54:25,845: __main__: INFO: Valid loss: 0.692181 - Valid acc: 0.847411 - Valid F1: 0.0286073 - best valid F1: 0.273075
+2018-06-22 02:54:25,846: __main__: INFO: No improvement. patience: 15
+2018-06-22 02:54:25,846: __main__: INFO: ***********************************
+2018-06-22 03:15:21,020: __main__: INFO: Epoch: 59 - train loss: 0.711253 - train acc: 0.500753 - train F1: 0.496641
+2018-06-22 03:15:21,021: __main__: INFO: computing validation losses...
+2018-06-22 03:16:01,064: __main__: INFO: Valid loss: 0.692601 - Valid acc: 0.770923 - Valid F1: 0.204138 - best valid F1: 0.273075
+2018-06-22 03:16:01,065: __main__: INFO: No improvement. patience: 14
+2018-06-22 03:16:01,065: __main__: INFO: ***********************************
+2018-06-22 03:36:20,307: __main__: INFO: Epoch: 60 - train loss: 0.711877 - train acc: 0.499126 - train F1: 0.496107
+2018-06-22 03:36:20,308: __main__: INFO: computing validation losses...
+2018-06-22 03:37:10,889: __main__: INFO: Valid loss: 0.693161 - Valid acc: 0.491973 - Valid F1: 0.274162 - best valid F1: 0.273075
+2018-06-22 03:37:13,980: __main__: INFO: Saved new model.
+2018-06-22 03:37:13,980: __main__: INFO: ***********************************
+2018-06-22 03:57:34,704: __main__: INFO: Epoch: 61 - train loss: 0.710769 - train acc: 0.497666 - train F1: 0.495367
+2018-06-22 03:57:34,705: __main__: INFO: computing validation losses...
+2018-06-22 03:58:14,420: __main__: INFO: Valid loss: 0.692717 - Valid acc: 0.733851 - Valid F1: 0.224662 - best valid F1: 0.274162
+2018-06-22 03:58:14,421: __main__: INFO: No improvement. patience: 19
+2018-06-22 03:58:14,421: __main__: INFO: ***********************************
+2018-06-22 04:19:12,946: __main__: INFO: Epoch: 62 - train loss: 0.709141 - train acc: 0.50197 - train F1: 0.500662
+2018-06-22 04:19:12,946: __main__: INFO: computing validation losses...
+2018-06-22 04:19:52,690: __main__: INFO: Valid loss: 0.692626 - Valid acc: 0.769388 - Valid F1: 0.206878 - best valid F1: 0.274162
+2018-06-22 04:19:52,691: __main__: INFO: No improvement. patience: 18
+2018-06-22 04:19:52,691: __main__: INFO: ***********************************
+2018-06-22 04:40:37,107: __main__: INFO: Epoch: 63 - train loss: 0.707638 - train acc: 0.502678 - train F1: 0.50092
+2018-06-22 04:40:37,108: __main__: INFO: computing validation losses...
+2018-06-22 04:41:17,031: __main__: INFO: Valid loss: 0.693074 - Valid acc: 0.560803 - Valid F1: 0.276562 - best valid F1: 0.274162
+2018-06-22 04:41:20,129: __main__: INFO: Saved new model.
+2018-06-22 04:41:20,129: __main__: INFO: ***********************************
+2018-06-22 05:01:57,220: __main__: INFO: Epoch: 64 - train loss: 0.709046 - train acc: 0.49864 - train F1: 0.497719
+2018-06-22 05:01:57,221: __main__: INFO: computing validation losses...
+2018-06-22 05:02:34,925: __main__: INFO: Valid loss: 0.692009 - Valid acc: 0.852713 - Valid F1: 0.00705782 - best valid F1: 0.276562
+2018-06-22 05:02:34,926: __main__: INFO: No improvement. patience: 19
+2018-06-22 05:02:34,926: __main__: INFO: ***********************************
+2018-06-22 05:22:59,336: __main__: INFO: Epoch: 65 - train loss: 0.70876 - train acc: 0.498731 - train F1: 0.495943
+2018-06-22 05:22:59,336: __main__: INFO: computing validation losses...
+2018-06-22 05:23:51,579: __main__: INFO: Valid loss: 0.69277 - Valid acc: 0.715055 - Valid F1: 0.235827 - best valid F1: 0.276562
+2018-06-22 05:23:51,580: __main__: INFO: No improvement. patience: 18
+2018-06-22 05:23:51,580: __main__: INFO: ***********************************
+2018-06-22 05:44:36,504: __main__: INFO: Epoch: 66 - train loss: 0.708145 - train acc: 0.499621 - train F1: 0.496356
+2018-06-22 05:44:36,504: __main__: INFO: computing validation losses...
+2018-06-22 05:45:16,103: __main__: INFO: Valid loss: 0.692984 - Valid acc: 0.614454 - Valid F1: 0.27447 - best valid F1: 0.276562
+2018-06-22 05:45:16,104: __main__: INFO: No improvement. patience: 17
+2018-06-22 05:45:16,104: __main__: INFO: ***********************************
+2018-06-22 06:06:05,453: __main__: INFO: Epoch: 67 - train loss: 0.707009 - train acc: 0.500877 - train F1: 0.498449
+2018-06-22 06:06:05,454: __main__: INFO: computing validation losses...
+2018-06-22 06:06:58,437: __main__: INFO: Valid loss: 0.693197 - Valid acc: 0.452047 - Valid F1: 0.273715 - best valid F1: 0.276562
+2018-06-22 06:06:58,438: __main__: INFO: No improvement. patience: 16
+2018-06-22 06:06:58,438: __main__: INFO: ***********************************
+2018-06-22 06:27:29,667: __main__: INFO: Epoch: 68 - train loss: 0.707041 - train acc: 0.50159 - train F1: 0.497792
+2018-06-22 06:27:29,667: __main__: INFO: computing validation losses...
+2018-06-22 06:28:07,736: __main__: INFO: Valid loss: 0.693222 - Valid acc: 0.428089 - Valid F1: 0.273543 - best valid F1: 0.276562
+2018-06-22 06:28:07,737: __main__: INFO: No improvement. patience: 15
+2018-06-22 06:28:07,737: __main__: INFO: ***********************************
+2018-06-22 06:48:32,596: __main__: INFO: Epoch: 69 - train loss: 0.705594 - train acc: 0.501329 - train F1: 0.500032
+2018-06-22 06:48:32,597: __main__: INFO: computing validation losses...
+2018-06-22 06:49:12,544: __main__: INFO: Valid loss: 0.69334 - Valid acc: 0.363583 - Valid F1: 0.271968 - best valid F1: 0.276562
+2018-06-22 06:49:12,545: __main__: INFO: No improvement. patience: 14
+2018-06-22 06:49:12,545: __main__: INFO: ***********************************
+2018-06-22 07:10:00,864: __main__: INFO: Epoch: 70 - train loss: 0.705863 - train acc: 0.500332 - train F1: 0.498607
+2018-06-22 07:10:00,865: __main__: INFO: computing validation losses...
+2018-06-22 07:10:41,319: __main__: INFO: Valid loss: 0.693151 - Valid acc: 0.500622 - Valid F1: 0.276452 - best valid F1: 0.276562
+2018-06-22 07:10:41,320: __main__: INFO: No improvement. patience: 13
+2018-06-22 07:10:41,320: __main__: INFO: ***********************************
+2018-06-22 07:31:42,756: __main__: INFO: Epoch: 71 - train loss: 0.706368 - train acc: 0.500684 - train F1: 0.499247
+2018-06-22 07:31:42,757: __main__: INFO: computing validation losses...
+2018-06-22 07:32:22,733: __main__: INFO: Valid loss: 0.693397 - Valid acc: 0.334045 - Valid F1: 0.270007 - best valid F1: 0.276562
+2018-06-22 07:32:22,734: __main__: INFO: No improvement. patience: 12
+2018-06-22 07:32:22,734: __main__: INFO: ***********************************
+2018-06-22 07:53:08,032: __main__: INFO: Epoch: 72 - train loss: 0.705404 - train acc: 0.50073 - train F1: 0.499321
+2018-06-22 07:53:08,033: __main__: INFO: computing validation losses...
+2018-06-22 07:54:01,073: __main__: INFO: Valid loss: 0.693408 - Valid acc: 0.327944 - Valid F1: 0.269836 - best valid F1: 0.276562
+2018-06-22 07:54:01,074: __main__: INFO: No improvement. patience: 11
+2018-06-22 07:54:01,074: __main__: INFO: ***********************************
+2018-06-22 08:14:17,309: __main__: INFO: Epoch: 73 - train loss: 0.705625 - train acc: 0.498793 - train F1: 0.497407
+2018-06-22 08:14:17,310: __main__: INFO: computing validation losses...
+2018-06-22 08:14:55,104: __main__: INFO: Valid loss: 0.692742 - Valid acc: 0.7433 - Valid F1: 0.215026 - best valid F1: 0.276562
+2018-06-22 08:14:55,105: __main__: INFO: No improvement. patience: 10
+2018-06-22 08:14:55,105: __main__: INFO: ***********************************
+2018-06-22 08:35:33,117: __main__: INFO: Epoch: 74 - train loss: 0.705023 - train acc: 0.499479 - train F1: 0.497213
+2018-06-22 08:35:33,117: __main__: INFO: computing validation losses...
+2018-06-22 08:36:12,982: __main__: INFO: Valid loss: 0.692936 - Valid acc: 0.646187 - Valid F1: 0.268998 - best valid F1: 0.276562
+2018-06-22 08:36:12,983: __main__: INFO: No improvement. patience: 9
+2018-06-22 08:36:12,983: __main__: INFO: ***********************************
+2018-06-22 08:56:54,636: __main__: INFO: Epoch: 75 - train loss: 0.704126 - train acc: 0.502856 - train F1: 0.501495
+2018-06-22 08:56:54,637: __main__: INFO: computing validation losses...
+2018-06-22 08:57:34,410: __main__: INFO: Valid loss: 0.693043 - Valid acc: 0.583049 - Valid F1: 0.274508 - best valid F1: 0.276562
+2018-06-22 08:57:34,411: __main__: INFO: No improvement. patience: 8
+2018-06-22 08:57:34,411: __main__: INFO: ***********************************
+2018-06-22 09:18:38,317: __main__: INFO: Epoch: 76 - train loss: 0.704459 - train acc: 0.502068 - train F1: 0.498169
+2018-06-22 09:18:38,318: __main__: INFO: computing validation losses...
+2018-06-22 09:19:18,094: __main__: INFO: Valid loss: 0.693615 - Valid acc: 0.247953 - Valid F1: 0.266803 - best valid F1: 0.276562
+2018-06-22 09:19:18,094: __main__: INFO: No improvement. patience: 7
+2018-06-22 09:19:18,095: __main__: INFO: ***********************************
+2018-06-22 09:40:04,240: __main__: INFO: Epoch: 77 - train loss: 0.704064 - train acc: 0.49688 - train F1: 0.494842
+2018-06-22 09:40:04,241: __main__: INFO: computing validation losses...
+2018-06-22 09:40:57,555: __main__: INFO: Valid loss: 0.69386 - Valid acc: 0.160021 - Valid F1: 0.254509 - best valid F1: 0.276562
+2018-06-22 09:40:57,557: __main__: INFO: No improvement. patience: 6
+2018-06-22 09:40:57,557: __main__: INFO: ***********************************
+2018-06-22 10:01:07,208: __main__: INFO: Epoch: 78 - train loss: 0.703796 - train acc: 0.499958 - train F1: 0.499433
+2018-06-22 10:01:07,209: __main__: INFO: computing validation losses...
+2018-06-22 10:01:45,325: __main__: INFO: Valid loss: 0.69385 - Valid acc: 0.16309 - Valid F1: 0.255222 - best valid F1: 0.276562
+2018-06-22 10:01:45,326: __main__: INFO: No improvement. patience: 5
+2018-06-22 10:01:45,326: __main__: INFO: ***********************************
+2018-06-22 10:22:07,905: __main__: INFO: Epoch: 79 - train loss: 0.703283 - train acc: 0.501068 - train F1: 0.500974
+2018-06-22 10:22:07,906: __main__: INFO: computing validation losses...
+2018-06-22 10:23:00,363: __main__: INFO: Valid loss: 0.693435 - Valid acc: 0.315844 - Valid F1: 0.272593 - best valid F1: 0.276562
+2018-06-22 10:23:00,364: __main__: INFO: No improvement. patience: 4
+2018-06-22 10:23:00,364: __main__: INFO: ***********************************
+2018-06-22 10:43:44,523: __main__: INFO: Epoch: 80 - train loss: 0.703699 - train acc: 0.499546 - train F1: 0.498872
+2018-06-22 10:43:44,524: __main__: INFO: computing validation losses...
+2018-06-22 10:44:24,283: __main__: INFO: Valid loss: 0.693312 - Valid acc: 0.366754 - Valid F1: 0.272483 - best valid F1: 0.276562
+2018-06-22 10:44:24,284: __main__: INFO: No improvement. patience: 3
+2018-06-22 10:44:24,284: __main__: INFO: ***********************************
+2018-06-22 11:05:21,412: __main__: INFO: Epoch: 81 - train loss: 0.703519 - train acc: 0.499299 - train F1: 0.499247
+2018-06-22 11:05:21,413: __main__: INFO: computing validation losses...
+2018-06-22 11:06:01,310: __main__: INFO: Valid loss: 0.693099 - Valid acc: 0.547867 - Valid F1: 0.280689 - best valid F1: 0.276562
+2018-06-22 11:06:04,387: __main__: INFO: Saved new model.
+2018-06-22 11:06:04,387: __main__: INFO: ***********************************
+2018-06-22 11:26:52,592: __main__: INFO: Epoch: 82 - train loss: 0.703555 - train acc: 0.499958 - train F1: 0.49834
+2018-06-22 11:26:52,592: __main__: INFO: computing validation losses...
+2018-06-22 11:27:32,403: __main__: INFO: Valid loss: 0.692649 - Valid acc: 0.787803 - Valid F1: 0.177034 - best valid F1: 0.280689
+2018-06-22 11:27:32,404: __main__: INFO: No improvement. patience: 19
+2018-06-22 11:27:32,404: __main__: INFO: ***********************************
+2018-06-22 11:48:09,538: __main__: INFO: Epoch: 83 - train loss: 0.703033 - train acc: 0.498769 - train F1: 0.495058
+2018-06-22 11:48:09,538: __main__: INFO: computing validation losses...
+2018-06-22 11:48:47,486: __main__: INFO: Valid loss: 0.693396 - Valid acc: 0.323201 - Valid F1: 0.271555 - best valid F1: 0.280689
+2018-06-22 11:48:47,487: __main__: INFO: No improvement. patience: 18
+2018-06-22 11:48:47,487: __main__: INFO: ***********************************
+2018-06-22 12:08:56,115: __main__: INFO: Epoch: 84 - train loss: 0.702845 - train acc: 0.498149 - train F1: 0.495392
+2018-06-22 12:08:56,116: __main__: INFO: computing validation losses...
+2018-06-22 12:09:49,292: __main__: INFO: Valid loss: 0.693335 - Valid acc: 0.352599 - Valid F1: 0.272616 - best valid F1: 0.280689
+2018-06-22 12:09:49,293: __main__: INFO: No improvement. patience: 17
+2018-06-22 12:09:49,293: __main__: INFO: ***********************************
+2018-06-22 12:30:36,722: __main__: INFO: Epoch: 85 - train loss: 0.701794 - train acc: 0.502264 - train F1: 0.500892
+2018-06-22 12:30:36,722: __main__: INFO: computing validation losses...
+2018-06-22 12:31:16,738: __main__: INFO: Valid loss: 0.692985 - Valid acc: 0.625716 - Valid F1: 0.275028 - best valid F1: 0.280689
+2018-06-22 12:31:16,739: __main__: INFO: No improvement. patience: 16
+2018-06-22 12:31:16,739: __main__: INFO: ***********************************
+2018-06-22 12:52:15,521: __main__: INFO: Epoch: 86 - train loss: 0.701774 - train acc: 0.500038 - train F1: 0.498644
+2018-06-22 12:52:15,522: __main__: INFO: computing validation losses...
+2018-06-22 12:52:55,461: __main__: INFO: Valid loss: 0.693249 - Valid acc: 0.395723 - Valid F1: 0.27301 - best valid F1: 0.280689
+2018-06-22 12:52:55,462: __main__: INFO: No improvement. patience: 15
+2018-06-22 12:52:55,462: __main__: INFO: ***********************************
+2018-06-22 13:13:43,346: __main__: INFO: Epoch: 87 - train loss: 0.702013 - train acc: 0.499763 - train F1: 0.498258
+2018-06-22 13:13:43,346: __main__: INFO: computing validation losses...
+2018-06-22 13:14:36,341: __main__: INFO: Valid loss: 0.693173 - Valid acc: 0.46185 - Valid F1: 0.275392 - best valid F1: 0.280689
+2018-06-22 13:14:36,342: __main__: INFO: No improvement. patience: 14
+2018-06-22 13:14:36,342: __main__: INFO: ***********************************
+2018-06-22 13:35:22,306: __main__: INFO: Epoch: 88 - train loss: 0.701735 - train acc: 0.499245 - train F1: 0.498098
+2018-06-22 13:35:22,306: __main__: INFO: computing validation losses...
+2018-06-22 13:36:02,351: __main__: INFO: Valid loss: 0.693407 - Valid acc: 0.31724 - Valid F1: 0.272806 - best valid F1: 0.280689
+2018-06-22 13:36:02,352: __main__: INFO: No improvement. patience: 13
+2018-06-22 13:36:02,352: __main__: INFO: ***********************************
+2018-06-22 13:56:11,083: __main__: INFO: Epoch: 89 - train loss: 0.702504 - train acc: 0.497537 - train F1: 0.496804
+2018-06-22 13:56:11,084: __main__: INFO: computing validation losses...
+2018-06-22 13:57:01,619: __main__: INFO: Valid loss: 0.693526 - Valid acc: 0.279342 - Valid F1: 0.27323 - best valid F1: 0.280689
+2018-06-22 13:57:01,620: __main__: INFO: No improvement. patience: 12
+2018-06-22 13:57:01,620: __main__: INFO: ***********************************
+2018-06-22 14:17:22,266: __main__: INFO: Epoch: 90 - train loss: 0.701278 - train acc: 0.499725 - train F1: 0.499291
+2018-06-22 14:17:22,267: __main__: INFO: computing validation losses...
+2018-06-22 14:18:02,189: __main__: INFO: Valid loss: 0.69324 - Valid acc: 0.397536 - Valid F1: 0.273115 - best valid F1: 0.280689
+2018-06-22 14:18:02,190: __main__: INFO: No improvement. patience: 11
+2018-06-22 14:18:02,190: __main__: INFO: ***********************************
+2018-06-22 14:39:00,709: __main__: INFO: Epoch: 91 - train loss: 0.701328 - train acc: 0.50103 - train F1: 0.501256
+2018-06-22 14:39:00,709: __main__: INFO: computing validation losses...
+2018-06-22 14:39:41,335: __main__: INFO: Valid loss: 0.692696 - Valid acc: 0.783757 - Valid F1: 0.187435 - best valid F1: 0.280689
+2018-06-22 14:39:41,336: __main__: INFO: No improvement. patience: 10
+2018-06-22 14:39:41,336: __main__: INFO: ***********************************
+2018-06-22 15:00:26,216: __main__: INFO: Epoch: 92 - train loss: 0.701262 - train acc: 0.499389 - train F1: 0.497123
+2018-06-22 15:00:26,217: __main__: INFO: computing validation losses...
+2018-06-22 15:01:06,469: __main__: INFO: Valid loss: 0.692469 - Valid acc: 0.84476 - Valid F1: 0.0281424 - best valid F1: 0.280689
+2018-06-22 15:01:06,470: __main__: INFO: No improvement. patience: 9
+2018-06-22 15:01:06,470: __main__: INFO: ***********************************
+2018-06-22 15:22:09,102: __main__: INFO: Epoch: 93 - train loss: 0.700364 - train acc: 0.500671 - train F1: 0.496924
+2018-06-22 15:22:09,102: __main__: INFO: computing validation losses...
+2018-06-22 15:22:49,022: __main__: INFO: Valid loss: 0.693141 - Valid acc: 0.50808 - Valid F1: 0.278734 - best valid F1: 0.280689
+2018-06-22 15:22:49,023: __main__: INFO: No improvement. patience: 8
+2018-06-22 15:22:49,023: __main__: INFO: ***********************************
+2018-06-22 15:43:31,938: __main__: INFO: Epoch: 94 - train loss: 0.700314 - train acc: 0.502662 - train F1: 0.501814
+2018-06-22 15:43:31,938: __main__: INFO: computing validation losses...
+2018-06-22 15:44:24,388: __main__: INFO: Valid loss: 0.693292 - Valid acc: 0.364661 - Valid F1: 0.272542 - best valid F1: 0.280689
+2018-06-22 15:44:24,389: __main__: INFO: No improvement. patience: 7
+2018-06-22 15:44:24,389: __main__: INFO: ***********************************
+2018-06-22 16:04:33,031: __main__: INFO: Epoch: 95 - train loss: 0.700371 - train acc: 0.499751 - train F1: 0.499447
+2018-06-22 16:04:33,032: __main__: INFO: computing validation losses...
+2018-06-22 16:05:11,043: __main__: INFO: Valid loss: 0.692848 - Valid acc: 0.717706 - Valid F1: 0.236131 - best valid F1: 0.280689
+2018-06-22 16:05:11,044: __main__: INFO: No improvement. patience: 6
+2018-06-22 16:05:11,044: __main__: INFO: ***********************************
+2018-06-22 16:25:21,043: __main__: INFO: Epoch: 96 - train loss: 0.700995 - train acc: 0.497444 - train F1: 0.494464
+2018-06-22 16:25:21,044: __main__: INFO: computing validation losses...
+2018-06-22 16:26:13,491: __main__: INFO: Valid loss: 0.693262 - Valid acc: 0.379336 - Valid F1: 0.273217 - best valid F1: 0.280689
+2018-06-22 16:26:13,493: __main__: INFO: No improvement. patience: 5
+2018-06-22 16:26:13,493: __main__: INFO: ***********************************
+2018-06-22 16:47:00,809: __main__: INFO: Epoch: 97 - train loss: 0.700021 - train acc: 0.500215 - train F1: 0.498937
+2018-06-22 16:47:00,809: __main__: INFO: computing validation losses...
+2018-06-22 16:47:40,472: __main__: INFO: Valid loss: 0.69336 - Valid acc: 0.324596 - Valid F1: 0.270807 - best valid F1: 0.280689
+2018-06-22 16:47:40,473: __main__: INFO: No improvement. patience: 4
+2018-06-22 16:47:40,473: __main__: INFO: ***********************************
+2018-06-22 17:08:37,203: __main__: INFO: Epoch: 98 - train loss: 0.699374 - train acc: 0.504611 - train F1: 0.502115
+2018-06-22 17:08:37,203: __main__: INFO: computing validation losses...
+2018-06-22 17:09:17,729: __main__: INFO: Valid loss: 0.693374 - Valid acc: 0.32069 - Valid F1: 0.271884 - best valid F1: 0.280689
+2018-06-22 17:09:17,730: __main__: INFO: No improvement. patience: 3
+2018-06-22 17:09:17,730: __main__: INFO: ***********************************
+2018-06-22 17:30:01,320: __main__: INFO: Epoch: 99 - train loss: 0.700346 - train acc: 0.497227 - train F1: 0.495898
+2018-06-22 17:30:01,321: __main__: INFO: computing validation losses...
+2018-06-22 17:30:54,176: __main__: INFO: Valid loss: 0.69306 - Valid acc: 0.579004 - Valid F1: 0.277118 - best valid F1: 0.280689
+2018-06-22 17:30:54,177: __main__: INFO: No improvement. patience: 2
+2018-06-22 17:30:54,177: __main__: INFO: ***********************************
+2018-06-22 17:51:38,909: __main__: INFO: Epoch: 100 - train loss: 0.699943 - train acc: 0.499134 - train F1: 0.496822
+2018-06-22 17:51:38,909: __main__: INFO: computing validation losses...
+2018-06-22 17:52:19,003: __main__: INFO: Valid loss: 0.692903 - Valid acc: 0.692594 - Valid F1: 0.253313 - best valid F1: 0.280689
+2018-06-22 17:52:19,004: __main__: INFO: No improvement. patience: 1
+2018-06-22 17:52:19,004: __main__: INFO: ***********************************
+2018-06-22 18:12:48,882: __main__: INFO: Epoch: 101 - train loss: 0.699759 - train acc: 0.498524 - train F1: 0.496891
+2018-06-22 18:12:48,883: __main__: INFO: computing validation losses...
+2018-06-22 18:13:39,312: __main__: INFO: Valid loss: 0.692916 - Valid acc: 0.685656 - Valid F1: 0.25602 - best valid F1: 0.280689
+2018-06-22 18:13:39,313: __main__: INFO: No improvement. patience: 0
+2018-06-22 18:13:39,314: __main__: INFO: Finished training. Time elapsed: 132342 seconds
+2018-06-22 18:13:39,314: __main__: INFO: Saving timings...
+2018-06-22 18:13:39,333: __main__: INFO: done.
+This run of train PT rnn+mlp_noe+f1 R ranker++ exp83 ran for 12:49:28 and logs are available locally at: /home/ml/nangel3/.hyperdash/logs/train-pt-rnn-mlp-noe-f1-r-ranker-exp83/train-pt-rnn-mlp-noe-f1-r-ranker-exp83_2018-06-21t05-24-23-692435.log
