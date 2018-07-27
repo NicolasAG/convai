@@ -19,7 +19,7 @@ if [ "$MODE" = 'mlp_r' ] ; then
                 for lr in "${learningrates[@]}"
                 do
                     echo "Train MLP R ranker with" $op "(" $lr ") and" $ac "activations and" $drop "dropout -- stop on F1"
-                    hyperdash run -n "train PT mlp_f1 R ranker++ exp$exp" python q_train_stoponF1.py \
+                    hyperdash run -n "train PT mlp_f1 R ranker++ exp$exp" python q_train.py \
                         --gpu 1 \
                         --data_f ./data/q_ranker_amt_data++_1525301962.86.json \
                         --vocab_f ./data/q_ranker_amt_vocab_1525301962.86.pkl \

@@ -962,7 +962,7 @@ def main():
     #######################
     start_time = time.time()
     best_valid = 100000.
-    best_valid_acc = 0.
+    best_valid_f1 = -1.
     patience = params['patience']
 
     train_losses = []  # list of losses for each epoch
@@ -1030,14 +1030,14 @@ def main():
             # save validation accuracies
             valid_accurs.append(valid_acc)
 
-            logger.info("Valid loss: %g - Valid acc: %g - best valid accuracy: %g" % (
-                valid_loss, valid_acc['acc'], best_valid_acc
+            logger.info("Valid loss: %g - Valid acc: %g - Valid F1: %g - best valid F1: %g" % (
+                valid_loss, valid_acc['acc'], valid_acc['F1'], best_valid_f1
             ))
 
             # Early stopping on valid accuracy
-            if valid_acc['acc'] > best_valid_acc:
+            if valid_acc['F1'] > best_valid_f1:
                 # Reset best validation accuracy
-                best_valid_acc = valid_acc['acc']
+                best_valid_f1 = valid_acc['F1']
                 improved = True
 
         # predict q values: use huber loss (or MSE)
