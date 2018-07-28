@@ -1825,11 +1825,6 @@ def main():
     logger.info("done.")
 
 
-    ################################################
-    # TODO: plot recall@1 as a function of context length
-    ################################################
-
-
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
