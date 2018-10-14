@@ -187,6 +187,7 @@ def main():
     ###
     # Plotting argument mappings
     ###
+    """
     print "Plotting average valid score based on parameters..."
     # Divide by total
     for dico in [optimizers, learningrates, activations, dropouts]:
@@ -286,6 +287,7 @@ def main():
     plt.ylabel("score")
     plt.savefig("%s_dropouts.png" % args.prefix.replace('/', ''))
     plt.close()
+    """
 
     print "done."
 
