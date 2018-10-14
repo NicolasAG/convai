@@ -87,12 +87,13 @@ elif [ "$MODE" = 'rnn+mlp_r' ] ; then
                 for lr in "${learningrates[@]}"
                 do
                     echo "Train RNN+MLP R ranker with" $op "(" $lr ") and" $ac "activations and" $drop "dropout"
-                    #echo "DeepR/Deep_R-Network[exp$exp]os"
                     hyperdash run -n "train PT rnn+mlp R ranker++ exp$exp" python q_train.py \
+                        --gpu 0 \
                         --data_f ./data/q_ranker_amt_data++_1525301962.86.json \
                         --vocab_f ./data/q_ranker_amt_vocab_1525301962.86.pkl \
                         --mode rnn+mlp \
                         --predict_rewards yes \
+                        --use_custom_encs 'no' \
                         --optimizer $op \
                         --learning_rate $lr \
                         --mlp_activation $ac \
@@ -104,7 +105,7 @@ elif [ "$MODE" = 'rnn+mlp_r' ] ; then
                         --article_dropout $drop \
                         --utterance_dropout $drop \
                         --context_dropout $drop \
-                        --model_name "DeepR/Deep_R-Network[exp$exp]os"
+                        --model_name "DeepR/Deep_R-Network[exp$exp]os+noe+F1"
                     exp=$((exp+1))
                 done
             done
@@ -122,12 +123,13 @@ elif [ "$MODE" = 'rnn+mlp_q' ] ; then
                 for lr in "${learningrates[@]}"
                 do
                     echo "Train RNN+MLP Q ranker with" $op "(" $lr ") and" $ac "activations and" $drop "dropout"
-                    #echo "DeepQ/Deep_Q-Network[exp$exp]os"
                     hyperdash run -n "train PT rnn+mlp Q ranker++ exp$exp" python q_train.py \
+                        --gpu 0 \
                         --data_f ./data/q_ranker_amt_data++_1525301962.86.json \
                         --vocab_f ./data/q_ranker_amt_vocab_1525301962.86.pkl \
                         --mode rnn+mlp \
                         --predict_rewards no \
+                        --use_custom_encs 'no' \
                         --optimizer $op \
                         --learning_rate $lr \
                         --mlp_activation $ac \
@@ -139,13 +141,15 @@ elif [ "$MODE" = 'rnn+mlp_q' ] ; then
                         --article_dropout $drop \
                         --utterance_dropout $drop \
                         --context_dropout $drop \
-                        --model_name "DeepQ/Deep_Q-Network[exp$exp]os"
+                        --model_name "DeepQ/Deep_Q-Network[exp$exp]os+noe"
 
                     hyperdash run -n "train PT rnn+mlp Q ranker exp$exp" python q_train.py \
+                        --gpu 0 \
                         --data_f ./data/q_ranker_amt_data_1524939554.0.json \
                         --vocab_f ./data/q_ranker_amt_vocab_1524939554.0.pkl \
                         --mode rnn+mlp \
                         --predict_rewards no \
+                        --use_custom_encs 'no' \
                         --optimizer $op \
                         --learning_rate $lr \
                         --mlp_activation $ac \
@@ -157,7 +161,7 @@ elif [ "$MODE" = 'rnn+mlp_q' ] ; then
                         --article_dropout $drop \
                         --utterance_dropout $drop \
                         --context_dropout $drop \
-                        --model_name "DeepQ/Deep_Q-Network[exp$exp]"
+                        --model_name "DeepQ/Deep_Q-Network[exp$exp]noe"
                     exp=$((exp+1))
                 done
             done
