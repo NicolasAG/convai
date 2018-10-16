@@ -4,9 +4,12 @@ import spacy
 import re
 import numpy as np
 import json
-import cPickle as pkl
+import time
+import inspect
 from ranker import features
-from ranker.estimators import Estimator, LONG_TERM_MODE, SHORT_TERM_MODE
+from ranker.q_networks import to_var, to_tensor, QNetwork
+import torch
+import torch.nn.functional as F
 from Queue import Queue
 import multiprocessing
 import uuid
@@ -75,33 +78,22 @@ PARENT_PIPE = 'ipc:///tmp/parent_push.pipe'
 PARENT_PULL_PIPE = 'ipc:///tmp/parent_pull.pipe'
 
 ###
-# Load ranker models
+# Load scorer model parameters & feature list
 ###
+with open(conf.ranker['model_final'], 'rb') as f:
+    scorer_params = json.load(f)
 
-'''
-TODO: LOAD PYTORCH MODEL: ranker/models/q_estimator/SmallR/Small_R-Network[exp63]os+F1_1529609420.51_dqn.pt
-'''
-'''
-ranker_args_short = []
-with open(conf.ranker['model_short'], 'rb') as fp:
-    data_short, hidden_dims_short, hidden_dims_extra_short, activation_short, \
-        optimizer_short, learning_rate_short, \
-        model_path_short, model_id_short, model_name_short, _, _, _ \
-        = pkl.load(fp)
-# load the feature list used in short term ranker
-feature_list_short = data_short[-1]
-# reconstruct model_path just in case file have been moved:
-model_path_short = conf.ranker['model_short'].split(model_id_short)[0]
-if model_path_short.endswith('/'):
-    model_path_short = model_path_short[:-1]  # ignore the last '/'
-logging.info(model_path_short)
+# load the feature list used in final scorer
+feature_list = []
+for name, obj in inspect.getmembers(features):
+    if inspect.isclass(obj) and name not in ['SentimentIntensityAnalyzer', 'Feature']:
+        feature_list.append(name)
 
-logging.info("creating ranker feature instances...")
-# start_creation_time = time.time() import time!!
-feature_objects, feature_dim = features.initialize_features(feature_list_short)
-# logging.info("created all feature instances in %s sec" %
-             (time.time() - start_creation_time))
-'''
+logging.info("creating scorer feature instances...")
+start_creation_time = time.time()
+feature_objects, feature_dim = features.initialize_features(feature_list)
+assert feature_dim == 1579  # input dimension of custom encoding vector
+logging.info("created all feature instances in %s sec" % (time.time() - start_creation_time))
 
 
 class ModelClient(multiprocessing.Process):
@@ -180,48 +172,24 @@ class ModelClient(multiprocessing.Process):
 
         self.is_running = True
 
-        '''
-        TODO: BUILD PYTORCH MODEL
-        '''
-        import tensorflow as tf
-        logging.info("Building NN Ranker")
         ###
-        # Build NN ranker models and set their parameters
+        # Build NN ranker model and set its parameters
         ###
-        '''
-        self.model_graph_short = tf.Graph()
-        with self.model_graph_short.as_default():
-            self.estimator_short = Estimator(
-                data_short, hidden_dims_short, hidden_dims_extra_short, activation_short,
-                optimizer_short, learning_rate_short,
-                model_path_short, model_id_short, model_name_short
-            )
-        self.model_graph_long = tf.Graph()
-        with self.model_graph_long.as_default():
-            self.estimator_long = Estimator(
-                data_long, hidden_dims_long, hidden_dims_extra_long, activation_long,
-                optimizer_long, learning_rate_long,
-                model_path_long, model_id_long, model_name_long
-            )
-        logging.info("Init tf session")
-        # Wrap ANY call to the rankers within those two sessions:
-        self.sess_short = tf.Session(graph=self.model_graph_short)
-        self.sess_long = tf.Session(graph=self.model_graph_long)
-        logging.info("Done init tf session")
-        # example: reload trained parameters
-        logging.info("Loading trained params short-term estimator")
-        with self.sess_short.as_default():
-            with self.model_graph_short.as_default():
-                self.estimator_short.load(
-                    self.sess_short, model_path_short, model_id_short, model_name_short)
-        logging.info("Loading trained params long-term estimator")
-        with self.sess_long.as_default():
-            with self.model_graph_long.as_default():
-                self.estimator_long.load(
-                    self.sess_long, model_path_long, model_id_long, model_name_long)
-
+        logging.info("Building NN Scorer")
+        # model_path
+        scorer_path = conf.ranker['model_final'].replace('params.json', 'dqn.pt')
+        # build network
+        self.dqn = QNetwork(feature_dim, scorer_params['mlp_activation'], scorer_params['mlp_dropout'], 2)
+        # restore old parameters
+        self.dqn.load_state_dict(torch.load(scorer_path))
+        # put in inference mode (Dropout OFF)
+        self.dqn.eval()
+        # moving networks to GPU if available
+        if torch.cuda.is_available():
+            logging.info("")
+            logging.info("cuda available! Moving variables to cuda %d..." % args.gpu)
+            self.dqn.cuda()
         logging.info("Done building NN ranker")
-        '''
 
         self.warmup()
 
@@ -273,37 +241,21 @@ class ModelClient(multiprocessing.Process):
 
                         # Run scorer and save the score in packet
                         logging.info(
-                            "Scoring the candidate response for model {}".format(self.model_name)
+                            "Start scoring the candidate response for model {}".format(self.model_name)
                         )
-                        '''
-                        TODO: RUN PYCHARM MODEL ON THE FEATURES
-                        '''
-                        '''
                         # reshape raw_features to fit the ranker format
                         assert len(raw_features) == feature_dim
-                        candidate_vector = raw_features.reshape(
-                            1, feature_dim)  # make an array of shape (1, input)
-                        # Get predictions for this candidate response:
-                        with self.sess_short.as_default():
-                            with self.model_graph_short.as_default():
-                                logging.info("estimator short predicting")
-                                # get predicted class (0: downvote, 1: upvote), and confidence (ie: proba of upvote)
-                                vote, conf = self.estimator_short.predict(
-                                    SHORT_TERM_MODE, candidate_vector)
-                                # sanity check with batch size of 1
-                                assert len(vote) == len(conf) == 1
-                        with self.sess_long.as_default():
-                            with self.model_graph_long.as_default():
-                                logging.info("estimator long prediction")
-                                # get the predicted end-of-dialogue score:
-                                pred, _ = self.estimator_long.predict(
-                                    LONG_TERM_MODE, candidate_vector)
-                                # sanity check with batch size of 1
-                                assert len(pred) == 1
-                        
-                        score = pred[0]
-                        '''
-                        score = 0.5
+                        candidate_vector = raw_features.reshape(1, feature_dim)  # ~(1, input)
+                        candidate_vector = torch.Tensor(candidate_vector)
+                        candidate_vector = to_var(candidate_vector)  # put on GPU if available
+                        # Forward pass: predict reward
+                        prediction = self.dqn(candidate_vector)  # ~(1, 2)
+                        prediction = prediction[0]  # ~(2,)
+                        prediction = F.softmax(prediction)
+                        score = prediction.data[1]
+                        logging.info(
+                            "Done scoring the candidate response for model {}".format(self.model_name)
+                        )
                     except:
                         logging.error("Error in estimation in model {}".format(self.model_name))
                         score = 0
@@ -402,10 +354,7 @@ class ResponseModelsQuerier(object):
 class ModelSelectionAgent(object):
     def __init__(self):
         self.article_text = {}     # map from chat_id to article text
-        self.chat_history = {}     # save the context / response pairs for a particular chat here
-        self.article_nouns = {}    # map from chat_id to a list of nouns in the article
-        self.boring_count = {}     # number of times the user responded with short answer
-        self.used_models = {}
+        self.chat_history = {}     # map from chat_id to context
 
         self.modelIds = [
             ModelID.HRED_TWITTER,  # general generative model on twitter data
@@ -444,7 +393,6 @@ class ModelSelectionAgent(object):
         is_start = False
 
         logging.info(chat_id)
-        logging.info(self.article_nouns)
 
         # if text contains /start, don't add it to the context
         if '/start' in text:
@@ -455,32 +403,18 @@ class ModelSelectionAgent(object):
             text = re.sub(r'https?:\/\/.*[\r\n]*', '', text, flags=re.MULTILINE)
             # save the article for later use
             self.article_text[chat_id] = text
-            article_nlp = nlp(unicode(text))
-            # save all nouns from the article
-            self.article_nouns[chat_id] = [
-                p.lemma_ for p in article_nlp if p.pos_ in ['NOUN', 'PROPN']
-            ]
-
-            # initialize bored count to 0 for this new chat
-            self.boring_count[chat_id] = 0
 
             # initialize chat history
             self.chat_history[chat_id] = []
 
-            # initialize model usage history
-            self.used_models[chat_id] = []
-
             # preprocessing
             # Run in separate thread so that it doesn't hold up further processing
             logging.info("Preprocessing call")
-
             self.preprocess(chat_id, chat_unique_id)
-            # cand and nqg
-            query_models = [ModelID.NQG, ModelID.CAND_QA]
 
             logging.info("fire call")
             candidate_responses = self.response_models.get_response({
-                'query_models': query_models,
+                'query_models': [ModelID.NQG, ModelID.CAND_QA],
                 'article_text': self.article_text[chat_id],
                 'chat_id': chat_id,
                 'chat_unique_id': chat_unique_id,
@@ -491,16 +425,9 @@ class ModelSelectionAgent(object):
             logging.info("received response")
 
         else:
-            # fire global query
             # making sure dict initialized
-            if chat_id not in self.boring_count:
-                self.boring_count[chat_id] = 0
-
             if chat_id not in self.chat_history:
                 self.chat_history[chat_id] = []
-
-            if chat_id not in self.used_models:
-                self.used_models[chat_id] = []
 
             article_text = ''
             all_context = []
@@ -531,6 +458,8 @@ class ModelSelectionAgent(object):
             if len(available_models) > 0:
                 selection = random.choice(available_models)
                 response = candidate_responses[selection]
+            # else:
+            #     response = "I don't have a lot of questions about this article. Maybe you can ask me one?"
 
         else:
             # argmax selection: take the msg with max score
@@ -565,7 +494,6 @@ class ModelSelectionAgent(object):
         # add user and response pair in chat_history
         self.chat_history[response['chat_id']].append(response['context'][-1])
         self.chat_history[response['chat_id']].append(response['text'])
-        self.used_models[chat_id].append(response['model_name'])
 
         response['control'] = control
         logging.info("Done selecting best model")

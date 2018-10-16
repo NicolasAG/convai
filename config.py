@@ -45,8 +45,9 @@ config_data = {
         },
         "socket_port" : 8094,
         "ranker": {
-            "model_short" : "/root/convai/ranker/models/short_term/0.641391/1510248853.21_Estimator_args.pkl",
-            "model_long" : "/root/convai/ranker/models/long_term/1.4506/1510248853.21_short_term.0641391.151024885321_Estimator__args.pkl"
+            "model_short": "/root/convai/ranker/models/short_term/0.641391/1510248853.21_Estimator_args.pkl",
+            "model_long": "/root/convai/ranker/models/long_term/1.4506/1510248853.21_short_term.0641391.151024885321_Estimator__args.pkl",
+            "model_final": "/root/convai/ranker/models/q_estimator/SmallR/Small_R-Network[exp63]os+F1_1529609420.51_params.json"
         },
         "stopwords" : ['all', 'whoever', 'go', 'whose',
             'to', 'help', 'helps', 'sorry', 'very', 'ha', 'haha',
